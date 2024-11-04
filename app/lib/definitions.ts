@@ -93,3 +93,15 @@ export type CustomerForm = {
   email: string;
   image_url: string;
 };
+
+export type BudgetForm = {
+  id: string;
+  customer_id: string;
+  year: number;
+  program: string;
+  project: string;
+  concept: string;
+  amount: number;
+  // Definimos un estado de presupuesto, similar a las facturas, con opciones de 'pending' o 'approved'
+  status: 'pending' | 'approved';
+};

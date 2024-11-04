@@ -1,6 +1,7 @@
 import { fetchBudgetById, fetchCustomers } from '@/app/lib/data';
 import Breadcrumbs from '@/app/ui/budgets/breadcrumbs';
 import Form from '@/app/ui/budgets/edit-form';
+import { notFound } from 'next/navigation';
 
 export default async function Page({ params }: { params: { id: string; }; }) {
   const [budget, customers] = await Promise.all([fetchBudgetById(params.id), fetchCustomers()]);

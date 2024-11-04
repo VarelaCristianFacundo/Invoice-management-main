@@ -1,0 +1,6 @@
+      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND
+      954       1     954      16332  ?         197609 15:13:29 /usr/bin/mintty
+      985       1     985      10412  cons0     197609 16:11:52 /usr/bin/bash
+      984     955     984       3400  pty0      197609 15:13:40 /usr/bin/winpty
+     1101     985    1101       8480  cons0     197609 16:12:11 /usr/bin/PS
+      955     954     955       1352  pty0      197609 15:13:29 /usr/bin/bash

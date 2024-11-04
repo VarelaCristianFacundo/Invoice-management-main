@@ -1,7 +1,5 @@
 import { fetchFilteredBudgets } from '@/app/lib/data';
-import { formatCurrency, formatDateToLocal } from '@/app/lib/utils';
 import { DeleteBudget, UpdateBudget } from '@/app/ui/budgets/buttons';
-import BudgetStatus from '@/app/ui/budgets/status';
 
 export default async function BudgetsTable({ query, currentPage }: { query: string; currentPage: number; }) {
     const budgets = await fetchFilteredBudgets(query, currentPage);
@@ -13,25 +11,31 @@ export default async function BudgetsTable({ query, currentPage }: { query: stri
                     <table className="min-w-full text-gray-900">
                         <thead>
                             <tr>
-                                <th>Customer</th>
-                                <th>Email</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th className="sr-only">Edit</th>
+                                <th className='text-start'>Año</th>
+                                <th className='text-start'>Programa</th>
+                                <th className='text-start'>Proyecto</th>
+                                <th className='text-start'>Proveedor</th>
+                                <th className='text-start'>Concepto</th>
+                                <th className='text-start'>Monto</th>
+                                <th className='text-start'>Fecha</th>
+                                <th className='text-start'>Estado</th>
+                                <th className='text-start'>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {budgets?.map((budget) => (
-                                <tr key={budget.id} className="border-b">
-                                    <td>{budget.customerName}</td>
-                                    <td>{budget.email}</td>
-                                    <td>{formatCurrency(budget.amount)}</td>
-                                    <td>{formatDateToLocal(budget.date)}</td>
-                                    <td><BudgetStatus status={budget.status} /></td>
-                                    <td className="text-right">
-                                        <UpdateBudget id={budget.id} />
-                                        <DeleteBudget id={budget.id} />
+                            {budgets.map((budget) => (
+                                <tr key={budget.id}>
+                                    <td>{budget.year}</td>
+                                    <td>{budget.program}</td>
+                                    <td>{budget.project}</td>
+                                    <td>{budget.customer_id}</td> {/* Puedes reemplazar con el nombre del proveedor si está disponible */}
+                                    <td>{budget.concept}</td>
+                                    <td>${(budget.amount / 100).toFixed(2)}</td>
+                                    <td>{new Date(budget.date).toLocaleDateString()}</td>
+                                    <td>{budget.status}</td>
+                                    <td className='flex'>
+                                        <UpdateBudget id={budget.id} /> {/* Botón de edición */}
+                                        <DeleteBudget id={budget.id} /> {/* Botón de eliminación */}
                                     </td>
                                 </tr>
                             ))}

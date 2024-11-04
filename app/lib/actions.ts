@@ -175,40 +175,67 @@ export async function updateInvoice(id: string, formData: FormData) {
   redirect('/dashboard/invoices');
 }
 
-export async function createBudget(formData: FormData) {
-  const validated = BudgetSchema.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
-  });
+export async function createBudget({
+  year,
+  program,
+  project,
+  customerId,
+  concept,
+  amount,
+  status,
+}) {
+  const queryText = `
+    INSERT INTO budgets (year, program, project, customer_id, concept, amount, status, date)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)
+  `;
+  const values = [year, program, project, customerId, concept, amount, status];
 
-  if (!validated.success) {
-    return { error: validated.error };
+  try {
+    await pool.query(queryText, values);
+  } catch (error) {
+    console.error('Error creating budget:', error);
+    throw new Error('Failed to create budget');
   }
-
-  const { customerId, amount, status } = validated.data;
-  await pool.query(
-    'INSERT INTO budgets (customer_id, amount, status) VALUES ($1, $2, $3)',
-    [customerId, amount * 100, status],
-  );
 }
 
 export async function updateBudget(id: string, formData: FormData) {
-  const validated = BudgetSchema.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
-  });
+  const data = {
+    year: Number(formData.get('year')),
+    program: formData.get('program') as string,
+    project: formData.get('project') as string,
+    concept: formData.get('concept') as string,
+    customerId: formData.get('customerId') as string,
+    amount: parseFloat(formData.get('amount') as string),
+    status: formData.get('status') as string,
+  };
 
-  if (!validated.success) {
-    return { error: validated.error };
+  const queryText = `
+    UPDATE budgets
+    SET year = $1, program = $2, project = $3, concept = $4, customer_id = $5, amount = $6, status = $7
+    WHERE id = $8
+  `;
+  const values = [
+    data.year,
+    data.program,
+    data.project,
+    data.concept,
+    data.customerId,
+    data.amount,
+    data.status,
+    id,
+  ];
+
+  try {
+    const result = await pool.query(queryText, values);
+    if (result.rowCount === 0) {
+      console.error('No budget found with the specified ID');
+      throw new Error('No budget found to update');
+    }
+    revalidatePath('/dashboard/budgets'); // Mantén solo la revalidación de la caché
+  } catch (error) {
+    console.error('Error updating budget:', error);
+    throw new Error('Database update failed');
   }
-
-  const { customerId, amount, status } = validated.data;
-  await pool.query(
-    'UPDATE budgets SET customer_id=$1, amount=$2, status=$3 WHERE id=$4',
-    [customerId, amount * 100, status, id],
-  );
 }
 
 export async function deleteBudget(id: string) {
@@ -264,6 +291,26 @@ export async function deleteInvoice(id: string) {
   } catch (error) {
     console.error('Database Error:', error);
     return { message: 'Database Error: Failed to Delete Invoice.' };
+  }
+}
+
+export async function checkProjectFunds(
+  project: string,
+  amount: number,
+): Promise<boolean> {
+  try {
+    const queryText = `
+      SELECT SUM(amount) AS total_budget
+      FROM budgets
+      WHERE project = $1 AND status = 'approved'
+    `;
+    const result = await pool.query(queryText, [project]);
+
+    const totalBudget = result.rows[0].total_budget || 0;
+    return totalBudget >= amount;
+  } catch (error) {
+    console.error('Error checking project funds:', error);
+    return false;
   }
 }
 

@@ -1,9 +1,8 @@
-// dashboard/budget/page.tsx
+import { fetchBudgetsPages } from '@/app/lib/data'; // Importar la función
 import { CreateBudget } from '@/app/ui/budgets/buttons';
 import Pagination from '@/app/ui/budgets/pagination';
 import Table from '@/app/ui/budgets/table';
 import Search from '@/app/ui/search';
-import { fetchBudgetsPages } from '@/app/lib/data'; // Importar la función
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -20,10 +19,13 @@ export default async function Page({
   const totalPages = await fetchBudgetsPages(query); // Ahora la función está definida
 
   return (
+
     <div>
       <h1>Budgets</h1>
-      <Search placeholder="Search budgets..." />
-      <CreateBudget />
+      <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
+        <Search placeholder="Search budgets..." />
+        <CreateBudget />
+      </div>
       <Table query={query} currentPage={currentPage} />
       <Pagination totalPages={totalPages} />
     </div>

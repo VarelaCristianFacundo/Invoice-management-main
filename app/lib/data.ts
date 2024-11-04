@@ -253,7 +253,7 @@ export async function fetchFilteredBudgets(
 
   try {
     const queryText = `
-      SELECT *
+      SELECT id, year, program, project, customer_id, concept, amount, date, status
       FROM budgets
       WHERE LOWER(status) LIKE $1
       ORDER BY date DESC
@@ -267,6 +267,17 @@ export async function fetchFilteredBudgets(
     console.error('Error fetching filtered budgets:', error);
     return [];
   }
+}
+
+export async function fetchBudgetById(id: string) {
+  const queryText = `
+      SELECT id, year, program, project, customer_id, concept, amount, date, status
+      FROM budgets
+      WHERE id = $1
+  `;
+  const values = [id];
+  const result = await pool.query(queryText, values);
+  return result.rows[0];
 }
 
 export async function fetchCustomersData() {
