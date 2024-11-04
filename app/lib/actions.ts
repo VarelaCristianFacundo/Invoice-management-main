@@ -1,9 +1,9 @@
 'use server';
 import { signIn } from '@/auth';
 import { AuthError } from 'next-auth';
-import { Pool } from 'pg';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { Pool } from 'pg';
 import { z } from 'zod';
 
 const FormSchema = z.object({
@@ -28,6 +28,12 @@ const CustomerFormSchema = z.object({
   email: z.string({
     invalid_type_error: 'Please enter an email.',
   }),
+});
+
+const BudgetSchema = z.object({
+  customerId: z.string(),
+  amount: z.coerce.number().positive(),
+  status: z.enum(['pending', 'approved']),
 });
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
@@ -167,6 +173,54 @@ export async function updateInvoice(id: string, formData: FormData) {
 
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
+}
+
+export async function createBudget(formData: FormData) {
+  const validated = BudgetSchema.safeParse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  if (!validated.success) {
+    return { error: validated.error };
+  }
+
+  const { customerId, amount, status } = validated.data;
+  await pool.query(
+    'INSERT INTO budgets (customer_id, amount, status) VALUES ($1, $2, $3)',
+    [customerId, amount * 100, status],
+  );
+}
+
+export async function updateBudget(id: string, formData: FormData) {
+  const validated = BudgetSchema.safeParse({
+    customerId: formData.get('customerId'),
+    amount: formData.get('amount'),
+    status: formData.get('status'),
+  });
+
+  if (!validated.success) {
+    return { error: validated.error };
+  }
+
+  const { customerId, amount, status } = validated.data;
+  await pool.query(
+    'UPDATE budgets SET customer_id=$1, amount=$2, status=$3 WHERE id=$4',
+    [customerId, amount * 100, status, id],
+  );
+}
+
+export async function deleteBudget(id: string) {
+  try {
+    const res = await fetch(`/api/budget/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete budget');
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export async function updateCustomer(id: string, formData: FormData) {

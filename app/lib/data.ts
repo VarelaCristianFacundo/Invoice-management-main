@@ -226,6 +226,49 @@ export async function fetchCustomerById(id: string) {
   return customers[0];
 }
 
+export async function fetchBudgetsPages(query: string): Promise<number> {
+  try {
+    const queryText = `
+      SELECT COUNT(*)
+      FROM budgets
+      WHERE LOWER(status) LIKE $1
+    `;
+    const values = [`%${query.toLowerCase()}%`];
+    const result = await pool.query(queryText, values);
+
+    const count = parseInt(result.rows[0].count, 10);
+    const itemsPerPage = 10;
+    return Math.ceil(count / itemsPerPage);
+  } catch (error) {
+    console.error('Error fetching budgets pages:', error);
+    return 1;
+  }
+}
+export async function fetchFilteredBudgets(
+  query: string,
+  page: number = 1,
+): Promise<any[]> {
+  const itemsPerPage = 10;
+  const offset = (page - 1) * itemsPerPage;
+
+  try {
+    const queryText = `
+      SELECT *
+      FROM budgets
+      WHERE LOWER(status) LIKE $1
+      ORDER BY date DESC
+      LIMIT $2 OFFSET $3
+    `;
+    const values = [`%${query.toLowerCase()}%`, itemsPerPage, offset];
+    const result = await pool.query(queryText, values);
+
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching filtered budgets:', error);
+    return [];
+  }
+}
+
 export async function fetchCustomersData() {
   const queryText = `
     SELECT

@@ -10,6 +10,58 @@ const {
   users,
 } = require('../app/lib/placeholder-data.js');
 
+const budgets = [
+  {
+    id: uuidv4(),
+    customer_id: customers[0].id, // Puedes referenciar IDs de clientes existentes
+    amount: 5000, // Monto en centavos (5000 representa $50.00)
+    status: 'pending', // Estatus de ejemplo
+    date: new Date().toISOString().split('T')[0],
+  },
+  // Agrega más presupuestos si lo deseas
+];
+
+async function seedBudgets(client) {
+  try {
+    await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+        customer_id UUID NOT NULL,
+        amount INT NOT NULL,
+        status VARCHAR(255) NOT NULL,
+        date DATE NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+      );
+    `);
+
+    console.log(`Created "budgets" table`);
+
+    for (const budget of budgets) {
+      await client.query(
+        `
+        INSERT INTO budgets (id, customer_id, amount, status, date)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id) DO NOTHING;
+        `,
+        [
+          budget.id,
+          budget.customer_id,
+          budget.amount,
+          budget.status,
+          budget.date,
+        ],
+      );
+    }
+
+    console.log(`Seeded budgets`);
+  } catch (error) {
+    console.error('Error seeding budgets:', error);
+    throw error;
+  }
+}
+
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
@@ -163,6 +215,7 @@ async function main() {
     await seedCustomers(client);
     await seedInvoices(client);
     await seedRevenue(client);
+    await seedBudgets(client);
   } catch (error) {
     console.error(
       'An error occurred while attempting to seed the database:',
