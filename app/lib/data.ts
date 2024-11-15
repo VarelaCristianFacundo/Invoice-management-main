@@ -253,10 +253,21 @@ export async function fetchFilteredBudgets(
 
   try {
     const queryText = `
-      SELECT id, year, program, project, customer_id, concept, amount, date, status
+      SELECT
+        budgets.id,
+        budgets.year,
+        budgets.program,
+        budgets.project,
+        customers.name AS provider_name,
+        customers.image_url AS provider_image, -- Imagen del proveedor
+        budgets.concept,
+        budgets.amount,
+        budgets.date,
+        budgets.status
       FROM budgets
-      WHERE LOWER(status) LIKE $1
-      ORDER BY date DESC
+      JOIN customers ON budgets.customer_id = customers.id
+      WHERE LOWER(budgets.status) LIKE $1
+      ORDER BY budgets.date DESC
       LIMIT $2 OFFSET $3
     `;
     const values = [`%${query.toLowerCase()}%`, itemsPerPage, offset];
