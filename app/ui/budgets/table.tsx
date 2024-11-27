@@ -1,9 +1,9 @@
 // budgets/table.tsx
-import Image from 'next/image';
 import { fetchFilteredBudgets } from '@/app/lib/data';
+import { formatCurrency, formatDateToLocal } from '@/app/lib/utils';
 import { DeleteBudget, UpdateBudget } from '@/app/ui/budgets/buttons';
 import BudgetStatus from '@/app/ui/budgets/status';
-import { formatDateToLocal, formatCurrency } from '@/app/lib/utils';
+import Image from 'next/image';
 
 export default async function BudgetsTable({
   query,
@@ -72,6 +72,9 @@ export default async function BudgetsTable({
                   Proyecto
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
+                  Área
+                </th>
+                <th scope="col" className="px-3 py-5 font-medium">
                   Concepto
                 </th>
                 <th scope="col" className="px-3 py-5 font-medium">
@@ -112,6 +115,8 @@ export default async function BudgetsTable({
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.project}
                   </td>
+                  <td className="whitespace-nowrap px-3 py-3">{budget.area || 'N/A'}</td> {/* Campo área */}
+
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.concept}
                   </td>

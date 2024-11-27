@@ -105,3 +105,14 @@ export type BudgetForm = {
   // Definimos un estado de presupuesto, similar a las facturas, con opciones de 'pending' o 'approved'
   status: 'pending' | 'approved';
 };
+
+export interface Area {
+  id: number;
+  name: string;
+}
+
+export interface AreaFund {
+  id: number;
+  area_id: number;
+  allocated_funds: number;
+}

@@ -1,6 +1,8 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { Pool } from 'pg';
 import {
+  Area,
+  AreaFund,
   CustomerField,
   CustomerForm,
   CustomersTableType,
@@ -166,6 +168,35 @@ export async function fetchCustomers() {
   return await queryDatabase<CustomerField>(queryText);
 }
 
+export async function fetchAreas(): Promise<Area[]> {
+  const queryText = 'SELECT * FROM areas ORDER BY name ASC';
+  const result = await pool.query(queryText);
+  return result.rows;
+}
+
+export async function fetchAreaFunds(): Promise<AreaFund[]> {
+  const queryText = `
+    SELECT af.*, a.name as area_name
+    FROM area_funds af
+    JOIN areas a ON af.area_id = a.id
+    ORDER BY a.name ASC
+  `;
+  const result = await pool.query(queryText);
+  return result.rows;
+}
+
+export async function updateAreaFund(
+  area_id: number,
+  amount: number,
+): Promise<void> {
+  const queryText = `
+    INSERT INTO area_funds (area_id, allocated_funds)
+    VALUES ($1, $2)
+    ON CONFLICT (area_id) DO UPDATE SET allocated_funds = $2
+  `;
+  await pool.query(queryText, [area_id, amount]);
+}
+
 export async function fetchFilteredCustomers(
   query: string,
   currentPage: number,
@@ -244,6 +275,20 @@ export async function fetchBudgetsPages(query: string): Promise<number> {
     return 1;
   }
 }
+
+export async function fetchAreasWithFunds() {
+  const queryText = `
+    SELECT
+      areas.id,
+      areas.name,
+      area_funds.allocated_funds
+    FROM areas
+    LEFT JOIN area_funds ON areas.id = area_funds.area_id
+    ORDER BY areas.name ASC
+  `;
+  const result = await pool.query(queryText);
+  return result.rows;
+}
 export async function fetchFilteredBudgets(
   query: string,
   page: number = 1,
@@ -258,8 +303,9 @@ export async function fetchFilteredBudgets(
         budgets.year,
         budgets.program,
         budgets.project,
+        budgets.area,
         customers.name AS provider_name,
-        customers.image_url AS provider_image, -- Imagen del proveedor
+        customers.image_url AS provider_image,
         budgets.concept,
         budgets.amount,
         budgets.date,
@@ -268,7 +314,7 @@ export async function fetchFilteredBudgets(
       JOIN customers ON budgets.customer_id = customers.id
       WHERE LOWER(budgets.status) LIKE $1
       ORDER BY budgets.date DESC
-      LIMIT $2 OFFSET $3
+      LIMIT $2 OFFSET $3  
     `;
     const values = [`%${query.toLowerCase()}%`, itemsPerPage, offset];
     const result = await pool.query(queryText, values);

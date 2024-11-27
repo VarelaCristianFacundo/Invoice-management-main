@@ -31,7 +31,12 @@ const CustomerFormSchema = z.object({
 });
 
 const BudgetSchema = z.object({
+  year: z.string(),
+  area: z.string().nonempty({ message: 'Area is required.' }),
+  program: z.string(),
+  project: z.string(),
   customerId: z.string(),
+  concept: z.string(),
   amount: z.coerce.number().positive(),
   status: z.enum(['pending', 'approved']),
 });
@@ -97,6 +102,35 @@ export async function createInvoice(prevState: State, formData: FormData) {
 
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
+}
+
+// app/lib/actions.ts
+
+export async function updateAreaFunds(
+  updates: { areaId: string; amount: number }[],
+) {
+  try {
+    for (const update of updates) {
+      const { areaId, amount } = update;
+
+      // Opcional: Validar que amount es un número válido
+      if (isNaN(amount) || amount < 0) {
+        console.warn(`Monto inválido para el área ${areaId}: ${amount}`);
+        continue; // Saltar esta actualización
+      }
+
+      const queryText = `
+        INSERT INTO area_funds (area_id, allocated_funds)
+        VALUES ($1, $2)
+        ON CONFLICT (area_id) DO UPDATE SET allocated_funds = $2;
+      `;
+      await pool.query(queryText, [areaId, amount]);
+    }
+    console.log('Fondos actualizados exitosamente');
+  } catch (error) {
+    console.error('Error al actualizar los fondos de las áreas:', error);
+    throw new Error('No se pudo actualizar los fondos de las áreas.');
+  }
 }
 
 export async function addCustomer(
@@ -177,6 +211,7 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 export async function createBudget({
   year,
+  area,
   program,
   project,
   customerId,
@@ -184,17 +219,43 @@ export async function createBudget({
   amount,
   status,
 }) {
+  console.log('Datos recibidos:', {
+    year,
+    area,
+    program,
+    project,
+    customerId,
+    concept,
+    amount,
+    status,
+  });
+
+  // Verificar y validar los datos de entrada
+  if (!area || typeof area !== 'string') {
+    throw new Error('El área es obligatoria y debe ser una cadena válida.');
+  }
+
   const queryText = `
-    INSERT INTO budgets (year, program, project, customer_id, concept, amount, status, date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE)
-  `;
-  const values = [year, program, project, customerId, concept, amount, status];
+  INSERT INTO budgets (year, area, program, project, customer_id, concept, amount, status, date)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE)
+`;
+  const values = [
+    year,
+    area,
+    program,
+    project,
+    customerId,
+    concept,
+    amount,
+    status,
+  ];
 
   try {
     await pool.query(queryText, values);
+    console.log('Presupuesto creado:', values);
   } catch (error) {
-    console.error('Error creating budget:', error);
-    throw new Error('Failed to create budget');
+    console.error('Error al insertar presupuesto:', error);
+    throw new Error('No se pudo crear el presupuesto.');
   }
 }
 

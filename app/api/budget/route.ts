@@ -10,12 +10,21 @@ export async function POST(request: Request) {
     const body = await request.json();
     console.log('Request body:', body); // Log para verificar el contenido del cuerpo de la solicitud
 
-    const { year, program, project, customerId, concept, amount, status } =
-      body;
+    const {
+      year,
+      area,
+      program,
+      project,
+      customerId,
+      concept,
+      amount,
+      status,
+    } = body;
 
     // Inserta el presupuesto usando la función `createBudget`
     await createBudget({
       year: Number(year),
+      area,
       program,
       project,
       customerId,

@@ -13,17 +13,51 @@ const {
 const budgets = [
   {
     id: uuidv4(),
-    year: new Date().getFullYear(),
-    program: 'Programa A', // Ajusta según los datos
-    project: 'Proyecto X', // Ajusta según los datos
-    customer_id: customers[0]?.id || uuidv4(), // Proveedor
-    concept: 'Concepto de gasto específico', // Descripción del gasto
-    amount: 5000, // Monto en centavos
+    customer_id: customers[0]?.id || uuidv4(),
+    area_id: areas.find((a) => a.name === 'Sistemas')?.id,
+    amount: 5000,
     status: 'pending',
     date: new Date().toISOString().split('T')[0],
+    year: 2024,
+    program: 'Test Program',
+    project: 'Test Project',
+    concept: 'Concept Example',
   },
   // Agrega más presupuestos si lo deseas
 ];
+
+const areas = [
+  { id: uuidv4(), name: 'Secretaría' },
+  { id: uuidv4(), name: 'Sistemas' },
+  { id: uuidv4(), name: 'Comunicación' },
+  { id: uuidv4(), name: 'GDI' },
+  { id: uuidv4(), name: 'EGC' },
+  { id: uuidv4(), name: 'GT' },
+];
+
+const areaFunds = [
+  { area_name: 'Comunicación', allocated_funds: 100000 },
+  { area_name: 'Sistemas', allocated_funds: 150000 },
+  // Añade las demás áreas...
+];
+
+for (const fund of areaFunds) {
+  const areaResult = await client.query(
+    'SELECT id FROM areas WHERE name = $1',
+    [fund.area_name],
+  );
+  const areaId = areaResult.rows[0]?.id;
+  if (areaId) {
+    await client.query(
+      `
+      INSERT INTO area_funds (id, area_id, allocated_funds)
+      VALUES (uuid_generate_v4(), $1, $2)
+      ON CONFLICT (area_id) DO UPDATE SET allocated_funds = $2;
+      `,
+      [areaId, fund.allocated_funds],
+    );
+  }
+}
 
 async function seedBudgets(client) {
   try {
@@ -86,6 +120,17 @@ async function seedBudgets(client) {
           budget.project,
           budget.concept,
         ],
+      );
+    }
+
+    for (const area of areas) {
+      await client.query(
+        `
+        INSERT INTO areas (id, name)
+        VALUES ($1, $2)
+        ON CONFLICT (name) DO NOTHING;
+        `,
+        [area.id, area.name],
       );
     }
 

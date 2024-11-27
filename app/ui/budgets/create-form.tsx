@@ -22,6 +22,7 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
     const formData = {
       year: (e.currentTarget as any).year.value,
       program: (e.currentTarget as any).program.value,
+      area: (e.currentTarget as any).area.value,
       project: (e.currentTarget as any).project.value,
       customerId: (e.currentTarget as any).customerId.value,
       concept: (e.currentTarget as any).concept.value,
@@ -67,6 +68,30 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
           placeholder="Enter year"
         />
       </div>
+      <div className="mb-4">
+        <label htmlFor="area" className="mb-2 block text-sm font-medium">
+          Área
+        </label>
+        <select
+          id="area"
+          name="area"
+          required
+          defaultValue=""
+          className="block w-full rounded-md border border-gray-200 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="" disabled>
+            Seleccionar área
+          </option>
+          <option value="Secretaría">Secretaría</option>
+          <option value="Sistemas">Sistemas</option>
+          <option value="Comunicación">Comunicación</option>
+          <option value="GDI">GDI</option>
+          <option value="EGC">EGC</option>
+          <option value="GT">GT</option>
+        </select>
+      </div>
+
+
 
       <div className="mb-4">
         <label htmlFor="program" className="mb-2 block text-sm font-medium">

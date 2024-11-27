@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BanknotesIcon,
   DocumentDuplicateIcon,
   HomeIcon,
   UserGroupIcon,
@@ -21,6 +22,11 @@ const links = [
     name: 'Facturas',
     href: '/dashboard/invoices',
     icon: DocumentDuplicateIcon,
+  },
+  {
+    name: 'Fondos',
+    href: '/dashboard/allocations',
+    icon: BanknotesIcon,
   },
   { name: 'Proveedores', href: '/dashboard/customers', icon: UserGroupIcon },
 ];
