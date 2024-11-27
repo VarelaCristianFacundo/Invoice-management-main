@@ -2,6 +2,7 @@
 
 import {
   BanknotesIcon,
+  CurrencyDollarIcon,
   DocumentDuplicateIcon,
   HomeIcon,
   UserGroupIcon,
@@ -16,7 +17,7 @@ const links = [
   {
     name: 'Presupuestos',
     href: '/dashboard/budgets',
-    icon: DocumentDuplicateIcon,
+    icon: CurrencyDollarIcon,
   },
   {
     name: 'Facturas',
