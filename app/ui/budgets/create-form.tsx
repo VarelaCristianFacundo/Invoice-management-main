@@ -10,11 +10,51 @@ import {
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function CreateBudgetForm({ customers }: { customers: CustomerField[] }) {
+export default function CreateBudgetForm({ customers, areas }: { customers: CustomerField[], areas: any[] }) {
   const [message, setMessage] = useState<string | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
+  const [availableFunds, setAvailableFunds] = useState<number>(0);
   const router = useRouter();
+
+  useEffect(() => {
+    async function fetchAvailableFunds(areaId: string) {
+      if (!areaId) {
+        // Cambiar console.error por un log condicional
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Area ID is required to fetch funds');
+        }
+        setAvailableFunds(0);
+        return;
+      }
+    
+      try {
+        const res = await fetch(`/api/areas/${areaId}/funds`);
+    
+        if (!res.ok) {
+          console.error(`API error: ${res.statusText}`);
+          setAvailableFunds(0);
+          return;
+        }
+    
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
+        setAvailableFunds(data.allocated_funds || 0);
+      } catch (error) {
+        console.error('Error fetching available funds:', error);
+        setAvailableFunds(0);
+      }
+    }
+    
+
+    fetchAvailableFunds(selectedAreaId);
+  }, [selectedAreaId]);
+
+  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const areaId = e.target.value;
+    setSelectedAreaId(areaId);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -22,7 +62,7 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
     const formData = {
       year: (e.currentTarget as any).year.value,
       program: (e.currentTarget as any).program.value,
-      area: (e.currentTarget as any).area.value,
+      areaId: selectedAreaId,
       project: (e.currentTarget as any).project.value,
       customerId: (e.currentTarget as any).customerId.value,
       concept: (e.currentTarget as any).concept.value,
@@ -30,7 +70,11 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
       status: (e.currentTarget as any).status.value,
     };
 
-    console.log('Form data to be sent:', formData); // Log para ver los datos antes de enviarlos
+    // Validar si el monto excede el fondo disponible
+    if (formData.amount > availableFunds) {
+      setMessage('El monto excede el fondo disponible del área seleccionada.');
+      return;
+    }
 
     try {
       const res = await fetch('/api/budget', {
@@ -41,17 +85,16 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
         body: JSON.stringify(formData),
       });
 
-      console.log('Response status:', res.status); // Log del estado de la respuesta
-
       if (!res.ok) throw new Error('Failed to create budget');
 
-      setMessage('Budget created successfully!');
+      setMessage('¡Presupuesto creado exitosamente!');
       router.push('/dashboard/budgets');
     } catch (error) {
       console.error('Failed to create budget:', error);
-      setMessage('Failed to create budget');
+      setMessage('Error al crear el presupuesto');
     }
   };
+
 
   return (
     <form onSubmit={handleSubmit} className="rounded-md bg-gray-50 p-4 md:p-6">
@@ -76,20 +119,29 @@ export default function CreateBudgetForm({ customers }: { customers: CustomerFie
           id="area"
           name="area"
           required
-          defaultValue=""
+          value={selectedAreaId}
+          onChange={handleAreaChange}
           className="block w-full rounded-md border border-gray-200 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="" disabled>
             Seleccionar área
           </option>
-          <option value="Secretaría">Secretaría</option>
-          <option value="Sistemas">Sistemas</option>
-          <option value="Comunicación">Comunicación</option>
-          <option value="GDI">GDI</option>
-          <option value="EGC">EGC</option>
-          <option value="GT">GT</option>
+          {areas.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.name}
+            </option>
+          ))}
         </select>
       </div>
+
+      {/* Mostrar fondo disponible */}
+      {selectedAreaId && (
+        <div className="mb-4">
+          <p className="text-sm font-medium">
+            Fondo disponible: <span className="text-green-600">{availableFunds.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
+          </p>
+        </div>
+      )}
 
 
 

@@ -325,7 +325,15 @@ export async function fetchFilteredBudgets(
     return [];
   }
 }
-
+export async function getAreaFunds(areaId: string) {
+  const queryText = `
+    SELECT allocated_funds
+    FROM area_funds
+    WHERE area_id = $1
+  `;
+  const result = await pool.query(queryText, [areaId]);
+  return result.rows[0]?.allocated_funds || 0;
+}
 export async function fetchBudgetById(id: string) {
   const queryText = `
       SELECT id, year, program, project, customer_id, concept, amount, date, status
