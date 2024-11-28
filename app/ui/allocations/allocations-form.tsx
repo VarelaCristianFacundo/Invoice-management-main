@@ -1,22 +1,27 @@
-// app/ui/allocations/allocations-form.tsx
 "use client";
 
 import { formatCurrency } from '@/app/lib/utils';
 import { useEffect, useState } from 'react';
 
+type Area = {
+    id: string;
+    name: string;
+    allocated_funds: number | null;
+};
+
 export default function AllocationsForm() {
-    const [areas, setAreas] = useState([]);
-    const [funds, setFunds] = useState({});
+    const [areas, setAreas] = useState<Area[]>([]); // Especifica el tipo de área
+    const [funds, setFunds] = useState<Record<string, string | number>>({}); // Los fondos son un objeto con claves tipo string
 
     // Mover la función `loadAreas` dentro del componente
     const loadAreas = async () => {
         const res = await fetch('/api/areas');
-        const areasData = await res.json();
+        const areasData: Area[] = await res.json(); // Especifica que `areasData` es una lista de áreas
         setAreas(areasData);
+
         // Inicializar los fondos con los valores actuales
-        const initialFunds = {};
-        // Dentro de loadAreas()
-        areasData.forEach((area) => {
+        const initialFunds: Record<string, string | number> = {};
+        areasData.forEach((area: Area) => {
             initialFunds[area.id] = area.allocated_funds !== null ? area.allocated_funds : '';
         });
 
@@ -28,19 +33,19 @@ export default function AllocationsForm() {
         loadAreas();
     }, []);
 
-    const handleChange = (areaId, value) => {
+    const handleChange = (areaId: string, value: string | number) => {
         setFunds({
             ...funds,
             [areaId]: value,
         });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const updates = Object.entries(funds)
             .map(([areaId, amount]) => ({
                 areaId,
-                amount: parseFloat(amount),
+                amount: parseFloat(amount as string),
             }))
             .filter((update) => !isNaN(update.amount));
 
