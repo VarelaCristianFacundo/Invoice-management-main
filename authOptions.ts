@@ -3,7 +3,7 @@
 import bcrypt from 'bcrypt';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getUserByEmail } from './app/lib/user'; // Implementa esta función para obtener el usuario de la BD
+import { getUserByEmail } from './app/lib/user';
 
 export const authOptions: NextAuthOptions = {
   providers: [
