@@ -29,6 +29,17 @@ const CustomerFormSchema = z.object({
   }),
 });
 
+type BudgetParams = {
+  year: string; // O number si prefieres
+  area: string;
+  program: string;
+  project: string;
+  customerId: string;
+  concept: string;
+  amount: number;
+  status: 'pending' | 'approved';
+};
+
 const BudgetSchema = z.object({
   year: z.string(),
   area: z.string().nonempty({ message: 'Area is required.' }),
@@ -217,7 +228,7 @@ export async function createBudget({
   concept,
   amount,
   status,
-}) {
+}: BudgetParams) {
   console.log('Datos recibidos:', {
     year,
     area,
