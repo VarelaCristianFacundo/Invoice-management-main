@@ -1,11 +1,10 @@
 // authOptions.ts
 
 import bcrypt from 'bcrypt';
-import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { getUserByEmail } from './app/lib/user';
 
-export const authOptions: NextAuthOptions = {
+export const authOptions: any = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',

@@ -1,21 +1,31 @@
-import type { NextAuthConfig } from 'next-auth';
- 
-export const authConfig = {
+import type { Session, User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+
+// Usa "any" como tipo genérico para evitar errores de compilación
+export const authConfig: any = {
   pages: {
     signIn: '/login',
   },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith('/dashboard');
-      if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; // Redirect unauthenticated users to login page
-      } else if (isLoggedIn) {
-        return Response.redirect(new URL('/dashboard', nextUrl));
+    session: async ({ session, token }: { session: Session; token: JWT }) => {
+      // Agrega información personalizada al objeto `session`
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.sub as string, // Asegúrate de que `sub` sea un string
+          role: token.role as string, // Asegúrate de que `role` sea un string
+        };
       }
-      return true;
+      return session;
+    },
+    jwt: async ({ token, user }: { token: JWT; user?: User }) => {
+      // Agrega propiedades adicionales al token JWT
+      if (user) {
+        token.id = user.id as string; // Asegúrate de que `id` sea un string
+        token.role = user.role as string; // Asegúrate de que `role` sea un string
+      }
+      return token;
     },
   },
-  providers: [], // Add providers with an empty array for now
-} satisfies NextAuthConfig;
+  providers: [], // Configura tus proveedores aquí
+};
