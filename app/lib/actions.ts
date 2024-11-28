@@ -1,6 +1,5 @@
 'use server';
 import { signIn } from 'next-auth/react';
-import { AuthError } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Pool } from 'pg';
@@ -393,16 +392,26 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', formData);
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
+    const res = await signIn('credentials', {
+      redirect: false,
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+    });
+
+    if (res?.error) {
+      console.error('Authentication failed:', res.error);
+      switch (res.error) {
         case 'CredentialsSignin':
           return 'Invalid credentials.';
         default:
-          return 'Something went wrong.';
+          return 'Something went wrong. Please try again.';
       }
     }
-    throw error;
+
+    // Redirige al dashboard o realiza otras acciones
+    redirect('/dashboard');
+  } catch (error) {
+    console.error('Unexpected error during authentication:', error);
+    throw new Error('Authentication process failed.');
   }
 }
