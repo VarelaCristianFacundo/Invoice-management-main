@@ -1,7 +1,7 @@
 import type { User } from '@/app/lib/definitions';
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcrypt';
-import NextAuth from 'next-auth';
+import NextAuth from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { z } from 'zod';
 
