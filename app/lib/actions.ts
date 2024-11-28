@@ -1,5 +1,5 @@
 'use server';
-import { signIn } from '@/auth';
+import { signIn } from 'next-auth/react';
 import { AuthError } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
