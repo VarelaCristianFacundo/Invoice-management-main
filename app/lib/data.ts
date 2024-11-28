@@ -262,7 +262,7 @@ export async function fetchBudgetsPages(query: string): Promise<number> {
     const queryText = `
       SELECT COUNT(*)
       FROM budgets
-      WHERE LOWER(status) LIKE $1
+      WHERE LOWER(status::text) LIKE $1
     `;
     const values = [`%${query.toLowerCase()}%`];
     const result = await pool.query(queryText, values);
@@ -289,41 +289,20 @@ export async function fetchAreasWithFunds() {
   const result = await pool.query(queryText);
   return result.rows;
 }
-export async function fetchFilteredBudgets(
-  query: string,
-  page: number = 1,
-): Promise<any[]> {
-  const itemsPerPage = 10;
-  const offset = (page - 1) * itemsPerPage;
-
-  try {
-    const queryText = `
-      SELECT
-        budgets.id,
-        budgets.year,
-        budgets.program,
-        budgets.project,
-        budgets.area,
-        customers.name AS provider_name,
-        customers.image_url AS provider_image,
-        budgets.concept,
-        budgets.amount,
-        budgets.date,
-        budgets.status
-      FROM budgets
-      JOIN customers ON budgets.customer_id = customers.id
-      WHERE LOWER(budgets.status) LIKE $1
-      ORDER BY budgets.date DESC
-      LIMIT $2 OFFSET $3  
-    `;
-    const values = [`%${query.toLowerCase()}%`, itemsPerPage, offset];
-    const result = await pool.query(queryText, values);
-
-    return result.rows;
-  } catch (error) {
-    console.error('Error fetching filtered budgets:', error);
-    return [];
-  }
+export async function fetchFilteredBudgets(query: string, currentPage: number) {
+  const offset = (currentPage - 1) * 10;
+  const queryText = `
+    SELECT budgets.*, customers.name AS provider_name, customers.image_url AS provider_image, areas.name AS area_name
+    FROM budgets
+    JOIN customers ON budgets.customer_id = customers.id
+    LEFT JOIN areas ON budgets.area_id = areas.id
+    WHERE customers.name ILIKE $1 OR budgets.program ILIKE $1 OR budgets.project ILIKE $1 OR budgets.concept ILIKE $1
+    ORDER BY budgets.date DESC
+    LIMIT 10 OFFSET $2
+  `;
+  const values = [`%${query}%`, offset];
+  const result = await pool.query(queryText, values);
+  return result.rows;
 }
 export async function getAreaFunds(areaId: string) {
   const queryText = `
@@ -343,6 +322,18 @@ export async function fetchBudgetById(id: string) {
   const values = [id];
   const result = await pool.query(queryText, values);
   return result.rows[0];
+}
+
+export async function fetchRejectedBudgets() {
+  const queryText = `
+    SELECT budgets.*, areas.name AS area_name
+    FROM budgets
+    LEFT JOIN areas ON budgets.area_id = areas.id
+    WHERE budgets.status = 'rejected'
+    ORDER BY areas.name ASC
+  `;
+  const result = await pool.query(queryText);
+  return result.rows;
 }
 
 export async function fetchCustomersData() {

@@ -86,32 +86,17 @@ async function seedBudgets(client) {
 
     console.log(`Created "budgets" table`);
 
-    // Insertar datos de ejemplo en budgets
-    const budgets = [
-      {
-        id: uuidv4(),
-        customer_id: customers[0].id, // Puedes referenciar IDs de clientes existentes
-        amount: 5000, // Monto en centavos (5000 representa $50.00)
-        status: 'pending', // Estatus de ejemplo
-        date: new Date().toISOString().split('T')[0],
-        year: 2024,
-        program: 'Test Program',
-        project: 'Test Project',
-        concept: 'Concept Example',
-      },
-      // Agrega más presupuestos de ejemplo si lo deseas
-    ];
-
     for (const budget of budgets) {
       await client.query(
         `
-        INSERT INTO budgets (id, customer_id, amount, status, date, year, program, project, concept)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO budgets (id, customer_id, area_id, amount, status, date, year, program, project, concept)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id) DO NOTHING;
         `,
         [
           budget.id,
           budget.customer_id,
+          budget.area_id,
           budget.amount,
           budget.status,
           budget.date,

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     const {
       year,
-      area,
+      areaId,
       program,
       project,
       customerId,
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     // Inserta el presupuesto usando la función `createBudget`
     await createBudget({
       year: String(year),
-      area,
+      areaId,
       program,
       project,
       customerId,

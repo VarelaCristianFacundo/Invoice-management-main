@@ -1,7 +1,12 @@
+// app/api/areas/[id]/funds/route.ts
+
 import { getAreaFunds } from '@/app/lib/data';
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request, { params }: any) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
     const areaId = params.id;
     const funds = await getAreaFunds(areaId);

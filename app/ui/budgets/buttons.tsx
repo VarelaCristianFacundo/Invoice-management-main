@@ -2,6 +2,7 @@
 
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export function CreateBudget() {
     return (
@@ -11,6 +12,35 @@ export function CreateBudget() {
         </Link>
     );
 }
+
+
+export function RejectBudget({ id }: { id: string }) {
+  const router = useRouter();
+
+  const handleReject = async () => {
+    const confirmed = confirm('¿Estás seguro de rechazar este presupuesto?');
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/budget/${id}/reject`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Failed to reject budget');
+      alert('Presupuesto rechazado exitosamente');
+      router.refresh();
+    } catch (error) {
+      console.error('Error rejecting budget:', error);
+      alert('Error al rechazar el presupuesto');
+    }
+  };
+
+  return (
+    <button onClick={handleReject} className="text-red-600 hover:text-red-800">
+      Rechazar
+    </button>
+  );
+}
+
 
 export function UpdateBudget({ id }: { id: string }) {
     return (
@@ -37,3 +67,4 @@ export function DeleteBudget({ id }: { id: string }) {
         </button>
     );
 }
+

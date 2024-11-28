@@ -28,29 +28,6 @@ const CustomerFormSchema = z.object({
     invalid_type_error: 'Please enter an email.',
   }),
 });
-
-type BudgetParams = {
-  year: string; // O number si prefieres
-  area: string;
-  program: string;
-  project: string;
-  customerId: string;
-  concept: string;
-  amount: number;
-  status: 'pending' | 'approved';
-};
-
-const BudgetSchema = z.object({
-  year: z.string(),
-  area: z.string().nonempty({ message: 'Area is required.' }),
-  program: z.string(),
-  project: z.string(),
-  customerId: z.string(),
-  concept: z.string(),
-  amount: z.coerce.number().positive(),
-  status: z.enum(['pending', 'approved']),
-});
-
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const AddCustomer = CustomerFormSchema.omit({ id: true, date: true });
 
@@ -221,17 +198,26 @@ export async function updateInvoice(id: string, formData: FormData) {
 
 export async function createBudget({
   year,
-  area,
+  areaId,
   program,
   project,
   customerId,
   concept,
   amount,
   status,
-}: BudgetParams) {
+}: {
+  year: string;
+  areaId: string;
+  program: string;
+  project: string;
+  customerId: string;
+  concept: string;
+  amount: number;
+  status: string;
+}) {
   console.log('Datos recibidos:', {
     year,
-    area,
+    areaId,
     program,
     project,
     customerId,
@@ -240,18 +226,18 @@ export async function createBudget({
     status,
   });
 
-  // Verificar y validar los datos de entrada
-  if (!area || typeof area !== 'string') {
+  // Validar que areaId es una cadena válida
+  if (!areaId || typeof areaId !== 'string') {
     throw new Error('El área es obligatoria y debe ser una cadena válida.');
   }
 
   const queryText = `
-  INSERT INTO budgets (year, area, program, project, customer_id, concept, amount, status, date)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE)
-`;
+    INSERT INTO budgets (year, area_id, program, project, customer_id, concept, amount, status, date)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE)
+  `;
   const values = [
     year,
-    area,
+    areaId,
     program,
     project,
     customerId,

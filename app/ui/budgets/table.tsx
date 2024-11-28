@@ -1,7 +1,7 @@
 // budgets/table.tsx
 import { fetchFilteredBudgets } from '@/app/lib/data';
 import { formatCurrency, formatDateToLocal } from '@/app/lib/utils';
-import { DeleteBudget, UpdateBudget } from '@/app/ui/budgets/buttons';
+import { DeleteBudget, RejectBudget, UpdateBudget } from '@/app/ui/budgets/buttons';
 import BudgetStatus from '@/app/ui/budgets/status';
 import Image from 'next/image';
 
@@ -50,6 +50,7 @@ export default async function BudgetsTable({
                     <p>{formatDateToLocal(budget.date)}</p>
                   </div>
                   <div className="flex justify-end gap-2">
+                    <RejectBudget id={budget.id} />
                     <UpdateBudget id={budget.id} />
                     <DeleteBudget id={budget.id} />
                   </div>
@@ -115,7 +116,7 @@ export default async function BudgetsTable({
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.project}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">{budget.area || 'N/A'}</td> {/* Campo área */}
+                  <td className="whitespace-nowrap px-3 py-3">{budget.area_name || 'N/A'}</td> {/* Campo área */}
 
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.concept}
@@ -131,6 +132,7 @@ export default async function BudgetsTable({
                   </td>
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
+                      <RejectBudget id={budget.id} />
                       <UpdateBudget id={budget.id} />
                       <DeleteBudget id={budget.id} />
                     </div>

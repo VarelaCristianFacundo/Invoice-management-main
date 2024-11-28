@@ -28,16 +28,16 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
         setAvailableFunds(0);
         return;
       }
-    
+
       try {
         const res = await fetch(`/api/areas/${areaId}/funds`);
-    
+
         if (!res.ok) {
           console.error(`API error: ${res.statusText}`);
           setAvailableFunds(0);
           return;
         }
-    
+
         const text = await res.text();
         const data = text ? JSON.parse(text) : {};
         setAvailableFunds(data.allocated_funds || 0);
@@ -46,7 +46,7 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
         setAvailableFunds(0);
       }
     }
-    
+
 
     fetchAvailableFunds(selectedAreaId);
   }, [selectedAreaId]);
@@ -62,13 +62,14 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
     const formData = {
       year: (e.currentTarget as any).year.value,
       program: (e.currentTarget as any).program.value,
-      areaId: selectedAreaId,
+      areaId: selectedAreaId, // Cambiado de 'area' a 'areaId'
       project: (e.currentTarget as any).project.value,
       customerId: (e.currentTarget as any).customerId.value,
       concept: (e.currentTarget as any).concept.value,
       amount: parseFloat((e.currentTarget as any).amount.value),
       status: (e.currentTarget as any).status.value,
     };
+
 
     // Validar si el monto excede el fondo disponible
     if (formData.amount > availableFunds) {
