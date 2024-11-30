@@ -1,5 +1,3 @@
-// app/lib/user.ts
-
 import { Pool } from 'pg';
 
 const pool = new Pool({

@@ -1,5 +1,3 @@
-// app/dashboard/profile/page.tsx
-
 import { authOptions } from '@/authOptions';
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';

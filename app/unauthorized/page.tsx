@@ -1,5 +1,3 @@
-// app/unauthorized/page.tsx
-
 export default function UnauthorizedPage() {
     return (
         <div className="p-6">

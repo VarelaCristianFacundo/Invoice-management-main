@@ -91,8 +91,6 @@ export async function createInvoice(prevState: State, formData: FormData) {
   redirect('/dashboard/invoices');
 }
 
-// app/lib/actions.ts
-
 export async function updateAreaFunds(
   updates: { areaId: string; amount: number }[],
 ) {

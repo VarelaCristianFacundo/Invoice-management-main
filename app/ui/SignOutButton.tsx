@@ -1,5 +1,3 @@
-// app/ui/SignOutButton.tsx
-
 'use client';
 
 import { PowerIcon } from '@heroicons/react/24/outline';

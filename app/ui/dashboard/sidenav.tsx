@@ -1,5 +1,3 @@
-// app/ui/dashboard/sidenav.tsx
-
 import SignOutButton from '@/app/ui/SignOutButton';
 import CamarcoLogo from '@/app/ui/camarco-logo';
 import NavLinks from '@/app/ui/dashboard/nav-links';

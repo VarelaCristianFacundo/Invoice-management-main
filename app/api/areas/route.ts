@@ -1,5 +1,3 @@
-// app/api/areas/route.ts
-
 import { fetchAreasWithFunds } from '@/app/lib/data';
 import { NextResponse } from 'next/server';
 

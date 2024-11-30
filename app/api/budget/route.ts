@@ -1,5 +1,3 @@
-// app/api/budget/route.ts
-
 import { createBudget } from '@/app/lib/actions';
 import { NextResponse } from 'next/server';
 

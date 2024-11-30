@@ -1,5 +1,3 @@
-// app/api/areas/[id]/funds/route.ts
-
 import { getAreaFunds } from '@/app/lib/data';
 import { NextResponse } from 'next/server';
 

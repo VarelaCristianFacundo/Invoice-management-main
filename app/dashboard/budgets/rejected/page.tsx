@@ -1,5 +1,3 @@
-// app/dashboard/budgets/rejected/page.tsx
-
 import { fetchRejectedBudgets } from '@/app/lib/data';
 import { formatCurrency, formatDateToLocal } from '@/app/lib/utils';
 import BudgetStatus from '@/app/ui/budgets/status';

@@ -1,5 +1,3 @@
-// app/api/area-funds/route.ts
-
 import { updateAreaFunds } from '@/app/lib/actions';
 import { NextResponse } from 'next/server';
 
