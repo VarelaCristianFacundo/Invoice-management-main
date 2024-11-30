@@ -1,12 +1,13 @@
 import { getAreaFunds } from '@/app/lib/data';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const areaId = params.id;
+
   try {
-    const areaId = params.id;
     const funds = await getAreaFunds(areaId);
     return NextResponse.json({ allocated_funds: funds });
   } catch (error) {

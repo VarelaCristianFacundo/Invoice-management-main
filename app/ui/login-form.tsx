@@ -1,21 +1,14 @@
+// app/ui/login-form.tsx
+
 'use client';
 
-import { Button } from '@/app/ui/button';
-import { lusitana } from '@/app/ui/fonts';
-import {
-  ArrowRightIcon,
-  AtSymbolIcon,
-  ExclamationCircleIcon,
-  KeyIcon,
-} from '@heroicons/react/24/outline';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function LoginForm() {
-  const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,81 +22,51 @@ export default function LoginForm() {
       password,
     });
 
-    setIsLoading(false);
-
-
     if (res?.error) {
-      setErrorMessage('Correo electrónico o contraseña incorrectos');
+      console.error('Authentication failed:', res.error);
+      setError('Credenciales inválidas.');
     } else {
+      // Redirigir al dashboard si la autenticación fue exitosa
       router.push('/dashboard');
     }
   };
 
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
-        <h1 className={`${lusitana.className} mb-3 text-2xl`}>
-          Por favor, inicia sesión para continuar.
-        </h1>
-        <div className="w-full">
-          <div>
-            <label
-              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
-              htmlFor="email"
-            >
-              Correo Electrónico
-            </label>
-            <div className="relative">
-              <input
-                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
-                id="email"
-                type="email"
-                name="email"
-                placeholder="Ingresa tu correo electrónico"
-                required
-              />
-              <AtSymbolIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <label
-              className="mb-3 mt-5 block text-xs font-medium text-gray-900"
-              htmlFor="password"
-            >
-              Contraseña
-            </label>
-            <div className="relative">
-              <input
-                className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
-                id="password"
-                type="password"
-                name="password"
-                placeholder="Ingresa tu contraseña"
-                required
-                minLength={6}
-              />
-              <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {error && <p className="text-red-500">{error}</p>}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Email</label>
+        <div className="mt-1">
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+          />
         </div>
-        <Button
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Contraseña
+        </label>
+        <div className="mt-1">
+          <input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+          />
+        </div>
+      </div>
+      <div>
+        <button
           type="submit"
-          className="mt-4 w-full"
-          disabled={isLoading}
+          className="flex w-full justify-center rounded-md border border-transparent bg-sky-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
         >
-          Iniciar Sesión <ArrowRightIcon className="ml-auto h-5 w-5 text-gray-50" />
-        </Button>
-        {errorMessage && (
-          <div
-            className="flex h-8 items-center space-x-1"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            <ExclamationCircleIcon className="h-5 w-5 text-red-500" />
-            <p className="text-sm text-red-500">{errorMessage}</p>
-          </div>
-        )}
+          Iniciar Sesión
+        </button>
       </div>
     </form>
   );

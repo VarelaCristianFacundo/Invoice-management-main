@@ -1,4 +1,3 @@
-import { unstable_noStore as noStore } from 'next/cache';
 import { Pool } from 'pg';
 import {
   Area,
@@ -24,7 +23,6 @@ async function queryDatabase<T>(
   queryText: string,
   params?: any[],
 ): Promise<T[]> {
-  noStore();
   try {
     const { rows } = await pool.query(queryText, params);
     return rows;

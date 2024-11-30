@@ -1,5 +1,5 @@
 'use server';
-import { signIn } from 'next-auth/react';
+// import { signIn } from 'next-auth/react';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Pool } from 'pg';
@@ -382,31 +382,31 @@ export async function deleteCustomer(id: string) {
   }
 }
 
-export async function authenticate(
-  prevState: string | undefined,
-  formData: FormData,
-) {
-  try {
-    const res = await signIn('credentials', {
-      redirect: false,
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-    });
+// export async function authenticate(
+//   prevState: string | undefined,
+//   formData: FormData,
+// ) {
+//   try {
+//     const res = await signIn('credentials', {
+//       redirect: false,
+//       email: formData.get('email') as string,
+//       password: formData.get('password') as string,
+//     });
 
-    if (res?.error) {
-      console.error('Authentication failed:', res.error);
-      switch (res.error) {
-        case 'CredentialsSignin':
-          return 'Invalid credentials.';
-        default:
-          return 'Something went wrong. Please try again.';
-      }
-    }
+//     if (res?.error) {
+//       console.error('Authentication failed:', res.error);
+//       switch (res.error) {
+//         case 'CredentialsSignin':
+//           return 'Invalid credentials.';
+//         default:
+//           return 'Something went wrong. Please try again.';
+//       }
+//     }
 
-    // Redirige al dashboard o realiza otras acciones
-    redirect('/dashboard');
-  } catch (error) {
-    console.error('Unexpected error during authentication:', error);
-    throw new Error('Authentication process failed.');
-  }
-}
+//     // Redirige al dashboard o realiza otras acciones
+//     redirect('/dashboard');
+//   } catch (error) {
+//     console.error('Unexpected error during authentication:', error);
+//     throw new Error('Authentication process failed.');
+//   }
+// }
