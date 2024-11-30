@@ -7,13 +7,12 @@ const pool = new Pool({
 });
 
 export async function getUserByEmail(email: string) {
-  const client = await pool.connect();
-  try {
-    const res = await client.query('SELECT * FROM users WHERE email = $1', [
-      email,
-    ]);
-    return res.rows[0];
-  } finally {
-    client.release();
-  }
+  const queryText = `
+    SELECT id, name, email, password, role
+    FROM users
+    WHERE email = $1
+  `;
+  const values = [email];
+  const result = await pool.query(queryText, values);
+  return result.rows[0];
 }

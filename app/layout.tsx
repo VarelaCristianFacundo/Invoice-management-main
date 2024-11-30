@@ -1,7 +1,8 @@
-import '@/app/ui/global.css'
-import {inter} from '@/app/ui/fonts'
+import { inter } from '@/app/ui/fonts';
+import '@/app/ui/global.css';
 import { Metadata } from 'next';
- 
+import { Providers } from './Providers';
+
 export const metadata: Metadata = {
   title: {
     template: '%s | Camarco Dashboard',
@@ -18,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>{children}</body>
+      <Providers><body className={`${inter.className} antialiased`}>{children}</body></Providers>
     </html>
   );
 }

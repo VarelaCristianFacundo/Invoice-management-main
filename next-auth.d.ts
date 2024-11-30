@@ -1,18 +1,20 @@
+// next-auth.d.ts
+
 import 'next-auth';
 
 declare module 'next-auth' {
   interface Session {
     user: {
+      id: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      id?: string; // Campo adicional
-      role?: string; // Campo adicional
-    } & DefaultSession['user'];
+      role?: string;
+    };
   }
 
   interface User {
-    id?: string;
+    id: string;
     role?: string;
   }
 }
