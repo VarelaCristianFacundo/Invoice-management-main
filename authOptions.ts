@@ -1,10 +1,11 @@
 // authOptions.ts
 
 import bcrypt from 'bcrypt';
+import { NextAuthOptions } from 'next-auth/index';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { getUserByEmail } from './app/lib/user';
 
-export const authOptions: any = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -35,4 +36,20 @@ export const authOptions: any = {
     signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
+      }
+      return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id as string;
+        token.role = user.role as string;
+      }
+      return token;
+    },
+  },
 };

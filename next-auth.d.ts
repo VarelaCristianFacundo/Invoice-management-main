@@ -1,4 +1,3 @@
-// next-auth.d.ts
 import 'next-auth';
 
 declare module 'next-auth' {
@@ -9,7 +8,7 @@ declare module 'next-auth' {
       image?: string | null;
       id?: string; // Campo adicional
       role?: string; // Campo adicional
-    };
+    } & DefaultSession['user'];
   }
 
   interface User {

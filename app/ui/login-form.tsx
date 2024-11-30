@@ -14,12 +14,11 @@ import { useState } from 'react';
 
 export default function LoginForm() {
   const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
 
     const email = e.currentTarget.email.value;
     const password = e.currentTarget.password.value;
@@ -32,12 +31,14 @@ export default function LoginForm() {
 
     setIsLoading(false);
 
+
     if (res?.error) {
       setErrorMessage('Correo electrónico o contraseña incorrectos');
     } else {
       router.push('/dashboard');
     }
   };
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
