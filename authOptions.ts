@@ -42,19 +42,25 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: `next-auth.session-token`, // Cambia a un nombre genérico para evitar problemas en local
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        domain: '.invoice-management-main.vercel.app',
+        secure: process.env.NODE_ENV === 'production', // Solo usa secure en producción
+        domain:
+          process.env.NODE_ENV === 'production'
+            ? '.invoice-management-main.vercel.app'
+            : undefined, // No configura dominio en local
       },
     },
   },
+
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, user }: any) {
+      console.log('authOptions', user);
+      console.log('authOptions', token);
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -62,6 +68,8 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }: any) {
+      console.log('authOptions', session);
+      console.log('authOptions', token);
       if (token) {
         session.user = {
           ...session.user,

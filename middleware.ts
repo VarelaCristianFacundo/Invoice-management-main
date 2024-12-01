@@ -5,12 +5,21 @@ import { withAuth } from 'next-auth/middleware';
 export default withAuth({
   callbacks: {
     authorized: ({ token, req }) => {
-      // Obtiene el rol del usuario
-      const userRole = token?.role;
-
+      console.log('Token:', token);
+      console.log('Requested Path:', req.nextUrl.pathname);
+  
+      // Si no hay token, redirige al login
+      if (!token) {
+        console.log('No token found, redirecting to login');
+        return false;
+      }
+  
+      const userRole = token?.role || 'guest';
+      console.log('User Role:', userRole);
+  
       const { pathname } = req.nextUrl;
-
-      // Define las rutas protegidas y los roles que pueden acceder
+  
+      // Define las rutas protegidas y los roles permitidos
       const roleBasedRoutes: { [key: string]: string[] } = {
         '/dashboard/budgets': ['admin', 'usuario_presupuestos'],
         '/dashboard/invoices': ['admin', 'usuario', 'tesorero'],
@@ -18,15 +27,18 @@ export default withAuth({
         '/dashboard/customers': ['admin', 'tesorero'],
         '/dashboard/budgets/rejected': ['admin', 'usuario_presupuestos'],
       };
-
-      // Recorre las rutas y verifica si el usuario tiene acceso
+  
+      // Verifica si la ruta coincide y si el rol tiene acceso
       for (const [route, roles] of Object.entries(roleBasedRoutes)) {
         if (pathname.startsWith(route)) {
-          return roles.includes(userRole || '');
+          const hasAccess = roles.includes(userRole);
+          console.log(`Access to ${route}:`, hasAccess);
+          return hasAccess;
         }
       }
-
-      // Por defecto, permitir acceso
+  
+      // Permitir acceso por defecto
+      console.log('No specific restrictions for this route');
       return true;
     },
   },
