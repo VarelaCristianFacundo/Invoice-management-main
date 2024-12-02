@@ -191,6 +191,7 @@ export async function createBudget({
   concept,
   amount,
   status,
+  fileUrl,
 }: {
   year: string;
   areaId: string;
@@ -200,6 +201,7 @@ export async function createBudget({
   concept: string;
   amount: number;
   status: string;
+  fileUrl?: string;
 }) {
   console.log('Datos recibidos:', {
     year,
@@ -210,6 +212,7 @@ export async function createBudget({
     concept,
     amount,
     status,
+    fileUrl,
   });
 
   // Validar que areaId es una cadena válida
@@ -218,8 +221,8 @@ export async function createBudget({
   }
 
   const queryText = `
-    INSERT INTO budgets (year, area_id, program, project, customer_id, concept, amount, status, date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE)
+    INSERT INTO budgets (year, area_id, program, project, customer_id, concept, amount, status, date, file_url)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE, $9)
   `;
   const values = [
     year,
@@ -230,6 +233,7 @@ export async function createBudget({
     concept,
     amount,
     status,
+    fileUrl,
   ];
 
   try {

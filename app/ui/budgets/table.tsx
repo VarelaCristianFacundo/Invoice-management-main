@@ -13,7 +13,7 @@ export default async function BudgetsTable({
   currentPage: number;
 }) {
   const budgets = await fetchFilteredBudgets(query, currentPage);
-
+  console.log(budgets);
   return (
     <div className="mt-6 flow-root">
       <div className="inline-block min-w-full align-middle">
@@ -48,6 +48,18 @@ export default async function BudgetsTable({
                       {formatCurrency(budget.amount)}
                     </p>
                     <p>{formatDateToLocal(budget.date)}</p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    {budget.file_url && (
+                      <a
+                        href={budget.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Ver Archivo Adjunto
+                      </a>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2">
                     <RejectBudget id={budget.id} />
@@ -87,6 +99,10 @@ export default async function BudgetsTable({
                 <th scope="col" className="px-3 py-5 font-medium">
                   Estado
                 </th>
+                {/* Nueva columna para el archivo */}
+                <th scope="col" className="px-3 py-5 font-medium">
+                  Archivo
+                </th>
                 <th scope="col" className="relative py-3 pl-6 pr-3">
                   <span className="sr-only">Edit</span>
                 </th>
@@ -116,8 +132,9 @@ export default async function BudgetsTable({
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.project}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">{budget.area_name || 'N/A'}</td> {/* Campo área */}
-
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {budget.area_name || 'N/A'}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     {budget.concept}
                   </td>
@@ -129,6 +146,21 @@ export default async function BudgetsTable({
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     <BudgetStatus status={budget.status} />
+                  </td>
+                  {/* Nueva celda para el enlace del archivo */}
+                  <td className="whitespace-nowrap px-3 py-3">
+                    {budget.file_url ? (
+                      <a
+                        href={budget.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Ver Archivo
+                      </a>
+                    ) : (
+                      'N/A'
+                    )}
                   </td>
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex justify-end gap-3">

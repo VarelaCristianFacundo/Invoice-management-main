@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       concept,
       amount,
       status,
+      fileUrl,
     } = body;
 
     // Inserta el presupuesto usando la función `createBudget`
@@ -29,7 +30,9 @@ export async function POST(request: Request) {
       concept,
       amount: parseFloat(amount),
       status,
+      fileUrl,
     });
+    console.log('Valor de fileUrl en route.ts:', fileUrl);
 
     console.log('Budget created successfully'); // Log para confirmar que el presupuesto se creó sin errores
 

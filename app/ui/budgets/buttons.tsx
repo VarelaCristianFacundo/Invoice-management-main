@@ -1,6 +1,6 @@
 "use client";
 
-import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -35,8 +35,8 @@ export function RejectBudget({ id }: { id: string }) {
   };
 
   return (
-    <button onClick={handleReject} className="text-red-600 hover:text-red-800">
-      Rechazar
+    <button onClick={handleReject} className="rounded-md border p-2 text-red-600 hover:bg-gray-100 hover:text-red-800">
+      <XMarkIcon className="w-5" />
     </button>
   );
 }

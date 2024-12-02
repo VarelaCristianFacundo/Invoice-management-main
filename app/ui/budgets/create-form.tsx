@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomerField } from '@/app/lib/definitions';
+import { supabase } from '@/app/lib/supabaseClient';
 import { Button } from '@/app/ui/button';
 import {
   CheckIcon,
@@ -59,18 +60,46 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    const form = e.currentTarget as HTMLFormElement;
+    const formDataObj = new FormData(form);
+    const fileInput = form.elements.namedItem('file') as HTMLInputElement;
+    const file = fileInput?.files?.[0];
+    let fileUrl = '';
+
+
+
     const formData = {
-      year: (e.currentTarget as any).year.value,
-      program: (e.currentTarget as any).program.value,
-      areaId: selectedAreaId, // Cambiado de 'area' a 'areaId'
-      project: (e.currentTarget as any).project.value,
-      customerId: (e.currentTarget as any).customerId.value,
-      concept: (e.currentTarget as any).concept.value,
-      amount: parseFloat((e.currentTarget as any).amount.value),
-      status: (e.currentTarget as any).status.value,
+      year: formDataObj.get('year') as string,
+      program: formDataObj.get('program') as string,
+      areaId: selectedAreaId,
+      project: formDataObj.get('project') as string,
+      customerId: formDataObj.get('customerId') as string,
+      concept: formDataObj.get('concept') as string,
+      amount: parseFloat(formDataObj.get('amount') as string),
+      status: formDataObj.get('status') as string,
+      fileUrl,
     };
+    console.log('Datos enviados al servidor:', formData);
 
+    if (file) {
+      const filePath = `budgets/${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('budgets')
+        .upload(filePath, file);
 
+      if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        setMessage('Error uploading file');
+        return;
+      }
+
+      // Obtener la URL pública del archivo
+      const { data: publicUrlData } = supabase.storage
+        .from('budgets')
+        .getPublicUrl(filePath);
+
+      formData.fileUrl = publicUrlData.publicUrl;
+    }
     // Validar si el monto excede el fondo disponible
     if (formData.amount > availableFunds) {
       setMessage('El monto excede el fondo disponible del área seleccionada.');
@@ -221,6 +250,24 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
           />
           <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
         </div>
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="file" className="mb-2 block text-sm font-medium">
+          Upload File
+        </label>
+        <input
+          id="file"
+          name="file"
+          type="file"
+          accept=".pdf,image/*"
+          className="block w-full text-sm text-gray-500
+               file:mr-4 file:py-2 file:px-4
+               file:rounded-full file:border-0
+               file:text-sm file:font-semibold
+               file:bg-blue-50 file:text-blue-700
+               hover:file:bg-blue-100"
+        />
       </div>
 
       <fieldset>
