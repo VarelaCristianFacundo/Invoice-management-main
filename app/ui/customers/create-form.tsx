@@ -1,18 +1,51 @@
-'use client'
-import Link from 'next/link';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
-import { Button } from '@/app/ui/button';
-import { useFormState } from 'react-dom';
-import { addCustomer } from '@/app/lib/actions';
+'use client';
 
+import { addCustomer } from '@/app/lib/actions';
+import { Button } from '@/app/ui/button';
+import { UserCircleIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+interface State {
+  message: string | null;
+  errors: {
+    name?: string[];
+    email?: string[];
+    [key: string]: string[] | undefined;
+  };
+}
 
 export default function Form() {
-  const initialState = { message: null, errors: {} };
-  const [state, dispatch] = useFormState(addCustomer, initialState);
+  const initialState: State = { message: null, errors: {} };
+  const [state, setState] = useState<State>(initialState);
+  const router = useRouter();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const formData = {
+      name: (event.currentTarget as any).name.value,
+      email: (event.currentTarget as any).email.value,
+    };
+
+    try {
+      await addCustomer(formData);
+      setState({ message: 'Customer added successfully', errors: {} });
+      router.push('/dashboard/customers');
+    } catch (error: any) {
+      setState({
+        ...state,
+        errors: error.errors || {},
+        message: error.message || 'An error occurred',
+      });
+    }
+  };
+
   return (
-    <form action={dispatch}>
+    <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
-        {/* Customer Fullname  */}
+        {/* Customer Fullname */}
         <div className="mb-4">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
             Customer FullName
@@ -25,25 +58,25 @@ export default function Form() {
                 type="text"
                 aria-describedby="name-error"
                 placeholder="enter fullname"
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
               />
-            <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
+              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
             </div>
           </div>
           <div id="name-error" aria-live="polite" aria-atomic="true">
-          {state.errors?.name &&
-            state.errors.name.map((error: string) => (
-              <p className="mt-2 text-sm text-red-500" key={error}>
-                {error}
-              </p>
-            ))}
-        </div>
+            {state.errors?.name &&
+              state.errors.name.map((error: string) => (
+                <p className="mt-2 text-sm text-red-500" key={error}>
+                  {error}
+                </p>
+              ))}
+          </div>
         </div>
 
         {/* Customer Email */}
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm font-medium">
-            Customer email
+            Customer Email
           </label>
           <div className="relative mt-2 rounded-md">
             <div className="relative">
@@ -52,35 +85,33 @@ export default function Form() {
                 name="email"
                 type="email"
                 aria-describedby="email-error"
-                placeholder="email@email.com"
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+                placeholder="email@example.com"
+                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
               />
-            <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
+              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
             </div>
           </div>
           <div id="email-error" aria-live="polite" aria-atomic="true">
-          {state.errors?.email &&
-            state.errors.email.map((error: string) => (
-              <p className="mt-2 text-sm text-red-500" key={error}>
-                {error}
-              </p>
-            ))}
-        </div>
+            {state.errors?.email &&
+              state.errors.email.map((error: string) => (
+                <p className="mt-2 text-sm text-red-500" key={error}>
+                  {error}
+                </p>
+              ))}
+          </div>
         </div>
 
-        {/* Invoice Status */}
-        {/* <div id="customer-error status-error amount-error" aria-live="polite" aria-atomic="true">
-              {state.message &&
-                  <p className="mt-2 text-sm text-red-500">
-                    {state.message}
-                  </p>
-              }
-        </div> */}
+        {/* Mensaje de Éxito o Error */}
+        {state.message && (
+          <p className="mt-2 text-sm text-green-500">
+            {state.message}
+          </p>
+        )}
       </div>
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/customers"
-          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 hover:bg-gray-200"
         >
           Cancel
         </Link>

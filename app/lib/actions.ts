@@ -52,12 +52,12 @@ export type CustomerState = {
   message?: string | null;
 };
 
-export async function createInvoice(prevState: State, formData: FormData) {
-  const validatedFields = CreateInvoice.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
-  });
+export async function createInvoice(formData: {
+  customerId: string;
+  amount: number;
+  status: 'pending' | 'paid';
+}) {
+  const validatedFields = CreateInvoice.safeParse(formData);
 
   if (!validatedFields.success) {
     return {
@@ -67,17 +67,14 @@ export async function createInvoice(prevState: State, formData: FormData) {
   }
 
   const { customerId, amount, status } = validatedFields.data;
-  console.log(validatedFields.data);
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
-  console.log(date);
 
   try {
-    console.log('Inserting data into database');
     const queryText = `
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES ($1, $2, $3, $4)
-      `;
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES ($1, $2, $3, $4)
+    `;
     const params = [customerId, amountInCents, status, date];
     await pool.query(queryText, params);
   } catch (error) {
@@ -118,15 +115,8 @@ export async function updateAreaFunds(
   }
 }
 
-export async function addCustomer(
-  prevState: CustomerState,
-  formData: FormData,
-) {
-  console.log(prevState, 'prev state goes here');
-  const validatedFields = AddCustomer.safeParse({
-    name: formData.get('name'),
-    email: formData.get('email'),
-  });
+export async function addCustomer(formData: { name: string; email: string }) {
+  const validatedFields = AddCustomer.safeParse(formData);
 
   if (!validatedFields.success) {
     return {
@@ -136,14 +126,12 @@ export async function addCustomer(
   }
 
   const { name, email } = validatedFields.data;
-  console.log(validatedFields.data);
 
   try {
-    console.log('Inserting data into database');
     const queryText = `
-        INSERT INTO customers (name, email, image_url)
-        VALUES ($1, $2, $3)
-      `;
+      INSERT INTO customers (name, email, image_url)
+      VALUES ($1, $2, $3)
+    `;
     const params = [name, email, '/customers/emil-kowalski.png'];
     await pool.query(queryText, params);
   } catch (error) {
@@ -158,7 +146,7 @@ export async function addCustomer(
 }
 
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateCustomer = CustomerFormSchema.omit({ id: true, date: true });
+const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(id: string, formData: FormData) {
   const validatedFields = UpdateInvoice.safeParse({
@@ -305,11 +293,11 @@ export async function deleteBudget(id: string) {
   }
 }
 
-export async function updateCustomer(id: string, formData: FormData) {
-  const validatedFields = UpdateCustomer.safeParse({
-    name: formData.get('name'),
-    email: formData.get('email'),
-  });
+export async function updateCustomer(
+  id: string,
+  data: { name: string; email: string },
+) {
+  const validatedFields = UpdateCustomer.safeParse(data);
 
   if (!validatedFields.success) {
     return {

@@ -1,4 +1,5 @@
-'use client'
+'use client';
+
 import { CustomerField } from '@/app/lib/definitions';
 import Link from 'next/link';
 import {
@@ -8,15 +9,49 @@ import {
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@/app/ui/button';
+import { useState } from 'react';
 import { createInvoice } from '@/app/lib/actions';
-import { useFormState } from 'react-dom';
+import { useRouter } from 'next/navigation';
 
+interface State {
+  message: string | null;
+  errors: {
+    customerId?: string[];
+    amount?: string[];
+    status?: string[];
+    [key: string]: string[] | undefined;
+  };
+}
 
 export default function Form({ customers }: { customers: CustomerField[] }) {
-  const initialState = { message: null, errors: {} };
-  const [state, dispatch] = useFormState(createInvoice, initialState);
+  const initialState: State = { message: null, errors: {} };
+  const [state, setState] = useState<State>(initialState);
+  const router = useRouter();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const formData = {
+      customerId: (event.currentTarget as any).customerId.value,
+      amount: parseFloat((event.currentTarget as any).amount.value),
+      status: (event.currentTarget as any).status.value,
+    };
+
+    try {
+      await createInvoice(formData);
+      setState({ message: 'Invoice created successfully', errors: {} });
+      router.push('/dashboard/invoices');
+    } catch (error: any) {
+      setState({
+        ...state,
+        errors: error.errors || {},
+        message: error.message || 'An error occurred',
+      });
+    }
+  };
+
   return (
-    <form action={dispatch}>
+    <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
         {/* Customer Name */}
         <div className="mb-4">
