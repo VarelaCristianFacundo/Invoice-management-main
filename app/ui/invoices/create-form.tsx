@@ -1,17 +1,17 @@
 'use client';
 
+import { createInvoice } from '@/app/lib/actions';
 import { CustomerField } from '@/app/lib/definitions';
-import Link from 'next/link';
+import { Button } from '@/app/ui/button';
 import {
   CheckIcon,
   ClockIcon,
   CurrencyDollarIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
-import { Button } from '@/app/ui/button';
-import { useState } from 'react';
-import { createInvoice } from '@/app/lib/actions';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface State {
   message: string | null;
@@ -41,6 +41,7 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
       await createInvoice(formData);
       setState({ message: 'Invoice created successfully', errors: {} });
       router.push('/dashboard/invoices');
+      router.refresh();
     } catch (error: any) {
       setState({
         ...state,
@@ -78,13 +79,13 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
             <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
           </div>
           <div id="customer-error" aria-live="polite" aria-atomic="true">
-          {state.errors?.customerId &&
-            state.errors.customerId.map((error: string) => (
-              <p className="mt-2 text-sm text-red-500" key={error}>
-                {error}
-              </p>
-            ))}
-        </div>
+            {state.errors?.customerId &&
+              state.errors.customerId.map((error: string) => (
+                <p className="mt-2 text-sm text-red-500" key={error}>
+                  {error}
+                </p>
+              ))}
+          </div>
         </div>
 
         {/* Invoice Amount */}
@@ -107,13 +108,13 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
             </div>
           </div>
           <div id="amount-error" aria-live="polite" aria-atomic="true">
-          {state.errors?.amount &&
-            state.errors.amount.map((error: string) => (
-              <p className="mt-2 text-sm text-red-500" key={error}>
-                {error}
-              </p>
-            ))}
-        </div>
+            {state.errors?.amount &&
+              state.errors.amount.map((error: string) => (
+                <p className="mt-2 text-sm text-red-500" key={error}>
+                  {error}
+                </p>
+              ))}
+          </div>
         </div>
 
         {/* Invoice Status */}
@@ -158,13 +159,13 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
             </div>
           </div>
           <div id="status-error" aria-live="polite" aria-atomic="true">
-              {state.errors?.status &&
-                state.errors.status.map((error: string) => (
-                  <p className="mt-2 text-sm text-red-500" key={error}>
-                    {error}
-                  </p>
-                ))}
-            </div>
+            {state.errors?.status &&
+              state.errors.status.map((error: string) => (
+                <p className="mt-2 text-sm text-red-500" key={error}>
+                  {error}
+                </p>
+              ))}
+          </div>
         </fieldset>
         {/* <div id="customer-error status-error amount-error" aria-live="polite" aria-atomic="true">
               {state.message &&

@@ -119,6 +119,7 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
 
       setMessage('¡Presupuesto creado exitosamente!');
       router.push('/dashboard/budgets');
+      router.refresh();
     } catch (error) {
       console.error('Failed to create budget:', error);
       setMessage('Error al crear el presupuesto');

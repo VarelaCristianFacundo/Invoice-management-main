@@ -34,6 +34,7 @@ export default function Form({ customer }: { customer: CustomerForm }) {
       await updateCustomer(customer.id, formData);
       setState({ message: 'Customer updated successfully', errors: {} });
       router.push('/dashboard/customers');
+      router.refresh();
     } catch (error: any) {
       setState({
         ...state,

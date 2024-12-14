@@ -33,6 +33,7 @@ export default function Form() {
       await addCustomer(formData);
       setState({ message: 'Customer added successfully', errors: {} });
       router.push('/dashboard/customers');
+      router.refresh();
     } catch (error: any) {
       setState({
         ...state,

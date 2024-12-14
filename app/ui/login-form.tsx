@@ -28,6 +28,7 @@ export default function LoginForm() {
     } else {
       // Redirigir al dashboard si la autenticación fue exitosa
       router.push('/dashboard');
+      router.refresh();
     }
   };
 

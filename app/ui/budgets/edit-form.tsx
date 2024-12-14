@@ -22,6 +22,7 @@ export default function EditBudgetForm({
     try {
       await updateBudget(budget.id, formData);
       router.push('/dashboard/budgets');
+      router.refresh();
     } catch (error) {
       console.error('Failed to update budget:', error);
     }
