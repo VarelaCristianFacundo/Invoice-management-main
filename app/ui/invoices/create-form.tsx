@@ -12,6 +12,8 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 interface State {
   message: string | null;
@@ -37,9 +39,20 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
       status: (event.currentTarget as any).status.value,
     };
 
+    const result = await Swal.fire({
+      title: 'Confirm Creation',
+      text: 'Are you sure you want to create this invoice?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, create it',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await createInvoice(formData);
-      setState({ message: 'Invoice created successfully', errors: {} });
+      Swal.fire('Created!', 'The invoice was created successfully.', 'success');
       router.push('/dashboard/invoices');
       router.refresh();
     } catch (error: any) {
@@ -48,6 +61,7 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
         errors: error.errors || {},
         message: error.message || 'An error occurred',
       });
+      Swal.fire('Error!', 'There was an error creating the invoice.', 'error');
     }
   };
 
@@ -130,7 +144,7 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
                   name="status"
                   type="radio"
                   value="pending"
-                  aria-describedby='status-error'
+                  aria-describedby="status-error"
                   className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
                 />
                 <label
@@ -146,7 +160,7 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
                   name="status"
                   type="radio"
                   value="paid"
-                  aria-describedby='status-error'
+                  aria-describedby="status-error"
                   className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
                 />
                 <label
@@ -167,13 +181,6 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
               ))}
           </div>
         </fieldset>
-        {/* <div id="customer-error status-error amount-error" aria-live="polite" aria-atomic="true">
-              {state.message &&
-                  <p className="mt-2 text-sm text-red-500">
-                    {state.message}
-                  </p>
-              }
-        </div> */}
       </div>
       <div className="mt-6 flex justify-end gap-4">
         <Link

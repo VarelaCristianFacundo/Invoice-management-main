@@ -61,6 +61,7 @@ export async function createInvoice(formData: {
 
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Missing Fields. Failed to Create Invoice.',
     };
@@ -77,15 +78,19 @@ export async function createInvoice(formData: {
     `;
     const params = [customerId, amountInCents, status, date];
     await pool.query(queryText, params);
+
+    // Devuelve una respuesta exitosa
+    return {
+      success: true,
+      message: 'Invoice created successfully.',
+    };
   } catch (error) {
     console.error('Database Error:', error);
     return {
+      success: false,
       message: 'Database Error: Failed to Create Invoice.',
     };
   }
-
-  revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
 }
 
 export async function updateAreaFunds(
@@ -203,21 +208,11 @@ export async function createBudget({
   status: string;
   fileUrl?: string;
 }) {
-  console.log('Datos recibidos:', {
-    year,
-    areaId,
-    program,
-    project,
-    customerId,
-    concept,
-    amount,
-    status,
-    fileUrl,
-  });
-
-  // Validar que areaId es una cadena válida
   if (!areaId || typeof areaId !== 'string') {
-    throw new Error('El área es obligatoria y debe ser una cadena válida.');
+    return {
+      success: false,
+      message: 'The area is required and must be valid.',
+    };
   }
 
   const queryText = `
@@ -238,10 +233,13 @@ export async function createBudget({
 
   try {
     await pool.query(queryText, values);
-    console.log('Presupuesto creado:', values);
+    return { success: true, message: 'Budget created successfully.' };
   } catch (error) {
-    console.error('Error al insertar presupuesto:', error);
-    throw new Error('No se pudo crear el presupuesto.');
+    console.error('Error creating budget:', error);
+    return {
+      success: false,
+      message: 'Database error: Failed to create budget.',
+    };
   }
 }
 
