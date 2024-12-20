@@ -62,6 +62,7 @@ export async function createInvoice(formData: {
 
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Missing Fields. Failed to Create Invoice.',
     };
@@ -80,15 +81,19 @@ export async function createInvoice(formData: {
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
     await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
+    // Devuelve una respuesta exitosa
+    return {
+      success: true,
+      message: 'Invoice created successfully.',
+    };
+
   } catch (error) {
     console.error('Database Error:', error);
     return {
+      success: false,
       message: 'Database Error: Failed to Create Invoice.',
     };
   }
-
-  revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
 }
 
 export async function updateAreaFunds(
@@ -152,37 +157,29 @@ const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(id: string, formData: FormData) {
-  const validatedFields = UpdateInvoice.safeParse({
-    customerId: formData.get('customerId'),
-    amount: formData.get('amount'),
-    status: formData.get('status'),
-  });
+  const data = {
+    customerId: formData.get('customerId') as string,
+    amount: parseFloat(formData.get('amount') as string),
+    status: formData.get('status') as string,
+  };
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Update Invoice.',
-    };
-  }
-
-  const { customerId, amount, status } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const queryText = `
+    UPDATE invoices
+    SET customer_id = $1, amount = $2, status = $3
+    WHERE id = $4
+  `;
+  const params = [data.customerId, data.amount * 100, data.status, id];
 
   try {
-    const queryText = `
-      UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3
-      WHERE id = $4
-    `;
-    const params = [customerId, amountInCents, status, id];
-    await pool.query(queryText, params);
+    const result = await pool.query(queryText, params);
+    if (result.rowCount === 0) {
+      throw new Error('No invoice found to update.');
+    }
+    return { success: true, message: 'Invoice updated successfully.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { message: 'Database Error: Failed to Update Invoice.' };
+    return { success: false, message: 'Failed to update invoice.' };
   }
-
-  revalidatePath('/dashboard/invoices');
-  redirect('/dashboard/invoices');
 }
 
 export async function createBudget({
@@ -206,21 +203,11 @@ export async function createBudget({
   status: string;
   fileUrl?: string;
 }) {
-  console.log('Datos recibidos:', {
-    year,
-    areaId,
-    program,
-    project,
-    customerId,
-    concept,
-    amount,
-    status,
-    fileUrl,
-  });
-
-  // Validar que areaId es una cadena válida
   if (!areaId || typeof areaId !== 'string') {
-    throw new Error('El área es obligatoria y debe ser una cadena válida.');
+    return {
+      success: false,
+      message: 'The area is required and must be valid.',
+    };
   }
 
   const queryText = `
@@ -250,9 +237,13 @@ export async function createBudget({
     await pool.query(queryText, values);
     console.log('Presupuesto creado:', values);
     await sendBudgetEmail(pool, year, areaId, program, project, customerId, concept, amount, status);
+    return { success: true, message: 'Budget created successfully.' };
   } catch (error) {
-    console.error('Error al insertar presupuesto:', error);
-    throw new Error('No se pudo crear el presupuesto.');
+    console.error('Error creating budget:', error);
+    return {
+      success: false,
+      message: 'Database error: Failed to create budget.',
+    };
   }
 }
 
@@ -272,7 +263,7 @@ export async function updateBudget(id: string, formData: FormData) {
     SET year = $1, program = $2, project = $3, concept = $4, customer_id = $5, amount = $6, status = $7
     WHERE id = $8
   `;
-  const values = [
+  const params = [
     data.year,
     data.program,
     data.project,
@@ -284,15 +275,14 @@ export async function updateBudget(id: string, formData: FormData) {
   ];
 
   try {
-    const result = await pool.query(queryText, values);
+    const result = await pool.query(queryText, params);
     if (result.rowCount === 0) {
-      console.error('No budget found with the specified ID');
-      throw new Error('No budget found to update');
+      throw new Error('No budget found to update.');
     }
-    revalidatePath('/dashboard/budgets'); // Mantén solo la revalidación de la caché
+    return { success: true, message: 'Budget updated successfully.' };
   } catch (error) {
-    console.error('Error updating budget:', error);
-    throw new Error('Database update failed');
+    console.error('Database Error:', error);
+    return { success: false, message: 'Failed to update budget.' };
   }
 }
 
@@ -312,32 +302,23 @@ export async function updateCustomer(
   id: string,
   data: { name: string; email: string },
 ) {
-  const validatedFields = UpdateCustomer.safeParse(data);
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Update Customer.',
-    };
-  }
-
-  const { name, email } = validatedFields.data;
+  const queryText = `
+    UPDATE customers
+    SET name = $1, email = $2
+    WHERE id = $3
+  `;
+  const params = [data.name, data.email, id];
 
   try {
-    const queryText = `
-      UPDATE customers
-      SET name = $1, email = $2
-      WHERE id = $3
-    `;
-    const params = [name, email, id];
-    await pool.query(queryText, params);
+    const result = await pool.query(queryText, params);
+    if (result.rowCount === 0) {
+      throw new Error('No customer found to update.');
+    }
+    return { success: true, message: 'Customer updated successfully.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { message: 'Database Error: Failed to Update Customer.' };
+    return { success: false, message: 'Failed to update customer.' };
   }
-
-  revalidatePath('/dashboard/customers');
-  redirect('/dashboard/customers');
 }
 export async function deleteInvoice(id: string) {
   try {

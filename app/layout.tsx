@@ -6,7 +6,7 @@ import { Providers } from './Providers';
 export const metadata: Metadata = {
   title: {
     template: '%s | Camarco Dashboard',
-    default: ' Yo Camarco Dashboard',
+    default: ' Camarco Dashboard',
   },
   description: 'The official Next.js Learn Dashboard built with App Router.',
   metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),

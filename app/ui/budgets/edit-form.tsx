@@ -5,25 +5,41 @@ import { BudgetForm, CustomerField } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
 import { CheckIcon, ClockIcon, CurrencyDollarIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
-export default function EditBudgetForm({
-  budget,
-  customers,
-}: {
-  budget: BudgetForm;
-  customers: CustomerField[];
-}) {
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
+
+export default function EditBudgetForm({ budget, customers }: { budget: BudgetForm; customers: CustomerField[] }) {
   const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+
     try {
-      await updateBudget(budget.id, formData);
+      const result = await Swal.fire({
+        title: 'Confirm Update',
+        text: 'Are you sure you want to update this budget?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update it',
+        cancelButtonText: 'Cancel',
+      });
+
+      if (!result.isConfirmed) return;
+
+      const response = await updateBudget(budget.id, formData);
+      if (!response.success) throw new Error(response.message);
+
+      await Swal.fire('Updated!', 'The budget was updated successfully.', 'success');
+
+      // Redirigir y actualizar la tabla
       router.push('/dashboard/budgets');
+      router.refresh();
     } catch (error) {
-      console.error('Failed to update budget:', error);
+      console.error(error);
+      await Swal.fire('Error!', 'Failed to update the budget.', 'error');
     }
   };
 

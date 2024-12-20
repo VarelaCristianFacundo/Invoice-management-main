@@ -1,16 +1,19 @@
-import { deleteInvoice } from '@/app/lib/actions';
+"use client";
+
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 export function CreateInvoice() {
-
   return (
     <Link
       href="/dashboard/invoices/create"
-      className="flex h-10 items-center rounded-lg bg-gray-800 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800"
+      className="flex h-10 items-center rounded-lg bg-gray-800 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-700"
     >
-      <span className="hidden md:block">Create Invoice</span>{' '}
-      <PlusIcon className="h-5 md:ml-4" />
+      <PlusIcon className="w-5" />
+      <span>Create Invoice</span>
     </Link>
   );
 }
@@ -27,13 +30,38 @@ export function UpdateInvoice({ id }: { id: string }) {
 }
 
 export function DeleteInvoice({ id }: { id: string }) {
-  const deleteInvoiceWithId = deleteInvoice.bind(null, id);
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: 'Confirm Deletion',
+      text: 'Are you sure you want to delete this invoice?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/invoice/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Error deleting invoice');
+
+      Swal.fire('Deleted!', 'The invoice was deleted successfully.', 'success');
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      Swal.fire('Error!', 'There was an error deleting the invoice.', 'error');
+    }
+  };
+
   return (
-    <form action={deleteInvoiceWithId}>
-      <button className="rounded-md border p-2 hover:bg-gray-100">
-        <span className="sr-only">Delete</span>
-        <TrashIcon className="w-5" />
-      </button>
-    </form>
+    <button
+      onClick={handleDelete}
+      className="rounded-md border p-2 text-red-600 hover:bg-gray-100 hover:text-red-800"
+    >
+      <TrashIcon className="w-5" />
+    </button>
   );
 }

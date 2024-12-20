@@ -1,5 +1,6 @@
 "use client";
 
+import { createBudget } from '@/app/lib/actions';
 import { CustomerField } from '@/app/lib/definitions';
 import { supabase } from '@/app/lib/supabaseClient';
 import { Button } from '@/app/ui/button';
@@ -12,6 +13,8 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 export default function CreateBudgetForm({ customers, areas }: { customers: CustomerField[], areas: any[] }) {
   const [message, setMessage] = useState<string | null>(null);
@@ -66,8 +69,6 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
     const file = fileInput?.files?.[0];
     let fileUrl = '';
 
-
-
     const formData = {
       year: formDataObj.get('year') as string,
       program: formDataObj.get('program') as string,
@@ -79,6 +80,19 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
       status: formDataObj.get('status') as string,
       fileUrl,
     };
+
+    // Confirmación con SweetAlert
+    const result = await Swal.fire({
+      title: 'Confirm Creation',
+      text: 'Are you sure you want to create this budget?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, create it',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!result.isConfirmed) return;
+
     console.log('Datos enviados al servidor:', formData);
 
     if (file) {
@@ -89,7 +103,7 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
 
       if (uploadError) {
         console.error('Error uploading file:', uploadError);
-        setMessage('Error uploading file');
+        Swal.fire('Error!', 'Error uploading file.', 'error');
         return;
       }
 
@@ -102,26 +116,23 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
     }
     // Validar si el monto excede el fondo disponible
     if (formData.amount > availableFunds) {
-      setMessage('El monto excede el fondo disponible del área seleccionada.');
+      Swal.fire('Error!', 'The amount exceeds available funds.', 'error');
       return;
     }
 
     try {
-      const res = await fetch('/api/budget', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await createBudget(formData);
 
-      if (!res.ok) throw new Error('Failed to create budget');
-
-      setMessage('¡Presupuesto creado exitosamente!');
-      router.push('/dashboard/budgets');
+      if (response.success) {
+        await Swal.fire('Created!', response.message, 'success');
+        router.push('/dashboard/budgets');
+        router.refresh();
+      } else {
+        Swal.fire('Error!', response.message, 'error');
+      }
     } catch (error) {
-      console.error('Failed to create budget:', error);
-      setMessage('Error al crear el presupuesto');
+      console.error('Error creating budget:', error);
+      Swal.fire('Error!', 'An unexpected error occurred.', 'error');
     }
   };
 
