@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Pool } from 'pg';
 import { z } from 'zod';
+import { sendEmail } from './SendMail';
 
 const FormSchema = z.object({
   id: z.string(),
@@ -77,6 +78,8 @@ export async function createInvoice(formData: {
     `;
     const params = [customerId, amountInCents, status, date];
     await pool.query(queryText, params);
+    console.log('Invoice created:', params);
+    await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
   } catch (error) {
     console.error('Database Error:', error);
     return {
@@ -235,10 +238,18 @@ export async function createBudget({
     status,
     fileUrl,
   ];
+  const queryMailData = `
+  SELECT a.name as area_name, c.name as customer_name
+  FROM areas a
+  JOIN customers c ON c.id = $2
+  WHERE a.id = $1
+`;  
 
+  const mailDataValues = [areaId, customerId];
   try {
     await pool.query(queryText, values);
     console.log('Presupuesto creado:', values);
+    await sendBudgetEmail(pool, year, areaId, program, project, customerId, concept, amount, status);
   } catch (error) {
     console.error('Error al insertar presupuesto:', error);
     throw new Error('No se pudo crear el presupuesto.');
@@ -402,3 +413,57 @@ export async function deleteCustomer(id: string) {
 //     throw new Error('Authentication process failed.');
 //   }
 // }
+
+
+
+export async function sendBudgetEmail(pool: Pool, year: string, areaId: string, program: string, project: string, customerId: string, concept: string, amount: number, status: string) {
+  const queryMailData = `
+    SELECT a.name as area_name, c.name as customer_name
+    FROM areas a
+    JOIN customers c ON c.id = $2
+    WHERE a.id = $1
+  `;
+
+  const mailDataValues = [areaId, customerId];
+
+  try {
+    const result = await pool.query(queryMailData, mailDataValues);
+    const areaName = result.rows[0].area_name;
+    const customerName = result.rows[0].customer_name;
+
+    const to = 'jmaragames@gmail.com';
+    const body = `Nuevo Presupuesto Creado:\n\nAño: ${year}\nÁrea: ${areaName}\nPrograma: ${program}\nProyecto: ${project}\nCliente: ${customerName}\nConcepto: ${concept}\nMonto: ${amount}\nEstado: ${status}`;
+    const subject = 'Nuevo Presupuesto Creado';
+    const cc = 'jmaragames@gmail.com';
+
+    await sendEmail(to, body, subject, cc);
+  } catch (error) {
+    console.error('Error al enviar el correo:', error);
+    throw new Error('No se pudo enviar el correo.');
+  }
+}
+
+export async function sendInvoiceEmail(pool: Pool, customerId: string, amountInCents: number, status: string, date: string) {
+  const queryMailData = `
+    SELECT name as customer_name
+    FROM customers
+    WHERE id = $1
+  `;
+
+  const mailDataValues = [customerId];
+
+  try {
+    const result = await pool.query(queryMailData, mailDataValues);
+    const customerName = result.rows[0].customer_name;
+
+    const to = 'jmaragames@gmail.com';
+    const body = `Nueva Factura Creada:\n\nCliente: ${customerName}\nMonto: ${amountInCents}\nEstado: ${status}\nFecha: ${date}`;
+    const subject = 'Nueva Factura Creada';
+    const cc = 'jmaragames@gmail.com';
+
+    await sendEmail(to, body, subject, cc);
+  } catch (error) {
+    console.error('Error al enviar el correo:', error);
+    throw new Error('No se pudo enviar el correo.');
+  }
+}
