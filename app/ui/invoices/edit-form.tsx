@@ -1,6 +1,8 @@
 'use client';
 
+import { updateInvoice } from '@/app/lib/actions';
 import { CustomerField, InvoiceForm } from '@/app/lib/definitions';
+import { Button } from '@/app/ui/button';
 import {
   CheckIcon,
   ClockIcon,
@@ -8,19 +10,45 @@ import {
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { Button } from '@/app/ui/button';
-import { updateInvoice } from '@/app/lib/actions';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
-export default function EditInvoiceForm({
-  invoice,
-  customers,
-}: {
-  invoice: InvoiceForm;
-  customers: CustomerField[];
-}) {
-  const updateInvoiceWithId = updateInvoice.bind(null, invoice.id);
+
+export default function EditInvoiceForm({ invoice, customers }: { invoice: InvoiceForm; customers: CustomerField[] }) {
+  const router = useRouter();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    try {
+      const result = await Swal.fire({
+        title: 'Confirm Update',
+        text: 'Are you sure you want to update this invoice?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update it',
+        cancelButtonText: 'Cancel',
+      });
+
+      if (!result.isConfirmed) return;
+
+      const response = await updateInvoice(invoice.id, formData);
+      if (!response.success) throw new Error(response.message);
+
+      await Swal.fire('Updated!', 'The invoice was updated successfully.', 'success');
+
+      router.push('/dashboard/invoices');
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      await Swal.fire('Error!', 'Failed to update the invoice.', 'error');
+    }
+  };
+
   return (
-    <form action={updateInvoiceWithId}>
+    <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
         {/* Customer Name */}
         <div className="mb-4">

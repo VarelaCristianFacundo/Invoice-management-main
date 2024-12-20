@@ -6,20 +6,10 @@ import { Button } from '@/app/ui/button';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
-interface State {
-  message: string | null;
-  errors: {
-    name?: string[];
-    email?: string[];
-    [key: string]: string[] | undefined;
-  };
-}
-
-export default function Form({ customer }: { customer: CustomerForm }) {
-  const initialState: State = { message: null, errors: {} };
-  const [state, setState] = useState<State>(initialState);
+export default function EditCustomerForm({ customer }: { customer: CustomerForm }) {
   const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -31,16 +21,28 @@ export default function Form({ customer }: { customer: CustomerForm }) {
     };
 
     try {
-      await updateCustomer(customer.id, formData);
-      setState({ message: 'Customer updated successfully', errors: {} });
+      const result = await Swal.fire({
+        title: 'Confirm Update',
+        text: 'Are you sure you want to update this customer?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update it',
+        cancelButtonText: 'Cancel',
+      });
+
+      if (!result.isConfirmed) return;
+
+      const response = await updateCustomer(customer.id, formData);
+      if (!response.success) throw new Error(response.message);
+
+      await Swal.fire('Updated!', 'The customer was updated successfully.', 'success');
+
+      // Redirigir y actualizar la tabla
       router.push('/dashboard/customers');
       router.refresh();
     } catch (error: any) {
-      setState({
-        ...state,
-        errors: error.errors || {},
-        message: error.message || 'An error occurred',
-      });
+      console.error(error);
+      await Swal.fire('Error!', error.message || 'Failed to update the customer.', 'error');
     }
   };
 
@@ -58,20 +60,11 @@ export default function Form({ customer }: { customer: CustomerForm }) {
                 id="name"
                 name="name"
                 type="text"
-                aria-describedby="name-error"
                 defaultValue={customer.name}
                 className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
               />
               <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
             </div>
-          </div>
-          <div id="name-error" aria-live="polite" aria-atomic="true">
-            {state.errors?.name &&
-              state.errors.name.map((error: string) => (
-                <p className="mt-2 text-sm text-red-500" key={error}>
-                  {error}
-                </p>
-              ))}
           </div>
         </div>
 
@@ -86,30 +79,15 @@ export default function Form({ customer }: { customer: CustomerForm }) {
                 id="email"
                 name="email"
                 type="email"
-                aria-describedby="email-error"
                 defaultValue={customer.email}
                 className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
               />
               <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
             </div>
           </div>
-          <div id="email-error" aria-live="polite" aria-atomic="true">
-            {state.errors?.email &&
-              state.errors.email.map((error: string) => (
-                <p className="mt-2 text-sm text-red-500" key={error}>
-                  {error}
-                </p>
-              ))}
-          </div>
         </div>
-
-        {/* Mensaje de Éxito o Error */}
-        {state.message && (
-          <p className="mt-2 text-sm text-green-500">
-            {state.message}
-          </p>
-        )}
       </div>
+
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/customers"
