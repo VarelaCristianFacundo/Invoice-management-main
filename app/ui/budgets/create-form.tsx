@@ -78,6 +78,7 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
       concept: formDataObj.get('concept') as string,
       amount: parseFloat(formDataObj.get('amount') as string),
       status: formDataObj.get('status') as string,
+      quarter: Number(formDataObj.get('quarter') as string),
       fileUrl,
     };
 

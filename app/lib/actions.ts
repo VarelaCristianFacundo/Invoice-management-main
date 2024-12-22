@@ -29,7 +29,9 @@ const CustomerFormSchema = z.object({
     invalid_type_error: 'Please enter an email.',
   }),
 });
-const CreateInvoice = FormSchema.omit({ id: true, date: true });
+const CreateInvoice = FormSchema.extend({
+  areaId: z.string(),
+}).omit({ id: true, date: true });
 const AddCustomer = CustomerFormSchema.omit({ id: true, date: true });
 
 const pool = new Pool({
@@ -57,6 +59,7 @@ export async function createInvoice(formData: {
   customerId: string;
   amount: number;
   status: 'pending' | 'paid';
+  areaId: string;
 }) {
   const validatedFields = CreateInvoice.safeParse(formData);
 
@@ -68,20 +71,24 @@ export async function createInvoice(formData: {
     };
   }
 
-  const { customerId, amount, status } = validatedFields.data;
+  const { customerId, amount, status, areaId } = validatedFields.data;
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
 
   try {
     const queryText = `
-      INSERT INTO invoices (customer_id, amount, status, date)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO invoices (customer_id, amount, status, date, areaId)
+      VALUES ($1, $2, $3, $4, $5)
     `;
-    const params = [customerId, amountInCents, status, date];
+    const params = [customerId, amountInCents, status, date, areaId];
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
+    
+    if(status === 'paid') {
+      updateAvailableAreaFounds(pool, areaId, amountInCents, status);
+    }
     await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
-    // Devuelve una respuesta exitosa
+    
     return {
       success: true,
       message: 'Invoice created successfully.',
@@ -156,35 +163,44 @@ export async function addCustomer(formData: { name: string; email: string }) {
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
-export async function updateInvoice(id: string, formData: FormData) {
-  const data = {
-    customerId: formData.get('customerId') as string,
-    amount: parseFloat(formData.get('amount') as string),
-    status: formData.get('status') as string,
-  };
-
-  const queryText = `
-    UPDATE invoices
-    SET customer_id = $1, amount = $2, status = $3
-    WHERE id = $4
-  `;
-  const params = [data.customerId, data.amount * 100, data.status, id];
-
+export async function updateInvoice(pool: Pool, invoiceId: string, customerId: string, amount: number, newStatus: string, date: string) {
   try {
-    const result = await pool.query(queryText, params);
-    if (result.rowCount === 0) {
-      throw new Error('No invoice found to update.');
+    // Obtener el estado actual de la factura
+    const currentStatus = await getInvoiceStatus(pool, invoiceId);
+
+    // Validar si el estado ha cambiado
+    if (currentStatus !== newStatus) {
+      // Actualizar los fondos del área basado en el nuevo estado
+      await updateAvailableAreaFounds(pool, customerId, amount, newStatus);
     }
-    return { success: true, message: 'Invoice updated successfully.' };
+
+    // Actualizar la factura
+    const updateQuery = `
+      UPDATE invoices
+      SET customer_id = $1, amount = $2, status = $3, date = $4
+      WHERE id = $5
+    `;
+    const updateParams = [customerId, amount, newStatus, date, invoiceId];
+    await pool.query(updateQuery, updateParams);
+    console.log('Invoice updated:', updateParams);
+
+    return {
+      success: true,
+      message: 'Invoice updated successfully.',
+    };
   } catch (error) {
     console.error('Database Error:', error);
-    return { success: false, message: 'Failed to update invoice.' };
+    return {
+      success: false,
+      message: 'Database Error: Failed to Update Invoice.',
+    };
   }
 }
 
 export async function createBudget({
   year,
   areaId,
+  quarter,
   program,
   project,
   customerId,
@@ -202,6 +218,7 @@ export async function createBudget({
   amount: number;
   status: string;
   fileUrl?: string;
+  quarter: number;
 }) {
   if (!areaId || typeof areaId !== 'string') {
     return {
@@ -209,7 +226,15 @@ export async function createBudget({
       message: 'The area is required and must be valid.',
     };
   }
+  const requiredAmount = amount;
+  const fundsAvailable = await validateFunds(pool, areaId, requiredAmount, year, quarter);
 
+  if (!fundsAvailable) {
+    return {
+      success: false,
+      message: 'Insufficient funds for the specified area.',
+    };
+  }
   const queryText = `
     INSERT INTO budgets (year, area_id, program, project, customer_id, concept, amount, status, date, file_url)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_DATE, $9)
@@ -446,5 +471,66 @@ export async function sendInvoiceEmail(pool: Pool, customerId: string, amountInC
   } catch (error) {
     console.error('Error al enviar el correo:', error);
     throw new Error('No se pudo enviar el correo.');
+  }
+}
+
+export async function validateFunds(pool: Pool, areaId: String, requiredAmount: number, year: string, quarter: number): Promise<boolean> {
+  const queryText = `
+    SELECT remaining_funds
+    FROM area_funds
+    WHERE area_id = $1 AND year = $2 AND quarter = $3 
+  `;
+  const values = [areaId, year, quarter];
+
+  try {
+    const result = await pool.query(queryText, values);
+    if (result.rows.length === 0) {
+      throw new Error(`Area encontrada id buscado: ${areaId}`);
+    }
+
+    const remaining_funds = result.rows[0].remaining_funds;
+    return remaining_funds >= requiredAmount;
+  } catch (error) {
+    console.error('Error al validar fondos:', error);
+    throw new Error('Error error al validar fondos.');
+  }
+}
+
+async function updateAvailableAreaFounds(pool: Pool, areaId: string, amount: number, status: string) {
+  const updateFundsQuery = `
+    UPDATE area_funds
+    SET 
+      remaining_funds = remaining_funds + CASE WHEN $3 = 'pending' THEN $1 ELSE -$1 END,
+      executed_funds = executed_funds + CASE WHEN $3 = 'pending' THEN -$1 ELSE $1 END
+    WHERE area_id = $2
+  `;
+  const updateFundsParams = [amount, areaId, status];
+  try {
+    await pool.query(updateFundsQuery, updateFundsParams);
+    console.log('Area funds updated:', updateFundsParams);
+  } catch (error) {
+    console.error('Error updating area funds:', error);
+    throw new Error('Error updating area funds');
+  }
+}
+
+export async function getInvoiceStatus(pool: Pool, invoiceId: string): Promise<string> {
+  const getStatusQuery = `
+    SELECT status
+    FROM invoices
+    WHERE id = $1
+  `;
+  const getStatusParams = [invoiceId];
+
+  try {
+    const statusResult = await pool.query(getStatusQuery, getStatusParams);
+    if (statusResult.rows.length === 0) {
+      throw new Error(`Invoice not found with id: ${invoiceId}`);
+    }
+
+    return statusResult.rows[0].status;
+  } catch (error) {
+    console.error('Error getting invoice status:', error);
+    throw new Error('Error getting invoice status');
   }
 }

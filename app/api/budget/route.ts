@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       amount,
       status,
       fileUrl,
+      quarter
     } = body;
 
     // Inserta el presupuesto usando la función `createBudget`
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       amount: parseFloat(amount),
       status,
       fileUrl,
+      quarter
     });
     console.log('Valor de fileUrl en route.ts:', fileUrl);
 

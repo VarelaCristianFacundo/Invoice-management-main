@@ -37,6 +37,7 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
       customerId: (event.currentTarget as any).customerId.value,
       amount: parseFloat((event.currentTarget as any).amount.value),
       status: (event.currentTarget as any).status.value,
+      areaId: (event.currentTarget as any).areaId.value,
     };
 
     const result = await Swal.fire({
