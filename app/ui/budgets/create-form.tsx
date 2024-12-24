@@ -27,7 +27,7 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
       if (!areaId) {
         // Cambiar console.error por un log condicional
         if (process.env.NODE_ENV === 'development') {
-          console.debug('Area ID is required to fetch funds');
+          console.debug('Area ID is required to fetch funds.');
         }
         setAvailableFunds(0);
         return;
