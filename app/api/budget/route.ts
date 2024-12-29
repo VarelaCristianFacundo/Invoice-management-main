@@ -7,37 +7,27 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     console.log('Request body:', body); // Log para verificar el contenido del cuerpo de la solicitud
-
     const {
+      id,
       year,
       areaId,
       program,
-      project,
-      customerId,
-      concept,
-      amount,
-      status,
-      fileUrl,
-      quarter
+      projectId,
+      allocated_amount,
+      half
     } = body;
 
     // Inserta el presupuesto usando la función `createBudget`
     await createBudget({
-      year: String(year),
+      id,
+      year,
       areaId,
       program,
-      project,
-      customerId,
-      concept,
-      amount: parseFloat(amount),
-      status,
-      fileUrl,
-      quarter
+      projectId,
+      allocated_amount,
+      half
     });
-    console.log('Valor de fileUrl en route.ts:', fileUrl);
-
     console.log('Budget created successfully'); // Log para confirmar que el presupuesto se creó sin errores
-
     return NextResponse.json(
       { message: 'Budget created successfully' },
       { status: 201 },

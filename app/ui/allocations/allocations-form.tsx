@@ -22,6 +22,8 @@ const sanitizeText = (text: string) => {
 export default function AllocationsForm() {
     const [areas, setAreas] = useState<Area[]>([]);
     const [funds, setFunds] = useState<Record<string, string | number>>({});
+    const [years, setYears] = useState<Record<string, string>>({});
+    const [quarters, setQuarters] = useState<Record<string, string>>({});
 
     // Mover loadAreas fuera del useEffect para reutilizarla
     const loadAreas = async () => {
@@ -30,10 +32,16 @@ export default function AllocationsForm() {
             const areasData: Area[] = await res.json();
             setAreas(areasData);
             const initialFunds: Record<string, string | number> = {};
+            const initialYears: Record<string, string> = {};
+            const initialQuarters: Record<string, string> = {};
             areasData.forEach((area) => {
                 initialFunds[area.id] = area.allocated_funds ?? '';
+                initialYears[area.id] = '';
+                initialQuarters[area.id] = '';
             });
             setFunds(initialFunds);
+            setYears(initialYears);
+            setQuarters(initialQuarters);
         } catch (error) {
             Swal.fire('Error', 'Failed to load areas. Please try again later.', 'error');
         }
@@ -43,8 +51,14 @@ export default function AllocationsForm() {
         loadAreas(); // Invocar la función al montar el componente
     }, []);
 
-    const handleChange = (areaId: string, value: string | number) => {
-        setFunds({ ...funds, [areaId]: value });
+    const handleChange = (areaId: string, field: string, value: string | number) => {
+        if (field === 'funds') {
+            setFunds({ ...funds, [areaId]: value });
+        } else if (field === 'year') {
+            setYears({ ...years, [areaId]: value as string });
+        } else if (field === 'quarter') {
+            setQuarters({ ...quarters, [areaId]: value as string});
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -54,8 +68,10 @@ export default function AllocationsForm() {
             .map(([areaId, amount]) => ({
                 areaId,
                 amount: parseFloat(amount as string),
+                year: parseInt(years[areaId]),
+                quarter: parseInt(quarters[areaId]),
             }))
-            .filter((update) => !isNaN(update.amount));
+            .filter((update) => !isNaN(update.amount) && !isNaN(update.year) && !isNaN(update.quarter));
 
         if (updates.length === 0) {
             Swal.fire('No Changes', 'There are no updates to save.', 'info');
@@ -107,9 +123,32 @@ export default function AllocationsForm() {
                         type="number"
                         step="0.01"
                         value={funds[area.id]}
-                        onChange={(e) => handleChange(area.id, e.target.value)}
+                        onChange={(e) => handleChange(area.id, 'funds', e.target.value)}
                         className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
                         min="0"
+                    />
+                    <label htmlFor={`year-${area.id}`} className="block text-sm font-medium mt-2">
+                        Año:
+                    </label>
+                    <input
+                        id={`year-${area.id}`}
+                        type="number"
+                        value={years[area.id]}
+                        onChange={(e) => handleChange(area.id, 'year', e.target.value)}
+                        className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+                        min="0"
+                    />
+                    <label htmlFor={`quarter-${area.id}`} className="block text-sm font-medium mt-2">
+                        Quarter:
+                    </label>
+                    <input
+                        id={`quarter-${area.id}`}
+                        type="number"
+                        value={quarters[area.id]}
+                        onChange={(e) => handleChange(area.id, 'quarter', e.target.value)}
+                        className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+                        min="1"
+                        max="4"
                     />
                 </div>
             ))}

@@ -29,7 +29,7 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
 
       if (!result.isConfirmed) return;
 
-      const response = await updateBudget(budget.id, formData);
+      const response = await updateBudget(budget.id, formData,'');
       if (!response.success) throw new Error(response.message);
 
       await Swal.fire('Updated!', 'The budget was updated successfully.', 'success');

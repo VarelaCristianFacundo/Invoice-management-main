@@ -27,10 +27,10 @@ export default async function RejectedBudgetsPage() {
                         {/* Iteramos sobre los presupuestos en cada área */}
                         {groupedBudgets[area].map((budget: any) => (
                             <div key={budget.id} className="rounded-md bg-white p-4 shadow hover:shadow-lg transition-shadow">
-                                <p><strong>Concepto:</strong> {budget.concept}</p>
+                                {/* <p><strong>Concepto:</strong> {budget.concept}</p>
                                 <p><strong>Monto:</strong> {formatCurrency(budget.amount)}</p>
                                 <p><strong>Fecha:</strong> {formatDateToLocal(budget.date)}</p>
-                                <BudgetStatus status={budget.status} />
+                                <BudgetStatus status={budget.status} /> */}
                             </div>
                         ))}
                     </div>

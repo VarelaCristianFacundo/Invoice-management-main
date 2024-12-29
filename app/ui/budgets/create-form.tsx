@@ -70,16 +70,13 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
     let fileUrl = '';
 
     const formData = {
-      year: formDataObj.get('year') as string,
-      program: formDataObj.get('program') as string,
+      id: formDataObj.get('id') as string,
       areaId: selectedAreaId,
-      project: formDataObj.get('project') as string,
-      customerId: formDataObj.get('customerId') as string,
-      concept: formDataObj.get('concept') as string,
-      amount: parseFloat(formDataObj.get('amount') as string),
-      status: formDataObj.get('status') as string,
-      quarter: Number(formDataObj.get('quarter') as string),
-      fileUrl,
+      projectId: formDataObj.get('project') as string,
+      allocated_amount: parseFloat(formDataObj.get('amount') as string),
+      year: Number(formDataObj.get('year') as unknown as string),
+      half: Number(formDataObj.get('half') as unknown as string),
+      program: formDataObj.get('program') as string,
     };
 
     // Confirmación con SweetAlert
@@ -108,15 +105,9 @@ export default function CreateBudgetForm({ customers, areas }: { customers: Cust
         return;
       }
 
-      // Obtener la URL pública del archivo
-      const { data: publicUrlData } = supabase.storage
-        .from('budgets')
-        .getPublicUrl(filePath);
-
-      formData.fileUrl = publicUrlData.publicUrl;
     }
     // Validar si el monto excede el fondo disponible
-    if (formData.amount > availableFunds) {
+    if (formData.allocated_amount > availableFunds) {
       Swal.fire('Error!', 'The amount exceeds available funds.', 'error');
       return;
     }

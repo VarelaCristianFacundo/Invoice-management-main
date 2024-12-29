@@ -323,13 +323,17 @@ export async function fetchBudgetById(id: string) {
 }
 
 export async function fetchRejectedBudgets() {
-  const queryText = `
+/*   const queryText = `
     SELECT budgets.*, areas.name AS area_name
     FROM budgets
     LEFT JOIN areas ON budgets.area_id = areas.id
     WHERE budgets.status = 'rejected'
     ORDER BY areas.name ASC
-  `;
+  `; */
+  const queryText = `
+  SELECT *
+  FROM budgets
+`;
   const result = await pool.query(queryText);
   return result.rows;
 }
@@ -362,4 +366,19 @@ export async function getUser(email: string) {
   const params = [email];
   const users = await queryDatabase<User>(queryText, params);
   return users[0];
+}
+
+export async function getAllYears(): Promise<number[]> {
+  const queryText = `
+    SELECT year
+    FROM year
+  `;
+  try {
+    const result = await pool.query(queryText);
+    const years = result.rows.map(row => row.year);
+    return years;
+  } catch (error) {
+    console.error('Error fetching years:', error);
+    throw new Error('Error fetching years');
+  }
 }
