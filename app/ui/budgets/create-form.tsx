@@ -1,323 +1,259 @@
 "use client";
 
-import { createBudget } from '@/app/lib/actions';
-import { CustomerField } from '@/app/lib/definitions';
-import { supabase } from '@/app/lib/supabaseClient';
-import { Button } from '@/app/ui/button';
 import {
-  CheckIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
-import Link from 'next/link';
+  createBudgetAllocation,
+  createProject
+} from '@/app/lib/actions';
+import { Button } from '@/app/ui/button';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css';
 
-export default function CreateBudgetForm({ customers, areas }: { customers: CustomerField[], areas: any[] }) {
-  const [message, setMessage] = useState<string | null>(null);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
-  const [availableFunds, setAvailableFunds] = useState<number>(0);
+type AreaType = {
+  id: string;
+  name: string;
+};
+
+export default function CreateBudgetForm({ areas }: { areas: AreaType[] }) {
+  const [step, setStep] = useState(1);
+  const [projectId, setProjectId] = useState<string | null>(null);
+
+  // Años
+  const [years, setYears] = useState<number[]>([]);
+  const [isLoadingYears, setIsLoadingYears] = useState(true);
+
+  // Datos del form
+  const [formData, setFormData] = useState({
+    project_name: '',
+    year: '',
+    allocated_amount: 0,
+    program: '',
+    areaId: '',
+    half: 1
+  });
+
   const router = useRouter();
 
+  // 1. Cargar años desde la API
   useEffect(() => {
-    async function fetchAvailableFunds(areaId: string) {
-      if (!areaId) {
-        // Cambiar console.error por un log condicional
-        if (process.env.NODE_ENV === 'development') {
-          console.debug('Area ID is required to fetch funds');
-        }
-        setAvailableFunds(0);
-        return;
-      }
-
+    const getYears = async () => {
       try {
-        const res = await fetch(`/api/areas/${areaId}/funds`);
-
-        if (!res.ok) {
-          console.error(`API error: ${res.statusText}`);
-          setAvailableFunds(0);
-          return;
-        }
-
-        const text = await res.text();
-        const data = text ? JSON.parse(text) : {};
-        setAvailableFunds(data.allocated_funds || 0);
+        const res = await fetch('/api/year');
+        if (!res.ok) throw new Error('Error fetching years data');
+        const data: number[] = await res.json();
+        const validYears = data.filter(y => typeof y === 'number');
+        setYears(validYears);
       } catch (error) {
-        console.error('Error fetching available funds:', error);
-        setAvailableFunds(0);
+        console.error('Error fetching years:', error);
+        Swal.fire('Error', 'Error fetching years. Please try again later.', 'error');
+      } finally {
+        setIsLoadingYears(false);
       }
-    }
+    };
+    getYears();
+  }, []);
 
-
-    fetchAvailableFunds(selectedAreaId);
-  }, [selectedAreaId]);
-
-  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const areaId = e.target.value;
-    setSelectedAreaId(areaId);
+  // 2. Manejo de cambios en inputs
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'allocated_amount' ? parseFloat(value) : value
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // 3. Paso 1: Crear solo el proyecto (budgets)
+  const handleSubmitStep1 = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    const form = e.currentTarget as HTMLFormElement;
-    const formDataObj = new FormData(form);
-    const fileInput = form.elements.namedItem('file') as HTMLInputElement;
-    const file = fileInput?.files?.[0];
-    let fileUrl = '';
-
-    const formData = {
-      id: formDataObj.get('id') as string,
-      areaId: selectedAreaId,
-      projectId: formDataObj.get('project') as string,
-      allocated_amount: parseFloat(formDataObj.get('amount') as string),
-      year: Number(formDataObj.get('year') as unknown as string),
-      half: Number(formDataObj.get('half') as unknown as string),
-      program: formDataObj.get('program') as string,
-    };
-
-    // Confirmación con SweetAlert
-    const result = await Swal.fire({
-      title: 'Confirm Creation',
-      text: 'Are you sure you want to create this budget?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, create it',
-      cancelButtonText: 'Cancel',
-    });
-
-    if (!result.isConfirmed) return;
-
-    console.log('Datos enviados al servidor:', formData);
-
-    if (file) {
-      const filePath = `budgets/${Date.now()}_${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('budgets')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        console.error('Error uploading file:', uploadError);
-        Swal.fire('Error!', 'Error uploading file.', 'error');
+    try {
+      const yearNumber = parseInt(formData.year);
+      if (!formData.project_name || !yearNumber) {
+        Swal.fire('Error', 'Please provide project name and valid year.', 'error');
         return;
       }
 
-    }
-    // Validar si el monto excede el fondo disponible
-    if (formData.allocated_amount > availableFunds) {
-      Swal.fire('Error!', 'The amount exceeds available funds.', 'error');
-      return;
-    }
-
-    try {
-      const response = await createBudget(formData);
-
-      if (response.success) {
-        await Swal.fire('Created!', response.message, 'success');
-        router.push('/dashboard/budgets');
-        router.refresh();
-      } else {
-        Swal.fire('Error!', response.message, 'error');
+      // Llamamos a createProject
+      const res = await createProject(formData.project_name, yearNumber);
+      if (!res.success) {
+        Swal.fire('Error', res.message, 'error');
+        return;
       }
+
+      // Guardamos ID y pasamos a step 2
+      setProjectId(res.projectId);
+      Swal.fire('Success', res.message, 'success');
+      setStep(2);
+
     } catch (error) {
-      console.error('Error creating budget:', error);
-      Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+      console.error('Error creating project:', error);
+      Swal.fire('Error', 'Unexpected error', 'error');
     }
   };
 
+  // 4. Paso 2: Crear la asignación (budget_allocations)
+  const handleSubmitStep2 = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      if (!projectId) {
+        Swal.fire('Error', 'No Project ID found.', 'error');
+        return;
+      }
+      if (!formData.areaId) {
+        Swal.fire('Error', 'Please select an area.', 'error');
+        return;
+      }
+      const yearNumber = parseInt(formData.year);
+
+      // Llamamos a createBudgetAllocation
+      const res = await createBudgetAllocation(
+        projectId,
+        formData.areaId,
+        formData.allocated_amount,
+        formData.half,
+        formData.program,
+        yearNumber  // <--- Mandamos el año
+      );
+
+      if (!res.success) {
+        Swal.fire('Error', res.message, 'error');
+        return;
+      }
+      Swal.fire('Success', res.message, 'success');
+      router.push('/dashboard/budgets');
+    } catch (error) {
+      console.error('Error creating budget allocation:', error);
+      Swal.fire('Error', 'Unexpected error', 'error');
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-md bg-gray-50 p-4 md:p-6">
-      {/* Form fields */}
-      <div className="mb-4">
-        <label htmlFor="year" className="mb-2 block text-sm font-medium">
-          Year
-        </label>
-        <input
-          id="year"
-          name="year"
-          type="number"
-          className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          placeholder="Enter year"
-        />
-      </div>
-      <div className="mb-4">
-        <label htmlFor="area" className="mb-2 block text-sm font-medium">
-          Área
-        </label>
-        <select
-          id="area"
-          name="area"
-          required
-          value={selectedAreaId}
-          onChange={handleAreaChange}
-          className="block w-full rounded-md border border-gray-200 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="" disabled>
-            Seleccionar área
-          </option>
-          {areas.map((area) => (
-            <option key={area.id} value={area.id}>
-              {area.name}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="rounded-md bg-gray-50 p-4 md:p-6">
+      {step === 1 && (
+        <form onSubmit={handleSubmitStep1}>
+          <div className="mb-4">
+            <label htmlFor="year" className="mb-2 block text-sm font-medium">
+              Year
+            </label>
+            {isLoadingYears ? (
+              <p>Loading years...</p>
+            ) : (
+              <select
+                id="year"
+                name="year"
+                value={formData.year}
+                onChange={handleChange}
+                className="block w-full rounded-md border py-2 px-3 text-sm"
+                required
+              >
+                <option value="">Select a year</option>
+                {years.map(y => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
-      {/* Mostrar fondo disponible */}
-      {selectedAreaId && (
-        <div className="mb-4">
-          <p className="text-sm font-medium">
-            Fondo disponible: <span className="text-green-600">{availableFunds.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</span>
-          </p>
-        </div>
+          <div className="mb-4">
+            <label htmlFor="project_name" className="mb-2 block text-sm font-medium">
+              Project Name
+            </label>
+            <input
+              id="project_name"
+              name="project_name"
+              type="text"
+              value={formData.project_name}
+              onChange={handleChange}
+              className="block w-full rounded-md border py-2 px-3 text-sm"
+              required
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-4">
+            <Button type="submit">Create Project</Button>
+          </div>
+        </form>
       )}
 
+      {step === 2 && projectId && (
+        <form onSubmit={handleSubmitStep2}>
+          <h2 className="mb-4 text-lg font-semibold text-gray-700">
+            Now assigning funds to "{formData.project_name}" ({formData.year})
+          </h2>
 
-
-      <div className="mb-4">
-        <label htmlFor="program" className="mb-2 block text-sm font-medium">
-          Program
-        </label>
-        <input
-          id="program"
-          name="program"
-          type="text"
-          className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          placeholder="Enter program name"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="project" className="mb-2 block text-sm font-medium">
-          Project
-        </label>
-        <input
-          id="project"
-          name="project"
-          type="text"
-          className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          placeholder="Enter project name"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="customerId" className="mb-2 block text-sm font-medium">
-          Choose customer
-        </label>
-        <div className="relative">
-          <select
-            id="customerId"
-            name="customerId"
-            className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-            defaultValue=""
-            aria-describedby="customer-error"
-          >
-            <option value="" disabled>Select a customer</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>{customer.name}</option>
-            ))}
-          </select>
-          <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="concept" className="mb-2 block text-sm font-medium">
-          Concept
-        </label>
-        <input
-          id="concept"
-          name="concept"
-          type="text"
-          className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          placeholder="Enter concept"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="amount" className="mb-2 block text-sm font-medium">
-          Choose an amount
-        </label>
-        <div className="relative">
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            step="0.01"
-            className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-            placeholder="Enter amount in USD"
-          />
-          <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="file" className="mb-2 block text-sm font-medium">
-          Upload File
-        </label>
-        <input
-          id="file"
-          name="file"
-          type="file"
-          accept=".pdf,image/*"
-          className="block w-full text-sm text-gray-500
-               file:mr-4 file:py-2 file:px-4
-               file:rounded-full file:border-0
-               file:text-sm file:font-semibold
-               file:bg-blue-50 file:text-blue-700
-               hover:file:bg-blue-100"
-        />
-      </div>
-
-      <fieldset>
-        <legend className="mb-2 block text-sm font-medium">Set the budget status</legend>
-        <div className="rounded-md border border-gray-200 bg-white px-[14px] py-3">
-          <div className="flex gap-4">
-            <div className="flex items-center">
-              <input
-                id="pending"
-                name="status"
-                type="radio"
-                value="pending"
-                className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-                defaultChecked
-              />
-              <label
-                htmlFor="pending"
-                className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
-              >
-                Pending <ClockIcon className="h-4 w-4" />
-              </label>
-            </div>
-            <div className="flex items-center">
-              <input
-                id="approved"
-                name="status"
-                type="radio"
-                value="approved"
-                className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-              />
-              <label
-                htmlFor="approved"
-                className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white"
-              >
-                Approved <CheckIcon className="h-4 w-4" />
-              </label>
-            </div>
+          <div className="mb-4">
+            <label htmlFor="areaId" className="mb-2 block text-sm font-medium">
+              Select Area
+            </label>
+            <select
+              id="areaId"
+              name="areaId"
+              value={formData.areaId}
+              onChange={handleChange}
+              className="block w-full rounded-md border py-2 px-3 text-sm"
+              required
+            >
+              <option value="" disabled>Select an area</option>
+              {areas.map(area => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      </fieldset>
 
-      <div className="mt-6 flex justify-end gap-4">
-        <Link href="/dashboard/budgets" className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200">
-          Cancel
-        </Link>
-        <Button type="submit">Create Budget</Button>
-      </div>
-    </form>
+          <div className="mb-4">
+            <label htmlFor="allocated_amount" className="mb-2 block text-sm font-medium">
+              Allocated Amount
+            </label>
+            <input
+              id="allocated_amount"
+              name="allocated_amount"
+              type="number"
+              value={formData.allocated_amount}
+              onChange={handleChange}
+              className="block w-full rounded-md border py-2 px-3 text-sm"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="program" className="mb-2 block text-sm font-medium">
+              Program
+            </label>
+            <input
+              id="program"
+              name="program"
+              type="text"
+              value={formData.program}
+              onChange={handleChange}
+              className="block w-full rounded-md border py-2 px-3 text-sm"
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="half" className="mb-2 block text-sm font-medium">
+              Semestre
+            </label>
+            <select
+              id="half"
+              name="half"
+              value={formData.half}
+              onChange={handleChange}
+              className="block w-full rounded-md border py-2 px-3 text-sm"
+            >
+              <option value={1}>First Semester</option>
+              <option value={2}>Second Semester</option>
+            </select>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-4">
+            <Button type="submit">Assign Area</Button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

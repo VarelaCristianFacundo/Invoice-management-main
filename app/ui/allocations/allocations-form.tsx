@@ -1,160 +1,226 @@
 "use client";
 
-import { formatCurrency } from '@/app/lib/utils';
-import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css';
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
+
+type Fund = {
+    half: number;
+    amount: number | null;
+};
 
 type Area = {
     id: string;
     name: string;
-    allocated_funds: number | null;
-};
-
-const sanitizeText = (text: string) => {
-    try {
-        return decodeURIComponent(escape(text));
-    } catch {
-        return text;
-    }
+    funds: Fund[];
 };
 
 export default function AllocationsForm() {
     const [areas, setAreas] = useState<Area[]>([]);
-    const [funds, setFunds] = useState<Record<string, string | number>>({});
-    const [years, setYears] = useState<Record<string, string>>({});
-    const [quarters, setQuarters] = useState<Record<string, string>>({});
-
-    // Mover loadAreas fuera del useEffect para reutilizarla
-    const loadAreas = async () => {
-        try {
-            const res = await fetch('/api/areas');
-            const areasData: Area[] = await res.json();
-            setAreas(areasData);
-            const initialFunds: Record<string, string | number> = {};
-            const initialYears: Record<string, string> = {};
-            const initialQuarters: Record<string, string> = {};
-            areasData.forEach((area) => {
-                initialFunds[area.id] = area.allocated_funds ?? '';
-                initialYears[area.id] = '';
-                initialQuarters[area.id] = '';
-            });
-            setFunds(initialFunds);
-            setYears(initialYears);
-            setQuarters(initialQuarters);
-        } catch (error) {
-            Swal.fire('Error', 'Failed to load areas. Please try again later.', 'error');
-        }
-    };
+    const [years, setYears] = useState<number[]>([]);
+    const [allocations, setAllocations] = useState<
+        Record<string, { year: number; half: number; amount: number }>
+    >({});
+    const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        loadAreas(); // Invocar la función al montar el componente
+        const fetchData = async () => {
+            try {
+                const [areasRes, yearsRes] = await Promise.all([
+                    fetch("/api/areas"), // Endpoint de áreas con allocated_funds
+                    fetch("/api/year"), // Endpoint de años disponibles
+                ]);
+
+                if (!areasRes.ok || !yearsRes.ok) {
+                    throw new Error("Error fetching data from APIs");
+                }
+
+                const areasData = await areasRes.json();
+                const yearsData: number[] = await yearsRes.json();
+
+                // Agrupar fondos por área y semestre
+                const groupedAreas: Area[] = Object.values(
+                    areasData.reduce((acc: Record<string, Area>, item: any) => {
+                        if (!acc[item.id]) {
+                            acc[item.id] = { id: item.id, name: item.name, funds: [] };
+                        }
+                        acc[item.id].funds.push({
+                            half: item.half || 1,
+                            amount: item.allocated_funds ? parseFloat(item.allocated_funds) : null,
+                        });
+                        return acc;
+                    }, {})
+                );
+
+                // Filtrar años válidos
+                const yearList = yearsData.filter((year) => typeof year === "number" && year > 0);
+
+                setAreas(groupedAreas);
+                setYears(yearList);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                Swal.fire("Error", "Error fetching data. Please try again later.", "error");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
     }, []);
 
     const handleChange = (areaId: string, field: string, value: string | number) => {
-        if (field === 'funds') {
-            setFunds({ ...funds, [areaId]: value });
-        } else if (field === 'year') {
-            setYears({ ...years, [areaId]: value as string });
-        } else if (field === 'quarter') {
-            setQuarters({ ...quarters, [areaId]: value as string});
-        }
+        setAllocations((prev) => ({
+            ...prev,
+            [areaId]: {
+                ...prev[areaId],
+                [field]: value,
+            },
+        }));
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        const updates = Object.entries(funds)
-            .map(([areaId, amount]) => ({
+    const handleSubmit = async () => {
+        const updates = Object.entries(allocations)
+            .map(([areaId, data]) => ({
                 areaId,
-                amount: parseFloat(amount as string),
-                year: parseInt(years[areaId]),
-                quarter: parseInt(quarters[areaId]),
+                year: data.year,
+                half: data.half,
+                amount: data.amount,
             }))
-            .filter((update) => !isNaN(update.amount) && !isNaN(update.year) && !isNaN(update.quarter));
+            .filter(
+                (update) =>
+                    update.year &&
+                    update.half &&
+                    !isNaN(update.amount) &&
+                    update.amount > 0
+            );
 
         if (updates.length === 0) {
-            Swal.fire('No Changes', 'There are no updates to save.', 'info');
+            Swal.fire("No Changes", "Please complete all fields before submitting.", "info");
             return;
         }
 
-        const result = await Swal.fire({
-            title: 'Confirm Update',
-            text: 'Are you sure you want to update the funds?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, update',
-            cancelButtonText: 'Cancel',
-        });
-
-        if (!result.isConfirmed) return;
-
         try {
-            const res = await fetch('/api/area-funds', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const res = await fetch("/api/area-funds", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates),
             });
 
-            const data = await res.json(); // Parsear la respuesta JSON
-
-            if (!res.ok || !data.message.includes('successfully')) {
-                throw new Error(data.error || 'Failed to update area funds');
+            if (!res.ok) {
+                const error = await res.json();
+                throw new Error(error.error || "Failed to save area funds.");
             }
 
-            Swal.fire('Success', 'Funds updated successfully!', 'success');
-            loadAreas(); // Recargar las áreas después de la actualización
-        } catch (error: any) {
-            Swal.fire('Error', error.message || 'Failed to update area funds. Please try again.', 'error');
+            Swal.fire("Success", "Funds saved successfully!", "success");
+        } catch (error) {
+            Swal.fire("Error", error.message, "error");
         }
     };
 
+    if (loading) {
+        return <div>Cargando datos...</div>;
+    }
+
     return (
-        <form onSubmit={handleSubmit}>
-            {areas.map((area) => (
-                <div key={area.id} className="mb-4">
-                    <label htmlFor={`area-${area.id}`} className="block text-sm font-medium">
-                        {sanitizeText(area.name)}{' '}
-                        ({'Current funds: '}
-                        {formatCurrency(area.allocated_funds || 0)})
-                    </label>
-                    <input
-                        id={`area-${area.id}`}
-                        type="number"
-                        step="0.01"
-                        value={funds[area.id]}
-                        onChange={(e) => handleChange(area.id, 'funds', e.target.value)}
-                        className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-                        min="0"
-                    />
-                    <label htmlFor={`year-${area.id}`} className="block text-sm font-medium mt-2">
-                        Año:
-                    </label>
-                    <input
-                        id={`year-${area.id}`}
-                        type="number"
-                        value={years[area.id]}
-                        onChange={(e) => handleChange(area.id, 'year', e.target.value)}
-                        className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-                        min="0"
-                    />
-                    <label htmlFor={`quarter-${area.id}`} className="block text-sm font-medium mt-2">
-                        Quarter:
-                    </label>
-                    <input
-                        id={`quarter-${area.id}`}
-                        type="number"
-                        value={quarters[area.id]}
-                        onChange={(e) => handleChange(area.id, 'quarter', e.target.value)}
-                        className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-                        min="1"
-                        max="4"
-                    />
-                </div>
-            ))}
-            <button type="submit" className="mt-4 rounded-md bg-blue-500 px-4 py-2 text-white">
-                Update Funds
+        <div className="relative flex flex-col md:flex-row gap-6">
+            {/* Left Column */}
+            <div className="flex-1">
+                {areas.map((area) => (
+                    <div key={area.id} className="mb-6 border-b pb-4">
+                        <h3 className="text-lg font-semibold">{area.name}</h3>
+
+                        <label htmlFor={`year-${area.id}`} className="block text-sm font-medium">
+                            Año
+                        </label>
+                        <select
+                            id={`year-${area.id}`}
+                            value={allocations[area.id]?.year || ""}
+                            onChange={(e) => handleChange(area.id, "year", parseInt(e.target.value))}
+                            className="block w-full rounded-md border border-gray-300 py-2 px-3 text-sm"
+                        >
+                            <option value="">Seleccione un año</option>
+                            {years.map((year) => (
+                                <option key={`year-${area.id}-${year}`} value={year}>
+                                    {year}
+                                </option>
+                            ))}
+                        </select>
+
+                        <label className="block text-sm font-medium mt-4">Semestre</label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name={`half-${area.id}`}
+                                    value="1"
+                                    onChange={() => handleChange(area.id, "half", 1)}
+                                    className="mr-2"
+                                    checked={allocations[area.id]?.half === 1}
+                                />
+                                1er Semestre
+                            </label>
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name={`half-${area.id}`}
+                                    value="2"
+                                    onChange={() => handleChange(area.id, "half", 2)}
+                                    className="mr-2"
+                                    checked={allocations[area.id]?.half === 2}
+                                />
+                                2do Semestre
+                            </label>
+                        </div>
+
+                        <label
+                            htmlFor={`amount-${area.id}`}
+                            className="block text-sm font-medium mt-4"
+                        >
+                            Monto
+                        </label>
+                        <input
+                            id={`amount-${area.id}`}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={allocations[area.id]?.amount || ""}
+                            onChange={(e) =>
+                                handleChange(area.id, "amount", parseFloat(e.target.value))
+                            }
+                            className="block w-full rounded-md border border-gray-300 py-2 px-3 text-sm"
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {/* Right Column */}
+            <div className="flex-1">
+                <h2 className="text-lg font-semibold mb-4">Montos Actuales por Área</h2>
+                <ul className="divide-y divide-gray-200">
+                    {areas.map((area) => (
+                        <li key={`current-${area.id}`} className="py-4">
+                            <h3 className="text-sm font-medium">{area.name}</h3>
+                            {area.funds.map((fund) => (
+                                <p key={`fund-${area.id}-${fund.half}`} className="text-sm text-gray-500">
+                                    {fund.half === 1 ? "1er Semestre:" : "2do Semestre:"}
+                                    <span className="ml-2 font-semibold">
+                                        ${fund.amount ? fund.amount.toFixed(2) : "0.00"}
+                                    </span>
+                                </p>
+                            ))}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+
+            {/* Floating Button */}
+            <button
+                type="button"
+                onClick={handleSubmit}
+                className="fixed bottom-4 right-4 bg-blue-600 text-white rounded-full p-4 shadow-lg hover:bg-blue-700 focus:ring"
+            >
+                Guardar Fondos
             </button>
-        </form>
+        </div>
     );
 }

@@ -9,7 +9,7 @@ export default async function Page() {
 
   return (
     <main>
-      <Breadcrumbs breadcrumbs={[{ label: 'Budgets', href: '/dashboard/budgets' }, { label: 'Create Budget', href: '/dashboard/budgets/create', active: true }]} />
+      <Breadcrumbs breadcrumbs={[{ label: 'Proyectos', href: '/dashboard/budgets' }, { label: 'Crear Proyecto', href: '/dashboard/budgets/create', active: true }]} />
       <BudgetForm customers={customers} areas={areas} />
     </main>
   );

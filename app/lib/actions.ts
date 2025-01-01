@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { Pool } from 'pg';
 import { z } from 'zod';
 import { sendEmail } from './SendMail';
-import { Yesteryear } from 'next/font/google';
 
 const FormSchema = z.object({
   id: z.string(),
@@ -79,7 +78,8 @@ export async function createInvoice(formData: {
     };
   }
 
-  const { customerId, amount, status, areaId, year, budgetAllocationId } = validatedFields.data;
+  const { customerId, amount, status, areaId, year, budgetAllocationId } =
+    validatedFields.data;
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
 
@@ -90,20 +90,35 @@ export async function createInvoice(formData: {
       INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
-    const params = [customerId, amountInCents, status, date, areaId, year, budgetAllocationId];
+    const params = [
+      customerId,
+      amountInCents,
+      status,
+      date,
+      areaId,
+      year,
+      budgetAllocationId,
+    ];
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
 
-    if(status === 'paid') { 
-      updateAvailableAreaFounds(pool, areaId, amount, year,half, budgetAllocationId, status);
+    if (status === 'paid') {
+      updateAvailableAreaFounds(
+        pool,
+        areaId,
+        amount,
+        year,
+        half,
+        budgetAllocationId,
+        status,
+      );
     }
     await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
-    
+
     return {
       success: true,
       message: 'Invoice created successfully.',
     };
-
   } catch (error) {
     console.error('Database Error:', error);
     return {
@@ -113,19 +128,24 @@ export async function createInvoice(formData: {
   }
 }
 
-
 export async function updateAreaFunds(
-  updates: {id: string, areaId: string; amount: number, year: number, half: number }[],
+  updates: {
+    id: string;
+    areaId: string;
+    amount: number;
+    year: number;
+    half: number;
+  }[],
 ) {
   try {
     for (const update of updates) {
-      const { id, areaId, amount, year,half } = update;
+      const { id, areaId, amount, year, half } = update;
       // Opcional: Validar que amount es un número válido
       if (isNaN(amount) || amount < 0) {
         console.warn(`Monto inválido para el área ${areaId}: ${amount}`);
         continue; // Saltar esta actualización
       }
-      if(id === 'new') {
+      if (id === 'new') {
         const queryTextInsert = `
           INSERT INTO area_funds (area_id, allocated_funds, year, quarter)
           VALUES ($1, $2, $3, $4)
@@ -138,7 +158,7 @@ export async function updateAreaFunds(
           SET allocated_funds = $2, year = $3, half = $4, area_id = $5
           WHERE id = $1
         `;
-        await pool.query(queryTextUpdate, [id, amount, year, half, areaId]);  
+        await pool.query(queryTextUpdate, [id, amount, year, half, areaId]);
       }
     }
     console.log('Fondos actualizados exitosamente');
@@ -181,7 +201,11 @@ export async function addCustomer(formData: { name: string; email: string }) {
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
-export async function updateInvoice(id: string, formData: FormData, changedBy: string) {
+export async function updateInvoice(
+  id: string,
+  formData: FormData,
+  changedBy: string,
+) {
   const data = {
     customerId: formData.get('customerId') as string,
     amount: Number(formData.get('amount') as unknown as string),
@@ -192,13 +216,22 @@ export async function updateInvoice(id: string, formData: FormData, changedBy: s
   };
 
   try {
-    const half = await getHalfByBudgetAllocationId(pool, data.budgetAllocationId);
+    const half = await getHalfByBudgetAllocationId(
+      pool,
+      data.budgetAllocationId,
+    );
     // Obtener el estado actual de la factura
     const invoice = await getInvoiceData(pool, id);
     const currentStatus = invoice.status;
     const currentAmount = invoice.amount;
-    const fundsAvailable = await validateFunds(pool, data.areaId, data.amount, String(data.year),half);
-    if(!fundsAvailable) {
+    const fundsAvailable = await validateFunds(
+      pool,
+      data.areaId,
+      data.amount,
+      String(data.year),
+      half,
+    );
+    if (!fundsAvailable) {
       return {
         success: false,
         message: 'Insufficent funds available',
@@ -206,12 +239,27 @@ export async function updateInvoice(id: string, formData: FormData, changedBy: s
     }
     // Validar si el estado ha cambiado
     if (currentStatus !== data.newStatus) {
-      if(data.newStatus === 'pending') {
-        
-        await updateAvailableAreaFounds(pool, data.areaId, data.amount, data.year, half, data.budgetAllocationId, data.newStatus);
+      if (data.newStatus === 'pending') {
+        await updateAvailableAreaFounds(
+          pool,
+          data.areaId,
+          data.amount,
+          data.year,
+          half,
+          data.budgetAllocationId,
+          data.newStatus,
+        );
       } else {
-        await updateAvailableAreaFounds(pool, data.areaId, data.amount, data.year, half, data.budgetAllocationId, data.newStatus);
-      }     
+        await updateAvailableAreaFounds(
+          pool,
+          data.areaId,
+          data.amount,
+          data.year,
+          half,
+          data.budgetAllocationId,
+          data.newStatus,
+        );
+      }
     }
 
     // Actualizar la factura
@@ -223,7 +271,15 @@ export async function updateInvoice(id: string, formData: FormData, changedBy: s
     const updateParams = [data.customerId, data.amount, data.newStatus, id];
     await pool.query(updateQuery, updateParams);
     console.log('Invoice updated:', updateParams);
-    await logInvoiceAudit(pool, id, data.customerId, data.amount, data.newStatus, 'UPDATE', changedBy);
+    await logInvoiceAudit(
+      pool,
+      id,
+      data.customerId,
+      data.amount,
+      data.newStatus,
+      'UPDATE',
+      changedBy,
+    );
     return {
       success: true,
       message: 'Invoice updated successfully.',
@@ -237,59 +293,163 @@ export async function updateInvoice(id: string, formData: FormData, changedBy: s
   }
 }
 
-//crear un proyecto
+// ----------------------------------------------------------------------------------
+// 1. createProject
+// ----------------------------------------------------------------------------------
+export async function createProject(project_name: string, year: number) {
+  try {
+    const queryText = `
+      INSERT INTO budgets (project_name, year)
+      VALUES ($1, $2)
+      RETURNING id
+    `;
+    const params = [project_name, year];
+    const result = await pool.query(queryText, params);
+
+    // Obtenemos el nuevo ID
+    const newProjectId = result.rows[0].id as string;
+
+    return {
+      success: true,
+      projectId: newProjectId,
+      message: 'Project created successfully.',
+    };
+  } catch (error) {
+    console.error('Error creating project:', error);
+    return {
+      success: false,
+      message: 'Database Error: Failed to create project in budgets.',
+    };
+  }
+}
+
+// ----------------------------------------------------------------------------------
+// 2. createBudgetAllocation
+// ----------------------------------------------------------------------------------
+export async function createBudgetAllocation(
+  project_id: string,
+  area_id: string,
+  allocated_amount: number,
+  half: number,
+  program: string,
+  year: number, // <---- Añadimos el year aquí
+) {
+  try {
+    // Notar que ahora incluimos también la columna "year"
+    const queryText = `
+      INSERT INTO budget_allocations 
+        (project_id, area_id, year, allocated_amount, executed_amount, half, program)
+      VALUES ($1, $2, $3, $4, 0, $5, $6)
+    `;
+    // Orden de parámetros: [project_id, area_id, year, allocated_amount, half, program]
+    const params = [
+      project_id,
+      area_id,
+      year, // <---- Insertamos year en la tercera posición
+      allocated_amount,
+      half,
+      program,
+    ];
+    await pool.query(queryText, params);
+
+    return {
+      success: true,
+      message: 'Budget allocation created successfully.',
+    };
+  } catch (error) {
+    console.error('Error creating budget allocation:', error.message);
+    console.error(error.stack);
+    return {
+      success: false,
+      message: 'Database Error: Failed to create budget allocation.',
+    };
+  }
+}
+
 export async function createBudget({
   id,
-  areaId,
   projectId,
+  areaId,
   allocated_amount,
   year,
   half,
-  program
+  program,
 }: {
   id: string;
-  projectId: string;	
+  projectId: string;
   areaId: string;
   allocated_amount: number;
   year: number;
   half: number;
   program: string;
-  
 }) {
-  if (id === 'new') {
-    try {
+  try {
+    if (id === 'new') {
+      // Primero creamos el proyecto en la tabla 'budgets'
       const queryText = `
-        INSERT INTO area_funds (area_id, allocated_funds, year, half, program, project_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO budgets (project_name, year)
+        VALUES ($1, $2) RETURNING id
       `;
-      const params = [areaId, allocated_amount, year, half, program, projectId];
-      await pool.query(queryText, params);
-      console.log('Project created:', params);
-      return { success: true, message: 'Project created successfully.' };
-    } catch (error) {
-      console.error('Database Error:', error);
-      return { success: false, message: 'Database Error: Failed to create project.' };
-    }
-  } else {
-    try {
-      const queryText = `
-        UPDATE area_funds
-        SET allocated_funds = $1, year = $2, half = $3, program = $4, project_id = $5
-        WHERE id = $6
-      `;
-      const params = [allocated_amount, year, half, program, projectId, id];
-      await pool.query(queryText, params);
-      console.log('Project updated:', params);
-      return { success: true, message: 'Project updated successfully.' };
-    } catch (error) {
-      console.error('Database Error:', error);
-      return { success: false, message: 'Database Error: Failed to update project.' };
-    }
-  }
+      const params = [projectId, year];
+      const result = await pool.query(queryText, params);
+      const projectId = result.rows[0].id; // Obtenemos el ID del nuevo proyecto.
 
+      // Ahora asignamos los fondos y áreas en 'budget_allocations'
+      const queryTextInsert = `
+        INSERT INTO budget_allocations (project_id, area_id, allocated_amount, executed_amount, program, half)
+        VALUES ($1, $2, $3, 0, $4, $5)
+      `;
+      const paramsAllocations = [
+        projectId,
+        areaId,
+        allocated_amount,
+        program,
+        half,
+      ];
+      await pool.query(queryTextInsert, paramsAllocations);
+      console.log('Budget created and areas assigned:', paramsAllocations);
+
+      return {
+        success: true,
+        message: 'Project and area allocated successfully.',
+      };
+    } else {
+      // Si no es un proyecto nuevo, actualizamos
+      const queryText = `
+        UPDATE budgets
+        SET project_name = $1, year = $2
+        WHERE id = $3
+      `;
+      const params = [projectId, year, id];
+      await pool.query(queryText, params);
+
+      // Actualizamos los fondos
+      const queryTextUpdate = `
+        UPDATE budget_allocations
+        SET allocated_amount = $3, executed_amount = 0, program = $4, half = $5
+        WHERE project_id = $1 AND area_id = $2
+      `;
+      const paramsUpdate = [projectId, areaId, allocated_amount, program, half];
+      await pool.query(queryTextUpdate, paramsUpdate);
+
+      console.log('Project and area updated:', paramsUpdate);
+
+      return {
+        success: true,
+        message: 'Project and allocation updated successfully.',
+      };
+    }
+  } catch (error) {
+    console.error('Database Error:', error);
+    return { success: false, message: 'Failed to create or update project.' };
+  }
 }
 
-export async function updateBudget(id: string, formData: FormData,  changedBy: string) {
+export async function updateBudget(
+  id: string,
+  formData: FormData,
+  changedBy: string,
+) {
   const data = {
     year: Number(formData.get('year')),
     program: formData.get('program') as string,
@@ -301,9 +461,20 @@ export async function updateBudget(id: string, formData: FormData,  changedBy: s
     status: formData.get('status') as string,
     quarter: Number(formData.get('quarter')),
   };
-  const fundsAvailable = await validateFunds(pool, data.areaId, data.amount, String(data.year), data.quarter);
-  const sumOfApproveds = await sumApprovedBudgetsByAreaAndQuarter(pool, data.areaId, String(data.year), data.quarter);
-  if(!fundsAvailable || sumOfApproveds < data.amount) {
+  const fundsAvailable = await validateFunds(
+    pool,
+    data.areaId,
+    data.amount,
+    String(data.year),
+    data.quarter,
+  );
+  const sumOfApproveds = await sumApprovedBudgetsByAreaAndQuarter(
+    pool,
+    data.areaId,
+    String(data.year),
+    data.quarter,
+  );
+  if (!fundsAvailable || sumOfApproveds < data.amount) {
     return { success: false, message: 'Insufficent funds available' };
   }
   const queryText = `
@@ -324,7 +495,20 @@ export async function updateBudget(id: string, formData: FormData,  changedBy: s
 
   try {
     const result = await pool.query(queryText, params);
-    await logBudgetAudit(pool, id, data.year, data.areaId, data.program, data.project, data.customerId, data.concept, data.amount, data.status, 'UPDATE', changedBy);
+    await logBudgetAudit(
+      pool,
+      id,
+      data.year,
+      data.areaId,
+      data.program,
+      data.project,
+      data.customerId,
+      data.concept,
+      data.amount,
+      data.status,
+      'UPDATE',
+      changedBy,
+    );
     if (result.rowCount === 0) {
       throw new Error('No budget found to update.');
     }
@@ -382,7 +566,12 @@ export async function deleteInvoice(id: string) {
   }
 }
 
-export async function sumApprovedBudgetsByAreaAndQuarter(pool: Pool, areaId: string, year: string, quarter: number): Promise<number> {
+export async function sumApprovedBudgetsByAreaAndQuarter(
+  pool: Pool,
+  areaId: string,
+  year: string,
+  quarter: number,
+): Promise<number> {
   const queryText = `
     SELECT SUM(amount) AS total_amount
     FROM budgets
@@ -462,9 +651,17 @@ export async function deleteCustomer(id: string) {
 //   }
 // }
 
-
-
-export async function sendBudgetEmail(pool: Pool, year: string, areaId: string, program: string, project: string, customerId: string, concept: string, amount: number, status: string) {
+export async function sendBudgetEmail(
+  pool: Pool,
+  year: string,
+  areaId: string,
+  program: string,
+  project: string,
+  customerId: string,
+  concept: string,
+  amount: number,
+  status: string,
+) {
   const queryMailData = `
     SELECT a.name as area_name, c.name as customer_name
     FROM areas a
@@ -491,7 +688,13 @@ export async function sendBudgetEmail(pool: Pool, year: string, areaId: string, 
   }
 }
 
-export async function sendInvoiceEmail(pool: Pool, customerId: string, amountInCents: number, status: string, date: string) {
+export async function sendInvoiceEmail(
+  pool: Pool,
+  customerId: string,
+  amountInCents: number,
+  status: string,
+  date: string,
+) {
   const queryMailData = `
     SELECT name as customer_name
     FROM customers
@@ -516,7 +719,13 @@ export async function sendInvoiceEmail(pool: Pool, customerId: string, amountInC
   }
 }
 
-export async function validateFunds(pool: Pool, areaId: String, requiredAmount: number, year: string, quarter: number): Promise<boolean> {
+export async function validateFunds(
+  pool: Pool,
+  areaId: String,
+  requiredAmount: number,
+  year: string,
+  quarter: number,
+): Promise<boolean> {
   const queryText = `
     SELECT remaining_funds
     FROM area_funds
@@ -538,7 +747,15 @@ export async function validateFunds(pool: Pool, areaId: String, requiredAmount: 
   }
 }
 
-async function updateAvailableAreaFounds(pool: Pool, areaId: string, amount: number, year:number, half:number, budgetAllocationId: string, status: string) {
+async function updateAvailableAreaFounds(
+  pool: Pool,
+  areaId: string,
+  amount: number,
+  year: number,
+  half: number,
+  budgetAllocationId: string,
+  status: string,
+) {
   updateBudgetAllocation(pool, budgetAllocationId, amount, status);
   const updateFundsQuery = `
     UPDATE area_funds
@@ -557,7 +774,12 @@ async function updateAvailableAreaFounds(pool: Pool, areaId: string, amount: num
   }
 }
 
-async function updateBudgetAllocation(pool: Pool, budgetAllocationId: string, amount: number, status: string) {
+async function updateBudgetAllocation(
+  pool: Pool,
+  budgetAllocationId: string,
+  amount: number,
+  status: string,
+) {
   const updateAllocationQuery = `
     UPDATE budget_allocations
     SET 
@@ -576,8 +798,10 @@ async function updateBudgetAllocation(pool: Pool, budgetAllocationId: string, am
   }
 }
 
-
-export async function getInvoiceData(pool: Pool, invoiceId: string): Promise<{ status: string, amount: number, year: number, quarter: number }> {
+export async function getInvoiceData(
+  pool: Pool,
+  invoiceId: string,
+): Promise<{ status: string; amount: number; year: number; quarter: number }> {
   const getStatusQuery = `
     SELECT status,amount,year,quarter
     FROM invoices
@@ -591,19 +815,39 @@ export async function getInvoiceData(pool: Pool, invoiceId: string): Promise<{ s
       throw new Error(`Invoice not found with id: ${invoiceId}`);
     }
 
-    return { status: statusResult.rows[0].status, amount: statusResult.rows[0].amount, year: statusResult.rows[0].year, quarter: statusResult.rows[0].quarter };
+    return {
+      status: statusResult.rows[0].status,
+      amount: statusResult.rows[0].amount,
+      year: statusResult.rows[0].year,
+      quarter: statusResult.rows[0].quarter,
+    };
   } catch (error) {
     console.error('Error getting invoice status:', error);
     throw new Error('Error getting invoice status');
   }
 }
 
-async function logInvoiceAudit(pool: Pool, invoiceId: string, customerId: string, amount: number, status: string, action: string, changedBy: string) {
+async function logInvoiceAudit(
+  pool: Pool,
+  invoiceId: string,
+  customerId: string,
+  amount: number,
+  status: string,
+  action: string,
+  changedBy: string,
+) {
   const auditQuery = `
     INSERT INTO invoice_audit (invoice_id, customer_id, amount, status, action, changed_by)
     VALUES ($1, $2, $3, $4, $5, $6)
   `;
-  const auditParams = [invoiceId, customerId, amount, status, action, changedBy];
+  const auditParams = [
+    invoiceId,
+    customerId,
+    amount,
+    status,
+    action,
+    changedBy,
+  ];
 
   try {
     await pool.query(auditQuery, auditParams);
@@ -614,12 +858,37 @@ async function logInvoiceAudit(pool: Pool, invoiceId: string, customerId: string
   }
 }
 
-async function logBudgetAudit(pool: Pool, budgetId: string, year: number, areaId: string, program: string, project: string, customerId: string, concept: string, amount: number, status: string, action: string, changedBy: string) {
+async function logBudgetAudit(
+  pool: Pool,
+  budgetId: string,
+  year: number,
+  areaId: string,
+  program: string,
+  project: string,
+  customerId: string,
+  concept: string,
+  amount: number,
+  status: string,
+  action: string,
+  changedBy: string,
+) {
   const auditQuery = `
     INSERT INTO budget_audit (budget_id, year, area_id, program, project, customer_id, concept, amount, status, action, changed_by)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
   `;
-  const auditParams = [budgetId, year, areaId, program, project, customerId, concept, amount, status, action, changedBy];
+  const auditParams = [
+    budgetId,
+    year,
+    areaId,
+    program,
+    project,
+    customerId,
+    concept,
+    amount,
+    status,
+    action,
+    changedBy,
+  ];
 
   try {
     await pool.query(auditQuery, auditParams);
@@ -630,8 +899,10 @@ async function logBudgetAudit(pool: Pool, budgetId: string, year: number, areaId
   }
 }
 
-
-export async function getHalfByBudgetAllocationId(pool: Pool, budgetAllocationId: string): Promise<number> {
+export async function getHalfByBudgetAllocationId(
+  pool: Pool,
+  budgetAllocationId: string,
+): Promise<number> {
   const queryText = `
     SELECT half
     FROM budget_allocations
@@ -642,7 +913,9 @@ export async function getHalfByBudgetAllocationId(pool: Pool, budgetAllocationId
   try {
     const result = await pool.query(queryText, queryParams);
     if (result.rows.length === 0) {
-      throw new Error(`No budget allocation found with id: ${budgetAllocationId}`);
+      throw new Error(
+        `No budget allocation found with id: ${budgetAllocationId}`,
+      );
     }
     return result.rows[0].half;
   } catch (error) {
@@ -650,5 +923,3 @@ export async function getHalfByBudgetAllocationId(pool: Pool, budgetAllocationId
     throw new Error('Error fetching half');
   }
 }
-
-

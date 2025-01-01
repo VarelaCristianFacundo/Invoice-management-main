@@ -256,22 +256,15 @@ export async function fetchCustomerById(id: string) {
 }
 
 export async function fetchBudgetsPages(query: string): Promise<number> {
-  try {
-    const queryText = `
-      SELECT COUNT(*)
-      FROM budgets
-      WHERE LOWER(status::text) LIKE $1
-    `;
-    const values = [`%${query.toLowerCase()}%`];
-    const result = await pool.query(queryText, values);
-
-    const count = parseInt(result.rows[0].count, 10);
-    const itemsPerPage = 10;
-    return Math.ceil(count / itemsPerPage);
-  } catch (error) {
-    console.error('Error fetching budgets pages:', error);
-    return 1;
-  }
+  const queryText = `
+    SELECT COUNT(*)
+    FROM budgets
+    WHERE project_name ILIKE $1;
+  `;
+  const values = [`%${query}%`];
+  const result = await pool.query(queryText, values);
+  const total = parseInt(result.rows[0].count, 10);
+  return Math.ceil(total / 10); // 10 ítems por página
 }
 
 export async function fetchAreasWithFunds() {
@@ -288,20 +281,41 @@ export async function fetchAreasWithFunds() {
   return result.rows;
 }
 export async function fetchFilteredBudgets(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * 10;
+  const offset = (currentPage - 1) * 10; // 10 items por página
   const queryText = `
-    SELECT budgets.*, customers.name AS provider_name, customers.image_url AS provider_image, areas.name AS area_name
+    SELECT 
+      budgets.id, 
+      budgets.project_name, 
+      budgets.year,
+      budget_allocations.program,
+      SUM(budget_allocations.allocated_amount) AS total_allocated_amount,
+      SUM(budget_allocations.executed_amount) AS total_executed_amount,
+      STRING_AGG(areas.name, ', ') AS area_names
     FROM budgets
-    JOIN customers ON budgets.customer_id = customers.id
-    LEFT JOIN areas ON budgets.area_id = areas.id
-    WHERE customers.name ILIKE $1 OR budgets.program ILIKE $1 OR budgets.project ILIKE $1 OR budgets.concept ILIKE $1
-    ORDER BY budgets.date DESC
-    LIMIT 10 OFFSET $2
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE 
+      budgets.project_name ILIKE $1 OR 
+      budgets.year::text ILIKE $1
+    GROUP BY budgets.id, budget_allocations.program
+    ORDER BY budgets.year DESC
+    LIMIT 10 OFFSET $2;
   `;
   const values = [`%${query}%`, offset];
-  const result = await pool.query(queryText, values);
-  return result.rows;
+
+  console.log('SQL Query:', queryText);
+  console.log('Query Values:', values);
+
+  try {
+    const result = await pool.query(queryText, values);
+    console.log('Query Result:', result.rows);
+    return result.rows;
+  } catch (error) {
+    console.error('Error executing SQL query:', error);
+    throw new Error('Database error occurred');
+  }
 }
+
 export async function getAreaFunds(areaId: string) {
   const queryText = `
     SELECT allocated_funds
@@ -313,17 +327,26 @@ export async function getAreaFunds(areaId: string) {
 }
 export async function fetchBudgetById(id: string) {
   const queryText = `
-      SELECT id, year, program, project, customer_id, concept, amount, date, status
-      FROM budgets
-      WHERE id = $1
+    SELECT 
+      budgets.id AS budget_id,
+      budgets.year,
+      budgets.project_name,
+      budget_allocations.program,
+      budget_allocations.allocated_amount,
+      budget_allocations.executed_amount,
+      budget_allocations.area_id,
+      areas.name AS area_name
+    FROM budgets
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE budgets.id = $1;
   `;
-  const values = [id];
-  const result = await pool.query(queryText, values);
+  const result = await pool.query(queryText, [id]);
   return result.rows[0];
 }
 
 export async function fetchRejectedBudgets() {
-/*   const queryText = `
+  /*   const queryText = `
     SELECT budgets.*, areas.name AS area_name
     FROM budgets
     LEFT JOIN areas ON budgets.area_id = areas.id
@@ -375,7 +398,7 @@ export async function getAllYears(): Promise<number[]> {
   `;
   try {
     const result = await pool.query(queryText);
-    const years = result.rows.map(row => row.year);
+    const years = result.rows.map((row) => row.year);
     return years;
   } catch (error) {
     console.error('Error fetching years:', error);

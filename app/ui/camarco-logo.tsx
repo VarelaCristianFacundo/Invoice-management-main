@@ -15,6 +15,7 @@ export default function CamarcoLogo() {
         objectFit="contain"
         objectPosition="top"
         style={{ width: '100%', height: '100%' }}
+        priority
       />
     </div>
   );

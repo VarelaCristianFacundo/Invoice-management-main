@@ -2,22 +2,11 @@ import { createBudget } from '@/app/lib/actions';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  console.log('POST request received at /api/budget'); // Log inicial para ver si la solicitud llega a esta ruta
-
   try {
     const body = await request.json();
-    console.log('Request body:', body); // Log para verificar el contenido del cuerpo de la solicitud
-    const {
-      id,
-      year,
-      areaId,
-      program,
-      projectId,
-      allocated_amount,
-      half
-    } = body;
+    const { id, year, areaId, program, projectId, allocated_amount, half } =
+      body;
 
-    // Inserta el presupuesto usando la función `createBudget`
     await createBudget({
       id,
       year,
@@ -25,15 +14,15 @@ export async function POST(request: Request) {
       program,
       projectId,
       allocated_amount,
-      half
+      half,
     });
-    console.log('Budget created successfully'); // Log para confirmar que el presupuesto se creó sin errores
+
     return NextResponse.json(
       { message: 'Budget created successfully' },
       { status: 201 },
     );
   } catch (error) {
-    console.error('Error in /api/budget route:', error); // Log de error en caso de que falle la creación del presupuesto
+    console.error('Error in /api/budget route:', error);
     return NextResponse.json(
       { error: 'Error creating budget' },
       { status: 500 },
