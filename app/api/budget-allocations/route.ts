@@ -27,6 +27,32 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const result = await db.query('SELECT * FROM budget_allocations');
-  return NextResponse.json(result.rows);
+  try {
+    // Ejemplo de JOIN con budgets y areas:
+    const result = await db.query(`
+      SELECT
+        ba.id,
+        ba.area_id,
+        a.name AS area_name,
+        ba.year,
+        ba.allocated_amount,
+        ba.executed_amount,
+        ba.program,
+        ba.half,
+        ba.project_id,
+        b.project_name
+      FROM budget_allocations ba
+      LEFT JOIN areas a ON ba.area_id = a.id
+      LEFT JOIN budgets b ON ba.project_id = b.id
+      ORDER BY b.project_name, a.name;
+    `);
+
+    return NextResponse.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching budget_allocations with joins:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch budget_allocations.' },
+      { status: 500 },
+    );
+  }
 }

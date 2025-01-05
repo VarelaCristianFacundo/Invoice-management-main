@@ -137,7 +137,6 @@ export async function createInvoice(formData: {
 
 export async function updateAreaFunds(
   updates: {
-    id: string;
     areaId: string;
     amount: number;
     year: number;
@@ -145,28 +144,24 @@ export async function updateAreaFunds(
   }[],
 ) {
   try {
-    for (const update of updates) {
-      const { id, areaId, amount, year, half } = update;
-      // Opcional: Validar que amount es un número válido
+    for (const { areaId, amount, year, half } of updates) {
       if (isNaN(amount) || amount < 0) {
         console.warn(`Monto inválido para el área ${areaId}: ${amount}`);
-        continue; // Saltar esta actualización
+        continue;
       }
-      if (id === 'new') {
-        const queryTextInsert = `
-          INSERT INTO area_funds (area_id, allocated_funds, year, quarter)
-          VALUES ($1, $2, $3, $4)
-        `;
-        const params = [areaId, amount, year, half];
-        await pool.query(queryTextInsert, params);
-      } else {
-        const queryTextUpdate = `
-          UPDATE area_funds
-          SET allocated_funds = $2, year = $3, half = $4, area_id = $5
-          WHERE id = $1
-        `;
-        await pool.query(queryTextUpdate, [id, amount, year, half, areaId]);
-      }
+
+      // Usamos ON CONFLICT para que no cree duplicados
+      // si ya existe la fila con (area_id, year, half).
+      await pool.query(
+        `
+        INSERT INTO area_funds (area_id, allocated_funds, year, half)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (area_id, year, half)
+        DO UPDATE SET
+          allocated_funds = EXCLUDED.allocated_funds
+      `,
+        [areaId, amount, year, half],
+      );
     }
     console.log('Fondos actualizados exitosamente');
   } catch (error) {

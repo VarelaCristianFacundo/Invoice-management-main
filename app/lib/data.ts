@@ -93,29 +93,83 @@ export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
 ) {
+  const ITEMS_PER_PAGE = 10;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const queryText = `
-    SELECT
-      invoices.id,
-      invoices.amount,
-      invoices.date,
-      invoices.status,
-      customers.name,
-      customers.email,
-      customers.image_url
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE $1 OR
-      customers.email ILIKE $1 OR
-      invoices.amount::text ILIKE $1 OR
-      invoices.date::text ILIKE $1 OR
-      invoices.status ILIKE $1
-    ORDER BY invoices.date DESC
+
+  const sql = `
+    SELECT 
+      i.id AS invoice_id,
+      i.customer_id,
+      i.amount,
+      i.status,
+      i.date,
+      i.budget_allocation_id,
+      -- si definiste pdf_url en tu DB, inclúyelo
+      -- i.pdf_url,          
+
+      -- JOINEAMOS customers
+      c.name        AS customer_name,
+      c.email       AS customer_email,
+      c.image_url   AS image_url,
+
+      -- JOINEAMOS budget_allocations
+      ba.project_id AS project_id,
+      ba.area_id    AS allocation_area_id,
+      ba.year       AS allocation_year,
+      ba.allocated_amount,
+      ba.executed_amount,
+      ba.program    AS allocation_program,
+      ba.half       AS allocation_half,
+
+      -- JOINEAMOS areas
+      a.name AS area_name,
+
+      -- JOINEAMOS budgets (para sacar nombre del proyecto)
+      b.project_name
+      
+    FROM invoices i
+    LEFT JOIN customers c
+      ON i.customer_id = c.id
+    LEFT JOIN budget_allocations ba
+      ON i.budget_allocation_id = ba.id
+    LEFT JOIN areas a
+      ON ba.area_id = a.id
+    LEFT JOIN budgets b
+      ON ba.project_id = b.id
+
+    -- Filtrado simple (ajusta a tus campos)
+    WHERE 
+      c.name ILIKE $1
+      OR i.amount::text ILIKE $1
+      OR i.status ILIKE $1
+      OR b.project_name ILIKE $1
+      OR a.name ILIKE $1
+
+    ORDER BY i.date DESC
     LIMIT $2 OFFSET $3
   `;
+
   const params = [`%${query}%`, ITEMS_PER_PAGE, offset];
-  return await queryDatabase<InvoicesTable>(queryText, params);
+  const { rows } = await pool.query(sql, params);
+
+  // Devuelve el array de facturas con la data "unida"
+  return rows.map((r) => ({
+    id: r.invoice_id,            // alias invoice_id
+    customer_id: r.customer_id,
+    name: r.customer_name,
+    email: r.customer_email,
+    image_url: r.image_url || "/default-user.png",
+
+    amount: Number(r.amount) || 0,
+    status: r.status,
+    date: r.date,
+
+    budget_allocation_id: r.budget_allocation_id,
+    project_name: r.project_name,          // de budgets
+    area_name: r.area_name,                // de areas
+    year: r.allocation_year,               // de budget_allocations
+    // pdf_url: r.pdf_url,  // si lo tuvieras
+  }));
 }
 
 export async function fetchInvoicesPages(query: string) {
