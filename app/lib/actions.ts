@@ -36,6 +36,8 @@ const CreateInvoice = FormSchema.extend({
   areaId: z.string(),
   year: z.number(),
   budgetAllocationId: z.string(),
+  file: z.string(),
+  company_id: z.number(),
 }).omit({ id: true, date: true });
 const AddCustomer = CustomerFormSchema.omit({ id: true, date: true });
 
@@ -67,6 +69,8 @@ export async function createInvoice(formData: {
   areaId: string;
   year: number;
   budgetAllocationId: string;
+  file: string;
+  company_id: number;
 }) {
   const validatedFields = CreateInvoice.safeParse(formData);
 
@@ -78,7 +82,7 @@ export async function createInvoice(formData: {
     };
   }
 
-  const { customerId, amount, status, areaId, year, budgetAllocationId } =
+  const { customerId, amount, status, areaId, year, budgetAllocationId, file, company_id} =
     validatedFields.data;
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
@@ -87,8 +91,8 @@ export async function createInvoice(formData: {
 
   try {
     const queryText = `
-      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file,company_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
     `;
     const params = [
       customerId,
@@ -98,20 +102,19 @@ export async function createInvoice(formData: {
       areaId,
       year,
       budgetAllocationId,
+      file,
+      company_id,
     ];
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
 
     if (status === 'paid') {
 
-      if(await checkProjectFunds(pool, areaId, budgetAllocationId, amount)) {
-        updateAvailableAreaFounds(
+      if(await checkProjectFunds(pool, budgetAllocationId, amount)) {
+        updateBudgetAllocation(
           pool,
-          areaId,
-          amount,
-          year,
-          half,
           budgetAllocationId,
+          amount,
           status,
         );
       } else {
@@ -149,7 +152,7 @@ export async function updateAreaFunds(
         console.warn(`Monto inválido para el área ${areaId}: ${amount}`);
         continue;
       }
-
+      console.debug(`Actualizando fondos para el área ${areaId}: ${amount}`);
       // Usamos ON CONFLICT para que no cree duplicados
       // si ya existe la fila con (area_id, year, half).
       await pool.query(
@@ -205,53 +208,49 @@ const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(
   id: string,
+  file: string, 
   formData: FormData,
-  changedBy: string,
-) {
+  company_id: number,
+  //descomentar cuando se pase el usuario logoneado
+  //changedBy: string,
+) 
+{
   const data = {
     customerId: formData.get('customerId') as string,
     amount: Number(formData.get('amount') as unknown as string),
     newStatus: formData.get('status') as string,
-    areaId: formData.get('string') as string,
-    year: Number(formData.get('year') as unknown as string),
-    budgetAllocationId: formData.get('budgetAllocationId') as string,
   };
-
+  console.log(id);
+  console.log(formData);
   try {
-    const half = await getHalfByBudgetAllocationId(
-      pool,
-      data.budgetAllocationId,
-    );
     // Obtener el estado actual de la factura
     const invoice = await getInvoiceData(pool, id);
+    console.log("invoice",invoice);
     const currentStatus = invoice.status;
     const currentAmount = invoice.amount;
-    const fundsAvailable = await checkProjectFunds(pool ,invoice.areaId, data.budgetAllocationId, data.amount);
+    const fundsAvailable = await checkProjectFundsByInoviceId(pool ,data.amount,id);
+    const finalStatus = data.newStatus === null ? currentStatus : data.newStatus;
     if(!fundsAvailable && data.newStatus === 'paid') {
       return {
         success: false,
         message: 'Insufficent funds available',
       };
     } else {
+      console.log('currentStatus:', currentStatus);
+      console.log('newStatus :', data.newStatus);
       if (currentStatus !== data.newStatus) {
         if (data.newStatus === 'pending') {
           await updateAvailableAreaFounds(
             pool,
-            data.areaId,
             currentAmount,
-            data.year,
-            half,
-            data.budgetAllocationId,
+            invoice.budgetAllocationId,
             data.newStatus,
           );
         } else {
           await updateAvailableAreaFounds(
             pool,
-            data.areaId,
             data.amount,
-            data.year,
-            half,
-            data.budgetAllocationId,
+            invoice.budgetAllocationId,
             data.newStatus,
           );
         }
@@ -260,10 +259,10 @@ export async function updateInvoice(
     // Actualizar la factura
     const updateQuery = `
       UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3
+      SET customer_id = $1, amount = $2, status = $3, file = $5, company_id = $6
       WHERE id = $4
     `;
-    const updateParams = [data.customerId, data.amount, data.newStatus, id];
+    const updateParams = [data.customerId, data.amount, data.newStatus, id,file,company_id];
     await pool.query(updateQuery, updateParams);
     console.log('Invoice updated:', updateParams);
     await logInvoiceAudit(
@@ -273,7 +272,7 @@ export async function updateInvoice(
       data.amount,
       data.newStatus,
       'UPDATE',
-      changedBy,
+      'changedBy',
     );
     return {
       success: true,
@@ -393,7 +392,7 @@ export async function createBudget({
         INSERT INTO budgets (project_name, year)
         VALUES ($1, $2) RETURNING id
       `;
-      const params = [projectId, year];
+      const params = [ , year];
       const result = await pool.query(queryText, params);
       const projectId = result.rows[0].id; // Obtenemos el ID del nuevo proyecto.
 
@@ -594,23 +593,19 @@ export async function sumApprovedBudgetsByAreaAndQuarter(
 
 export async function checkProjectFunds(
   pool: Pool,
-  areaId: string,
   budgetAllocationId: string,
   amount: number,
 ): Promise<boolean> {
   try {
     const queryText = `
       SELECT 
-        ba.executed_amount AS budget_executed_amount,
-        af.executed_funds AS area_executed_funds
+        executed_amount AS budget_executed_amount
       FROM 
-        budget_allocations ba
-      JOIN 
-        area_funds af ON ba.area_id = af.area_id AND ba.half = af.half AND ba.year = af.year
+        budget_allocations
       WHERE 
-        ba.id = $1 AND af.area_id = $2 AND ba.year = $3
+        id = $1
     `;
-    const queryParams = [budgetAllocationId, areaId];
+    const queryParams = [budgetAllocationId];
     const result = await pool.query(queryText, queryParams);
 
     if (result.rows.length === 0) {
@@ -618,16 +613,46 @@ export async function checkProjectFunds(
     }
 
     const budgetExecutedAmount = result.rows[0].budget_executed_amount || 0;
-    const areaExecutedFunds = result.rows[0].area_executed_funds || 0;
+    return budgetExecutedAmount > amount;
 
-    const totalExecuted = budgetExecutedAmount + areaExecutedFunds;
-    return totalExecuted < amount;
   } catch (error) {
     console.error('Error checking project funds:', error);
     return false;
   }
 }
 
+export async function checkProjectFundsByInoviceId(
+  pool: Pool,
+  amount: number,
+  invoice_id:string
+): Promise<boolean> {
+  try {
+    const queryText = `
+    SELECT 
+      ba.executed_amount AS budget_executed_amount,
+      ba.allocated_amount AS budget_allocated_amount
+    FROM 
+      budget_allocations ba
+    JOIN 
+      invoices i ON i.budget_allocation_id = ba.id
+    WHERE 
+      i.id = $1
+  `;
+    const queryParams = [invoice_id];
+    const result = await pool.query(queryText, queryParams);
+
+    if (result.rows.length === 0) {
+      throw new Error('No matching records found');
+    }
+    const budgetExecutedAmount = result.rows[0].budget_executed_amount;
+    const budgetAllocatedAmount = result.rows[0].budget_allocated_amount;
+    console.log(budgetExecutedAmount);
+    return budgetAllocatedAmount > amount + budgetExecutedAmount ;
+  } catch (error) {
+    console.error('Error checking project funds:', error);
+    return false;
+  }
+}
 // export async function authenticate(
 //   prevState: string | undefined,
 //   formData: FormData,
@@ -733,7 +758,7 @@ export async function validateFunds(
   quarter: number,
 ): Promise<boolean> {
   const queryText = `
-    SELECT remaining_funds
+    SELECT executed_funds
     FROM area_funds
     WHERE area_id = $1 AND year = $2 AND quarter = $3 
   `;
@@ -745,7 +770,7 @@ export async function validateFunds(
       throw new Error(`Area encontrada id buscado: ${areaId}`);
     }
 
-    const remaining_funds = result.rows[0].remaining_funds;
+    const remaining_funds = result.rows[0].executed_funds;
     return remaining_funds >= requiredAmount;
   } catch (error) {
     console.error('Error al validar fondos:', error);
@@ -755,25 +780,12 @@ export async function validateFunds(
 
 async function updateAvailableAreaFounds(
   pool: Pool,
-  areaId: string,
   amount: number,
-  year: number,
-  half: number,
   budgetAllocationId: string,
   status: string,
 ) {
-  updateBudgetAllocation(pool, budgetAllocationId, amount, status);
-  const updateFundsQuery = `
-    UPDATE area_funds
-    SET 
-      remaining_funds = allocated_funds + CASE WHEN $3 = 'pending' THEN $1 ELSE -$1 END,
-      executed_funds = executed_funds + CASE WHEN $3 = 'pending' THEN -$1 ELSE $1 END
-    WHERE area_id = $2 AND year = $4 AND half = $5
-  `;
-  const updateFundsParams = [amount, areaId, status, year, half];
   try {
-    await pool.query(updateFundsQuery, updateFundsParams);
-    console.log('Area funds updated:', updateFundsParams);
+   updateBudgetAllocation(pool, budgetAllocationId, amount, status);
   } catch (error) {
     console.error('Error updating area funds:', error);
     throw new Error('Error updating area funds');
@@ -789,13 +801,13 @@ async function updateBudgetAllocation(
   const updateAllocationQuery = `
     UPDATE budget_allocations
     SET 
-      allocated_amount = allocated_amount + CASE WHEN $3 = 'pending' THEN $1 ELSE -$1 END,
-      executed_amount = executed_amount + CASE WHEN $3 = 'pending' THEN -$1 ELSE $1 END
-    WHERE id = $2
+      executed_amount = executed_amount + CASE WHEN $3 = 'pending' THEN -CAST($1 AS NUMERIC) ELSE CAST($1 AS NUMERIC) END
+    WHERE id =$2
   `;
   const updateAllocationParams = [amount, budgetAllocationId, status];
 
   try {
+    console.log('Budget allocation updated:', updateAllocationParams);
     await pool.query(updateAllocationQuery, updateAllocationParams);
     console.log('Budget allocation updated:', updateAllocationParams);
   } catch (error) {
@@ -807,11 +819,21 @@ async function updateBudgetAllocation(
 export async function getInvoiceData(
   pool: Pool,
   invoiceId: string,
-): Promise<{ status: string; amount: number; year: number; half: number, areaId: string }> {
+): Promise<{ status: string; amount: number; year: number; half: number, areaId: string, budgetAllocationId: string }> {
   const getStatusQuery = `
-    SELECT status,amount, year, half, areaId
-    FROM invoices
-    WHERE id = $1
+    SELECT 
+      i.status,
+      i.amount,
+      i.year,
+      i.area_id,
+      i.budget_allocation_id,
+      ba.half
+    FROM 
+      invoices i
+    JOIN 
+      budget_allocations ba ON i.budget_allocation_id = ba.id
+    WHERE 
+      i.id = $1
   `;
   const getStatusParams = [invoiceId];
 
@@ -827,6 +849,7 @@ export async function getInvoiceData(
       year: statusResult.rows[0].year,
       half: statusResult.rows[0].half,
       areaId: statusResult.rows[0].areaId,
+      budgetAllocationId: statusResult.rows[0].budget_allocation_id,
     };
   } catch (error) {
     console.error('Error getting invoice status:', error);
@@ -908,20 +931,21 @@ async function logBudgetAudit(
 
 export async function getHalfByBudgetAllocationId(
   pool: Pool,
-  budgetAllocationId: string,
+  invoiceId: string,
 ): Promise<number> {
   const queryText = `
-    SELECT half
-    FROM budget_allocations
-    WHERE id = $1
+    SELECT ba.half
+    FROM budget_allocations ba
+    JOIN invoices i ON i.budget_allocation_id = ba.id
+    WHERE i.id = $1
   `;
-  const queryParams = [budgetAllocationId];
+  const queryParams = [invoiceId];
 
   try {
     const result = await pool.query(queryText, queryParams);
     if (result.rows.length === 0) {
       throw new Error(
-        `No budget allocation found with id: ${budgetAllocationId}`,
+        `No budget allocation found with id: ${invoiceId}`,
       );
     }
     return result.rows[0].half;

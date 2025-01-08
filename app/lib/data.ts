@@ -172,6 +172,26 @@ export async function fetchFilteredInvoices(
   }));
 }
 
+export async function getFileBase64ByInvoiceId(pool: Pool, invoiceId: string): Promise<string> {
+  const queryText = `
+    SELECT file
+    FROM invoices
+    WHERE id = $1
+  `;
+  const queryParams = [invoiceId];
+
+  try {
+    const result = await pool.query(queryText, queryParams);
+    if (result.rows.length === 0) {
+      throw new Error(`No invoice found with id: ${invoiceId}`);
+    }
+    return result.rows[0].file;
+  } catch (error) {
+    console.error('Error fetching file:', error);
+    throw new Error('Error fetching file');
+  }
+}
+
 export async function fetchInvoicesPages(query: string) {
   const queryText = `
     SELECT COUNT(*)
