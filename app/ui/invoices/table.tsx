@@ -2,6 +2,7 @@ import { fetchFilteredInvoices } from "@/app/lib/data";
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
+import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 
 export default async function InvoicesTable({
@@ -60,13 +61,14 @@ export default async function InvoicesTable({
 
                   <td className="px-3 py-3">
                     {/* PDF Link o ícono */}
-                    {invoice.pdf_url ? (
+                    {invoice.file ? (
                       <a
-                        href={invoice.pdf_url}
+                        href={invoice.file}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="flex items-center text-blue-600 hover:underline"
                       >
+                        <DocumentTextIcon className="h-5 w-5 mr-1" />
                         View PDF
                       </a>
                     ) : (

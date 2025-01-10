@@ -81,6 +81,18 @@ export default function CreateInvoiceForm({
     }
   };
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        // El resultado es algo como "data:application/pdf;base64,<MUCHAS_LETRAS>"
+        resolve(reader.result as string);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  }
+
   /** onSubmit principal */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -93,6 +105,13 @@ export default function CreateInvoiceForm({
       Swal.fire("Incomplete", "El monto debe ser mayor a 0", "info");
       return;
     }
+
+    // 1. Convertir PDF a Base64 si existe
+    let base64File = "";
+    if (pdfFile) {
+      base64File = await fileToBase64(pdfFile);
+    }
+
 
     // 1. Subir PDF (Opcional)
     let pdfUrl = "";
@@ -123,11 +142,11 @@ export default function CreateInvoiceForm({
       customerId,
       amount,
       status,
-      areaId: allocation.area_id,         // Lo sacamos del allocation
-      year: allocation.year,              // O un state, si prefieres
+      areaId,                      // Viene del allocation
+      year,
       budgetAllocationId: selectedAllocationId,
-      // Si quisieras adjuntar la url del PDF en la base de datos:
-      // pdfUrl,
+      file: base64File,           // Campo obligatorio
+      company_id: 1,              // Campo obligatorio (ejemplo: 1)
     };
 
     const result = await Swal.fire({
@@ -144,7 +163,6 @@ export default function CreateInvoiceForm({
       const response = await createInvoice(formData);
       if (response.success) {
         Swal.fire("Success", response.message, "success").then(() => {
-          // Redirigir al listado de facturas
           router.push("/dashboard/invoices");
           router.refresh();
         });

@@ -82,8 +82,16 @@ export async function createInvoice(formData: {
     };
   }
 
-  const { customerId, amount, status, areaId, year, budgetAllocationId, file, company_id} =
-    validatedFields.data;
+  const {
+    customerId,
+    amount,
+    status,
+    areaId,
+    year,
+    budgetAllocationId,
+    file,
+    company_id,
+  } = validatedFields.data;
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
 
@@ -109,14 +117,8 @@ export async function createInvoice(formData: {
     console.log('Invoice created:', params);
 
     if (status === 'paid') {
-
-      if(await checkProjectFunds(pool, budgetAllocationId, amount)) {
-        updateBudgetAllocation(
-          pool,
-          budgetAllocationId,
-          amount,
-          status,
-        );
+      if (await checkProjectFunds(pool, budgetAllocationId, amount)) {
+        updateBudgetAllocation(pool, budgetAllocationId, amount, status);
       } else {
         return {
           success: false,
@@ -208,13 +210,12 @@ const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(
   id: string,
-  file: string, 
+  file: string,
   formData: FormData,
   company_id: number,
   //descomentar cuando se pase el usuario logoneado
   //changedBy: string,
-) 
-{
+) {
   const data = {
     customerId: formData.get('customerId') as string,
     amount: Number(formData.get('amount') as unknown as string),
@@ -225,12 +226,17 @@ export async function updateInvoice(
   try {
     // Obtener el estado actual de la factura
     const invoice = await getInvoiceData(pool, id);
-    console.log("invoice",invoice);
+    console.log('invoice', invoice);
     const currentStatus = invoice.status;
     const currentAmount = invoice.amount;
-    const fundsAvailable = await checkProjectFundsByInoviceId(pool ,data.amount,id);
-    const finalStatus = data.newStatus === null ? currentStatus : data.newStatus;
-    if(!fundsAvailable && data.newStatus === 'paid') {
+    const fundsAvailable = await checkProjectFundsByInoviceId(
+      pool,
+      data.amount,
+      id,
+    );
+    const finalStatus =
+      data.newStatus === null ? currentStatus : data.newStatus;
+    if (!fundsAvailable && data.newStatus === 'paid') {
       return {
         success: false,
         message: 'Insufficent funds available',
@@ -254,15 +260,22 @@ export async function updateInvoice(
             data.newStatus,
           );
         }
+      }
     }
-  }
     // Actualizar la factura
     const updateQuery = `
       UPDATE invoices
       SET customer_id = $1, amount = $2, status = $3, file = $5, company_id = $6
       WHERE id = $4
     `;
-    const updateParams = [data.customerId, data.amount, data.newStatus, id,file,company_id];
+    const updateParams = [
+      data.customerId,
+      data.amount,
+      data.newStatus,
+      id,
+      file,
+      company_id,
+    ];
     await pool.query(updateQuery, updateParams);
     console.log('Invoice updated:', updateParams);
     await logInvoiceAudit(
@@ -392,7 +405,7 @@ export async function createBudget({
         INSERT INTO budgets (project_name, year)
         VALUES ($1, $2) RETURNING id
       `;
-      const params = [ , year];
+      const params = [, year];
       const result = await pool.query(queryText, params);
       const projectId = result.rows[0].id; // Obtenemos el ID del nuevo proyecto.
 
@@ -614,7 +627,6 @@ export async function checkProjectFunds(
 
     const budgetExecutedAmount = result.rows[0].budget_executed_amount || 0;
     return budgetExecutedAmount > amount;
-
   } catch (error) {
     console.error('Error checking project funds:', error);
     return false;
@@ -624,7 +636,7 @@ export async function checkProjectFunds(
 export async function checkProjectFundsByInoviceId(
   pool: Pool,
   amount: number,
-  invoice_id:string
+  invoice_id: string,
 ): Promise<boolean> {
   try {
     const queryText = `
@@ -647,7 +659,7 @@ export async function checkProjectFundsByInoviceId(
     const budgetExecutedAmount = result.rows[0].budget_executed_amount;
     const budgetAllocatedAmount = result.rows[0].budget_allocated_amount;
     console.log(budgetExecutedAmount);
-    return budgetAllocatedAmount > amount + budgetExecutedAmount ;
+    return budgetAllocatedAmount > amount + budgetExecutedAmount;
   } catch (error) {
     console.error('Error checking project funds:', error);
     return false;
@@ -785,7 +797,7 @@ async function updateAvailableAreaFounds(
   status: string,
 ) {
   try {
-   updateBudgetAllocation(pool, budgetAllocationId, amount, status);
+    updateBudgetAllocation(pool, budgetAllocationId, amount, status);
   } catch (error) {
     console.error('Error updating area funds:', error);
     throw new Error('Error updating area funds');
@@ -819,7 +831,14 @@ async function updateBudgetAllocation(
 export async function getInvoiceData(
   pool: Pool,
   invoiceId: string,
-): Promise<{ status: string; amount: number; year: number; half: number, areaId: string, budgetAllocationId: string }> {
+): Promise<{
+  status: string;
+  amount: number;
+  year: number;
+  half: number;
+  areaId: string;
+  budgetAllocationId: string;
+}> {
   const getStatusQuery = `
     SELECT 
       i.status,
@@ -931,21 +950,19 @@ async function logBudgetAudit(
 
 export async function getHalfByBudgetAllocationId(
   pool: Pool,
-  invoiceId: string,
+  budgetAllocationId: string,
 ): Promise<number> {
   const queryText = `
     SELECT ba.half
     FROM budget_allocations ba
-    JOIN invoices i ON i.budget_allocation_id = ba.id
-    WHERE i.id = $1
+    WHERE ba.id = $1
   `;
-  const queryParams = [invoiceId];
-
+  const queryParams = [budgetAllocationId];
   try {
     const result = await pool.query(queryText, queryParams);
     if (result.rows.length === 0) {
       throw new Error(
-        `No budget allocation found with id: ${invoiceId}`,
+        `No budget allocation found with id: ${budgetAllocationId}`,
       );
     }
     return result.rows[0].half;

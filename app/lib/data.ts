@@ -6,7 +6,6 @@ import {
   CustomerForm,
   CustomersTableType,
   InvoiceForm,
-  InvoicesTable,
   LatestInvoiceRaw,
   Revenue,
   User,
@@ -104,8 +103,7 @@ export async function fetchFilteredInvoices(
       i.status,
       i.date,
       i.budget_allocation_id,
-      -- si definiste pdf_url en tu DB, inclúyelo
-      -- i.pdf_url,          
+      i.file,  -- Asegúrate de incluir el campo 'file'
 
       -- JOINEAMOS customers
       c.name        AS customer_name,
@@ -154,25 +152,29 @@ export async function fetchFilteredInvoices(
 
   // Devuelve el array de facturas con la data "unida"
   return rows.map((r) => ({
-    id: r.invoice_id,            // alias invoice_id
+    id: r.invoice_id, // alias invoice_id
     customer_id: r.customer_id,
     name: r.customer_name,
     email: r.customer_email,
-    image_url: r.image_url || "/default-user.png",
+    image_url: r.image_url || '/default-user.png',
 
     amount: Number(r.amount) || 0,
     status: r.status,
     date: r.date,
 
     budget_allocation_id: r.budget_allocation_id,
-    project_name: r.project_name,          // de budgets
-    area_name: r.area_name,                // de areas
-    year: r.allocation_year,               // de budget_allocations
-    // pdf_url: r.pdf_url,  // si lo tuvieras
+    project_name: r.project_name, // de budgets
+    area_name: r.area_name, // de areas
+    year: r.allocation_year, // de budget_allocations
+
+    file: r.file, // Añadido para incluir el archivo
   }));
 }
 
-export async function getFileBase64ByInvoiceId(pool: Pool, invoiceId: string): Promise<string> {
+export async function getFileBase64ByInvoiceId(
+  pool: Pool,
+  invoiceId: string,
+): Promise<string> {
   const queryText = `
     SELECT file
     FROM invoices
