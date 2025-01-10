@@ -1,6 +1,9 @@
 import { Revenue } from './definitions';
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount?: number): string {
+  if (amount === undefined || amount === null) {
+    return '-'; // Valor predeterminado si no hay cantidad
+  }
   return amount.toLocaleString('es-AR', {
     style: 'currency',
     currency: 'ARS',

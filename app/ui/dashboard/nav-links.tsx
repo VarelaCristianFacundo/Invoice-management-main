@@ -16,7 +16,7 @@ import { usePathname } from 'next/navigation';
 const links = [
   { name: 'Home', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos'] },
   {
-    name: 'Presupuestos',
+    name: 'Proyectos',
     href: '/dashboard/budgets',
     icon: CurrencyDollarIcon,
     roles: ['admin', 'usuario_presupuestos'],
@@ -76,9 +76,8 @@ export default function NavLinks() {
           <Link
             key={link.name}
             href={link.href}
-            className={`flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-gray-800 md:flex-none md:justify-start md:p-2 md:px-3 ${
-            pathname === link.href ? 'bg-sky-100 text-gray-800' : ''
-            }`}
+            className={`flex h-[48px] grow items-center justify-center gap-2 rounded-md bg-gray-50 p-3 text-sm font-medium hover:bg-sky-100 hover:text-gray-800 md:flex-none md:justify-start md:p-2 md:px-3 ${pathname === link.href ? 'bg-sky-100 text-gray-800' : ''
+              }`}
           >
             <LinkIcon className="w-6" />
             <p className="hidden md:block">{link.name}</p>

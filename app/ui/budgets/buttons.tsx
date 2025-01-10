@@ -10,7 +10,7 @@ export function CreateBudget() {
   return (
     <Link href="/dashboard/budgets/create" className="flex h-10 items-center rounded-lg bg-gray-800 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-700">
       <PlusIcon className="w-5" />
-      <span>Create Budget</span>
+      <span>Crear Proyecto</span>
     </Link>
   );
 }

@@ -12,7 +12,7 @@ export default async function Page({ params }: { params: { id: string; }; }) {
 
   return (
     <main>
-      <Breadcrumbs breadcrumbs={[{ label: 'Budgets', href: '/dashboard/budget' }, { label: 'Edit Budget', href: `/dashboard/budget/${params.id}/edit`, active: true }]} />
+      <Breadcrumbs breadcrumbs={[{ label: 'Proyectos', href: '/dashboard/budget' }, { label: 'Edit Budget', href: `/dashboard/budget/${params.id}/edit`, active: true }]} />
       <Form budget={budget} customers={customers} />
     </main>
   );

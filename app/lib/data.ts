@@ -6,7 +6,6 @@ import {
   CustomerForm,
   CustomersTableType,
   InvoiceForm,
-  InvoicesTable,
   LatestInvoiceRaw,
   Revenue,
   User,
@@ -93,29 +92,106 @@ export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
 ) {
+  const ITEMS_PER_PAGE = 10;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const queryText = `
-    SELECT
-      invoices.id,
-      invoices.amount,
-      invoices.date,
-      invoices.status,
-      customers.name,
-      customers.email,
-      customers.image_url
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE $1 OR
-      customers.email ILIKE $1 OR
-      invoices.amount::text ILIKE $1 OR
-      invoices.date::text ILIKE $1 OR
-      invoices.status ILIKE $1
-    ORDER BY invoices.date DESC
+
+  const sql = `
+    SELECT 
+      i.id AS invoice_id,
+      i.customer_id,
+      i.amount,
+      i.status,
+      i.date,
+      i.budget_allocation_id,
+      i.file,  -- Asegúrate de incluir el campo 'file'
+
+      -- JOINEAMOS customers
+      c.name        AS customer_name,
+      c.email       AS customer_email,
+      c.image_url   AS image_url,
+
+      -- JOINEAMOS budget_allocations
+      ba.project_id AS project_id,
+      ba.area_id    AS allocation_area_id,
+      ba.year       AS allocation_year,
+      ba.allocated_amount,
+      ba.executed_amount,
+      ba.program    AS allocation_program,
+      ba.half       AS allocation_half,
+
+      -- JOINEAMOS areas
+      a.name AS area_name,
+
+      -- JOINEAMOS budgets (para sacar nombre del proyecto)
+      b.project_name
+      
+    FROM invoices i
+    LEFT JOIN customers c
+      ON i.customer_id = c.id
+    LEFT JOIN budget_allocations ba
+      ON i.budget_allocation_id = ba.id
+    LEFT JOIN areas a
+      ON ba.area_id = a.id
+    LEFT JOIN budgets b
+      ON ba.project_id = b.id
+
+    -- Filtrado simple (ajusta a tus campos)
+    WHERE 
+      c.name ILIKE $1
+      OR i.amount::text ILIKE $1
+      OR i.status ILIKE $1
+      OR b.project_name ILIKE $1
+      OR a.name ILIKE $1
+
+    ORDER BY i.date DESC
     LIMIT $2 OFFSET $3
   `;
+
   const params = [`%${query}%`, ITEMS_PER_PAGE, offset];
-  return await queryDatabase<InvoicesTable>(queryText, params);
+  const { rows } = await pool.query(sql, params);
+
+  // Devuelve el array de facturas con la data "unida"
+  return rows.map((r) => ({
+    id: r.invoice_id, // alias invoice_id
+    customer_id: r.customer_id,
+    name: r.customer_name,
+    email: r.customer_email,
+    image_url: r.image_url || '/default-user.png',
+
+    amount: Number(r.amount) || 0,
+    status: r.status,
+    date: r.date,
+
+    budget_allocation_id: r.budget_allocation_id,
+    project_name: r.project_name, // de budgets
+    area_name: r.area_name, // de areas
+    year: r.allocation_year, // de budget_allocations
+
+    file: r.file, // Añadido para incluir el archivo
+  }));
+}
+
+export async function getFileBase64ByInvoiceId(
+  pool: Pool,
+  invoiceId: string,
+): Promise<string> {
+  const queryText = `
+    SELECT file
+    FROM invoices
+    WHERE id = $1
+  `;
+  const queryParams = [invoiceId];
+
+  try {
+    const result = await pool.query(queryText, queryParams);
+    if (result.rows.length === 0) {
+      throw new Error(`No invoice found with id: ${invoiceId}`);
+    }
+    return result.rows[0].file;
+  } catch (error) {
+    console.error('Error fetching file:', error);
+    throw new Error('Error fetching file');
+  }
 }
 
 export async function fetchInvoicesPages(query: string) {
@@ -256,22 +332,15 @@ export async function fetchCustomerById(id: string) {
 }
 
 export async function fetchBudgetsPages(query: string): Promise<number> {
-  try {
-    const queryText = `
-      SELECT COUNT(*)
-      FROM budgets
-      WHERE LOWER(status::text) LIKE $1
-    `;
-    const values = [`%${query.toLowerCase()}%`];
-    const result = await pool.query(queryText, values);
-
-    const count = parseInt(result.rows[0].count, 10);
-    const itemsPerPage = 10;
-    return Math.ceil(count / itemsPerPage);
-  } catch (error) {
-    console.error('Error fetching budgets pages:', error);
-    return 1;
-  }
+  const queryText = `
+    SELECT COUNT(*)
+    FROM budgets
+    WHERE project_name ILIKE $1;
+  `;
+  const values = [`%${query}%`];
+  const result = await pool.query(queryText, values);
+  const total = parseInt(result.rows[0].count, 10);
+  return Math.ceil(total / 10); // 10 ítems por página
 }
 
 export async function fetchAreasWithFunds() {
@@ -288,20 +357,41 @@ export async function fetchAreasWithFunds() {
   return result.rows;
 }
 export async function fetchFilteredBudgets(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * 10;
+  const offset = (currentPage - 1) * 10; // 10 items por página
   const queryText = `
-    SELECT budgets.*, customers.name AS provider_name, customers.image_url AS provider_image, areas.name AS area_name
+    SELECT 
+      budgets.id, 
+      budgets.project_name, 
+      budgets.year,
+      budget_allocations.program,
+      SUM(budget_allocations.allocated_amount) AS total_allocated_amount,
+      SUM(budget_allocations.executed_amount) AS total_executed_amount,
+      STRING_AGG(areas.name, ', ') AS area_names
     FROM budgets
-    JOIN customers ON budgets.customer_id = customers.id
-    LEFT JOIN areas ON budgets.area_id = areas.id
-    WHERE customers.name ILIKE $1 OR budgets.program ILIKE $1 OR budgets.project ILIKE $1 OR budgets.concept ILIKE $1
-    ORDER BY budgets.date DESC
-    LIMIT 10 OFFSET $2
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE 
+      budgets.project_name ILIKE $1 OR 
+      budgets.year::text ILIKE $1
+    GROUP BY budgets.id, budget_allocations.program
+    ORDER BY budgets.year DESC
+    LIMIT 10 OFFSET $2;
   `;
   const values = [`%${query}%`, offset];
-  const result = await pool.query(queryText, values);
-  return result.rows;
+
+  console.log('SQL Query:', queryText);
+  console.log('Query Values:', values);
+
+  try {
+    const result = await pool.query(queryText, values);
+    console.log('Query Result:', result.rows);
+    return result.rows;
+  } catch (error) {
+    console.error('Error executing SQL query:', error);
+    throw new Error('Database error occurred');
+  }
 }
+
 export async function getAreaFunds(areaId: string) {
   const queryText = `
     SELECT allocated_funds
@@ -313,23 +403,36 @@ export async function getAreaFunds(areaId: string) {
 }
 export async function fetchBudgetById(id: string) {
   const queryText = `
-      SELECT id, year, program, project, customer_id, concept, amount, date, status
-      FROM budgets
-      WHERE id = $1
+    SELECT 
+      budgets.id AS budget_id,
+      budgets.year,
+      budgets.project_name,
+      budget_allocations.program,
+      budget_allocations.allocated_amount,
+      budget_allocations.executed_amount,
+      budget_allocations.area_id,
+      areas.name AS area_name
+    FROM budgets
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE budgets.id = $1;
   `;
-  const values = [id];
-  const result = await pool.query(queryText, values);
+  const result = await pool.query(queryText, [id]);
   return result.rows[0];
 }
 
 export async function fetchRejectedBudgets() {
-  const queryText = `
+  /*   const queryText = `
     SELECT budgets.*, areas.name AS area_name
     FROM budgets
     LEFT JOIN areas ON budgets.area_id = areas.id
     WHERE budgets.status = 'rejected'
     ORDER BY areas.name ASC
-  `;
+  `; */
+  const queryText = `
+  SELECT *
+  FROM budgets
+`;
   const result = await pool.query(queryText);
   return result.rows;
 }
@@ -362,4 +465,19 @@ export async function getUser(email: string) {
   const params = [email];
   const users = await queryDatabase<User>(queryText, params);
   return users[0];
+}
+
+export async function getAllYears(): Promise<number[]> {
+  const queryText = `
+    SELECT year
+    FROM year
+  `;
+  try {
+    const result = await pool.query(queryText);
+    const years = result.rows.map((row) => row.year);
+    return years;
+  } catch (error) {
+    console.error('Error fetching years:', error);
+    throw new Error('Error fetching years');
+  }
 }

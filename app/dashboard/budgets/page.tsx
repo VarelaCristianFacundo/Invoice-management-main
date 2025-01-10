@@ -15,9 +15,8 @@ export default async function Page({ searchParams }: { searchParams: { query?: s
   const totalPages = await fetchBudgetsPages(query); // Ahora la función está definida
 
   return (
-
     <div>
-      <h1>Budgets</h1>
+      <h1>Proyectos</h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
         <Search placeholder="Search budgets..." />
         <CreateBudget />

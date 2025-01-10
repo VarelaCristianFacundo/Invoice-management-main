@@ -45,6 +45,10 @@ export type LatestInvoiceRaw = Omit<LatestInvoice, 'amount'> & {
 };
 
 export type InvoicesTable = {
+  year: any;
+  area_name: any;
+  project_name: any;
+  pdf_url: string | undefined;
   id: string;
   customer_id: string;
   name: string;
@@ -94,17 +98,16 @@ export type CustomerForm = {
   image_url: string;
 };
 
-export type BudgetForm = {
-  id: string;
-  customer_id: string;
+export interface BudgetForm {
+  budget_id: string;
   year: number;
-  program: string;
-  project: string;
-  concept: string;
-  amount: number;
-  // Definimos un estado de presupuesto, similar a las facturas, con opciones de 'pending' o 'approved'
-  status: 'pending' | 'approved';
-};
+  project_name: string;
+  program?: string;
+  allocated_amount?: number;
+  executed_amount?: number;
+  area_id?: string;
+  area_name?: string;
+}
 
 export interface Area {
   id: number;
