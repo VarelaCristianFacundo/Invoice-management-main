@@ -1,4 +1,7 @@
+// app/ui/invoices/InvoicesTable.tsx
+
 import { fetchFilteredInvoices } from "@/app/lib/data";
+import { Invoice } from "@/app/lib/definitions"; // Importa la interfaz Invoice
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
@@ -13,7 +16,7 @@ export default async function InvoicesTable({
   currentPage: number;
 }) {
 
-  const invoices = await fetchFilteredInvoices(query, currentPage);
+  const invoices: Invoice[] = await fetchFilteredInvoices(query, currentPage); // Especifica el tipo
 
   return (
     <div className="mt-6 flow-root">
@@ -23,7 +26,7 @@ export default async function InvoicesTable({
             <thead className="rounded-lg text-left text-sm font-normal">
               <tr>
                 <th scope="col" className="px-4 py-5 font-medium">Customer</th>
-                <th scope="col" className="px-3 py-5 font-medium">Project - Area</th>
+                <th scope="col" className="px-3 py-5 font-medium">Area - Programa - Proyecto</th> {/* Actualizado */}
                 <th scope="col" className="px-3 py-5 font-medium">Amount</th>
                 <th scope="col" className="px-3 py-5 font-medium">Date</th>
                 <th scope="col" className="px-3 py-5 font-medium">Status</th>
@@ -48,8 +51,8 @@ export default async function InvoicesTable({
                   </td>
 
                   <td className="px-3 py-3">
-                    {invoice.project_name
-                      ? `${invoice.project_name} - ${invoice.area_name} (${invoice.year})`
+                    {invoice.area_name && invoice.program && invoice.project_name
+                      ? `${invoice.area_name} - ${invoice.program} - ${invoice.project_name}`
                       : "N/A"}
                   </td>
 

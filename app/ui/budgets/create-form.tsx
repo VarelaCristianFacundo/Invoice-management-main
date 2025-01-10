@@ -4,17 +4,24 @@ import {
   createBudgetAllocation,
   createProject
 } from '@/app/lib/actions';
+import { CustomerField } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 
-type AreaType = {
+export type AreaType = {
   id: string;
   name: string;
 };
 
-export default function CreateBudgetForm({ areas }: { areas: AreaType[] }) {
+export default function CreateBudgetForm({
+  areas,
+  customers,
+}: {
+  areas: AreaType[];
+  customers: CustomerField[];
+}) {
   const [step, setStep] = useState(1);
   const [projectId, setProjectId] = useState<string | null>(null);
 
@@ -80,7 +87,7 @@ export default function CreateBudgetForm({ areas }: { areas: AreaType[] }) {
       }
 
       // Guardamos ID y pasamos a step 2
-      setProjectId(res.projectId);
+      setProjectId(res.projectId || null);
       Swal.fire('Success', res.message, 'success');
       setStep(2);
 
@@ -179,7 +186,7 @@ export default function CreateBudgetForm({ areas }: { areas: AreaType[] }) {
       {step === 2 && projectId && (
         <form onSubmit={handleSubmitStep2}>
           <h2 className="mb-4 text-lg font-semibold text-gray-700">
-            Now assigning funds to "{formData.project_name}" ({formData.year})
+            Now assigning funds to &quot;{formData.project_name}&quot; ({formData.year})
           </h2>
 
           <div className="mb-4">

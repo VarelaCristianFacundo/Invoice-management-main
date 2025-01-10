@@ -5,7 +5,6 @@ import { BudgetForm, CustomerField } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
 import { CheckIcon, ClockIcon, CurrencyDollarIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
@@ -135,18 +134,17 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
           </div>
         </div>
       </fieldset>
-    </div>
 
-      {/* Buttons */ }
-  <div className="flex justify-end gap-4 mt-6">
-    <Link
-      href="/dashboard/budgets"
-      className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
-    >
-      Cancel
-    </Link>
-    <Button type="submit">Edit Budget</Button>
-  </div>
-    </form >
+      {/* Buttons */}
+      <div className="flex justify-end gap-4 mt-6">
+        <Link
+          href="/dashboard/budgets"
+          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+        >
+          Cancel
+        </Link>
+        <Button type="submit">Edit Budget</Button>
+      </div>
+    </form>
   );
 }

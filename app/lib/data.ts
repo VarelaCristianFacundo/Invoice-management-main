@@ -1,10 +1,11 @@
 import { Pool } from 'pg';
+import { AreaType } from '../ui/budgets/create-form';
 import {
-  Area,
   AreaFund,
   CustomerField,
   CustomerForm,
   CustomersTableType,
+  Invoice,
   InvoiceForm,
   LatestInvoiceRaw,
   Revenue,
@@ -91,7 +92,8 @@ const ITEMS_PER_PAGE = 6;
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
-) {
+): Promise<Invoice[]> {
+  // Aseguramos el tipo de retorno
   const ITEMS_PER_PAGE = 10;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
@@ -103,7 +105,7 @@ export async function fetchFilteredInvoices(
       i.status,
       i.date,
       i.budget_allocation_id,
-      i.file,  -- Asegúrate de incluir el campo 'file'
+      i.file,
 
       -- JOINEAMOS customers
       c.name        AS customer_name,
@@ -116,7 +118,7 @@ export async function fetchFilteredInvoices(
       ba.year       AS allocation_year,
       ba.allocated_amount,
       ba.executed_amount,
-      ba.program    AS allocation_program,
+      ba.program    AS program, -- Renombramos para mayor claridad
       ba.half       AS allocation_half,
 
       -- JOINEAMOS areas
@@ -124,7 +126,7 @@ export async function fetchFilteredInvoices(
 
       -- JOINEAMOS budgets (para sacar nombre del proyecto)
       b.project_name
-      
+        
     FROM invoices i
     LEFT JOIN customers c
       ON i.customer_id = c.id
@@ -168,6 +170,7 @@ export async function fetchFilteredInvoices(
     year: r.allocation_year, // de budget_allocations
 
     file: r.file, // Añadido para incluir el archivo
+    program: r.program, // Añadido para incluir el programa
   }));
 }
 
@@ -242,10 +245,14 @@ export async function fetchCustomers() {
   return await queryDatabase<CustomerField>(queryText);
 }
 
-export async function fetchAreas(): Promise<Area[]> {
-  const queryText = 'SELECT * FROM areas ORDER BY name ASC';
-  const result = await pool.query(queryText);
-  return result.rows;
+export async function fetchAreas(): Promise<AreaType[]> {
+  const query = 'SELECT id, name FROM areas ORDER BY name ASC';
+  const { rows } = await pool.query(query);
+
+  return rows.map((row: { id: number; name: string }) => ({
+    id: String(row.id), // conversion
+    name: row.name,
+  }));
 }
 
 export async function fetchAreaFunds(): Promise<AreaFund[]> {

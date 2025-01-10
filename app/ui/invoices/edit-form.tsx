@@ -34,7 +34,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
 
       if (!result.isConfirmed) return;
 
-      const response = await updateInvoice(invoice.id, formData,'');
+      const response = await updateInvoice(invoice.id, '', formData);
       if (!response.success) throw new Error(response.message);
 
       await Swal.fire('Updated!', 'The invoice was updated successfully.', 'success');

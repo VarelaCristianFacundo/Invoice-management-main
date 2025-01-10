@@ -17,6 +17,12 @@ export type Customer = {
 };
 
 export type Invoice = {
+  file: any;
+  project_name: any;
+  program: any;
+  area_name: any;
+  name: string;
+  image_url: string;
   id: string;
   customer_id: string;
   amount: number;
@@ -99,6 +105,9 @@ export type CustomerForm = {
 };
 
 export interface BudgetForm {
+  id: string; // << si deseas la propiedad 'id'
+  amount: string | number | readonly string[] | undefined;
+  status: string;
   budget_id: string;
   year: number;
   project_name: string;

@@ -210,9 +210,9 @@ const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(
   id: string,
-  file: string,
+  file: string = '', // valor por defecto
   formData: FormData,
-  company_id: number,
+  company_id: number = 0, // valor por defecto
   //descomentar cuando se pase el usuario logoneado
   //changedBy: string,
 ) {
