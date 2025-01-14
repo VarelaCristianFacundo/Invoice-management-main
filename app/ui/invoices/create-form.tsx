@@ -5,24 +5,17 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-// Ejemplo si usas Supabase para subir PDFs
-// import { supabase } from "@/app/lib/supabaseClient";
 
-/** Tipos mínimos, ajústalos a tus datos reales */
-type CustomerField = {
-  id: string;
-  name: string;
-};
-
+// Tipos mínimos (ajusta según tus definiciones)
+type CustomerField = { id: string; name: string };
 type BudgetAllocationItem = {
-  id: string;         // budgetAllocationId
+  id: string;
   project_name: string;
   area_id: string;
   area_name: string;
   year: number;
 };
 
-/** Props que recibirá este formulario */
 export default function CreateInvoiceForm({
   customers,
 }: {
@@ -31,48 +24,40 @@ export default function CreateInvoiceForm({
   const [budgetAllocations, setBudgetAllocations] = useState<BudgetAllocationItem[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState(0);
-  const [status, setStatus] = useState<"pending" | "paid">("pending");
-
-  // Para la selección del project/área:
+  // Este formulario siempre crea facturas en estado "presentado"
+  const invoiceStatus: "presentado" | "aprobado" | "pagado" | "rechazado" = "presentado";
   const [selectedAllocationId, setSelectedAllocationId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [year, setYear] = useState<number>(new Date().getFullYear());
-
-  // Para manejo de PDF
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-
   const router = useRouter();
 
-  // 1. Cargar Budget Allocations
+  // Cargar allocations
   useEffect(() => {
-    const fetchBudgetAllocations = async () => {
+    async function fetchBudgetAllocations() {
       try {
-        // Ajusta la ruta o la lógica a tu backend
         const res = await fetch("/api/budget-allocations");
-        if (!res.ok) {
-          throw new Error("Error fetching Budget Allocations");
-        }
+        if (!res.ok) throw new Error("Error fetching Budget Allocations");
         const data: BudgetAllocationItem[] = await res.json();
         setBudgetAllocations(data);
       } catch (error) {
         console.error(error);
         Swal.fire("Error", "Failed to fetch Budget Allocations.", "error");
       }
-    };
+    }
     fetchBudgetAllocations();
   }, []);
 
-  // 2. Cada vez que cambie selectedAllocationId, obtenemos areaId y year
+  // Actualiza areaId y year cuando se selecciona una allocation
   useEffect(() => {
     if (!selectedAllocationId) return;
-    const found = budgetAllocations.find((item) => item.id === selectedAllocationId);
+    const found = budgetAllocations.find(item => item.id === selectedAllocationId);
     if (found) {
       setAreaId(found.area_id);
       setYear(found.year);
     }
   }, [selectedAllocationId, budgetAllocations]);
 
-  /** Manejo de archivos PDF */
   const handlePdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setPdfFile(e.target.files[0]);
@@ -85,15 +70,11 @@ export default function CreateInvoiceForm({
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => {
-        // El resultado es algo como "data:application/pdf;base64,<MUCHAS_LETRAS>"
-        resolve(reader.result as string);
-      };
+      reader.onload = () => resolve(reader.result as string);
       reader.onerror = (error) => reject(error);
     });
   }
 
-  /** onSubmit principal */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -106,50 +87,30 @@ export default function CreateInvoiceForm({
       return;
     }
 
-    // 1. Convertir PDF a Base64 si existe
     let base64File = "";
     if (pdfFile) {
       base64File = await fileToBase64(pdfFile);
     }
 
-
-    // 1. Subir PDF (Opcional)
-    let pdfUrl = "";
-    if (pdfFile) {
-      // Ejemplo si usas Supabase:
-      // const filePath = `invoices/${Date.now()}_${pdfFile.name}`;
-      // const { data, error } = await supabase.storage
-      //   .from("invoices")
-      //   .upload(filePath, pdfFile);
-      // if (error) {
-      //   console.error("Error uploading PDF:", error);
-      //   Swal.fire("Error", "Failed to upload PDF", "error");
-      //   return;
-      // }
-      // pdfUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/invoices/${filePath}`;
-      // O si usas tu propio backend para subir archivos, etc.
-    }
-
-    // 2. Llamar createInvoice
-    // Buscamos la budgetAllocation elegida
-    const allocation = budgetAllocations.find((ba) => ba.id === selectedAllocationId);
+    const allocation = budgetAllocations.find(ba => ba.id === selectedAllocationId);
     if (!allocation) {
       Swal.fire("Error", "No se encontró la budgetAllocation seleccionada", "error");
       return;
     }
 
-    const formData = {
+    // Se arma el objeto a enviar con status fijado a "presentado"
+    const formDataObj = {
       customerId,
       amount,
-      status,
-      areaId,                      // Viene del allocation
+      status: invoiceStatus,
+      areaId,
       year,
       budgetAllocationId: selectedAllocationId,
-      file: base64File,           // Campo obligatorio
-      company_id: 1,              // Campo obligatorio (ejemplo: 1)
+      file: base64File,
+      company_id: 1, // Ejemplo
     };
 
-    const result = await Swal.fire({
+    const confirmation = await Swal.fire({
       title: "Confirm Creation",
       text: "Are you sure you want to create this invoice?",
       icon: "question",
@@ -157,21 +118,20 @@ export default function CreateInvoiceForm({
       confirmButtonText: "Yes, create it",
       cancelButtonText: "Cancel",
     });
-    if (!result.isConfirmed) return;
+    if (!confirmation.isConfirmed) return;
 
     try {
-      const response = await createInvoice(formData);
+      const response = await createInvoice(formDataObj);
       if (response.success) {
         Swal.fire("Success", response.message, "success").then(() => {
           router.push("/dashboard/invoices");
-          router.refresh();
         });
       } else {
         Swal.fire("Error", response.message, "error");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating invoice:", error);
-      Swal.fire("Error", "Failed to create Invoice", "error");
+      Swal.fire("Error", error.message || "Failed to create Invoice", "error");
     }
   };
 
@@ -199,7 +159,7 @@ export default function CreateInvoiceForm({
         </select>
       </div>
 
-      {/* BudgetAllocation: Project + Area */}
+      {/* Project + Area */}
       <div>
         <label htmlFor="allocation" className="mb-2 block text-sm font-medium">
           Choose Project + Area
@@ -238,38 +198,7 @@ export default function CreateInvoiceForm({
         />
       </div>
 
-      {/* Status */}
-      <fieldset>
-        <legend className="mb-2 block text-sm font-medium">
-          Invoice Status
-        </legend>
-        <div className="flex items-center gap-4">
-          <label className="flex items-center text-sm">
-            <input
-              type="radio"
-              name="status"
-              value="pending"
-              checked={status === "pending"}
-              onChange={() => setStatus("pending")}
-              className="mr-2"
-            />
-            Pending
-          </label>
-          <label className="flex items-center text-sm">
-            <input
-              type="radio"
-              name="status"
-              value="paid"
-              checked={status === "paid"}
-              onChange={() => setStatus("paid")}
-              className="mr-2"
-            />
-            Paid
-          </label>
-        </div>
-      </fieldset>
-
-      {/* Subir PDF */}
+      {/* PDF Upload */}
       <div>
         <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
           Upload PDF (optional)
@@ -280,11 +209,7 @@ export default function CreateInvoiceForm({
           type="file"
           accept="application/pdf"
           onChange={handlePdfChange}
-          className="block w-full text-sm text-gray-500
-                     file:mr-4 file:rounded-full file:border-0
-                     file:bg-gray-100 file:py-2 file:px-4
-                     file:text-sm file:font-semibold
-                     hover:file:bg-gray-200"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"
         />
       </div>
 

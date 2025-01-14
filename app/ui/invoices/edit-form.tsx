@@ -1,49 +1,73 @@
-'use client';
+"use client";
 
-import { updateInvoice } from '@/app/lib/actions';
-import { CustomerField, InvoiceForm } from '@/app/lib/definitions';
-import { Button } from '@/app/ui/button';
-import {
-  CheckIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
-  UserCircleIcon,
-} from '@heroicons/react/24/outline';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import Swal from 'sweetalert2';
-import 'sweetalert2/dist/sweetalert2.min.css';
+import { updateInvoice } from "@/app/lib/actions";
+import { CustomerField, InvoiceForm } from "@/app/lib/definitions";
+import { Button } from "@/app/ui/button";
+import { CurrencyDollarIcon, UserCircleIcon } from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
+// Función auxiliar para convertir archivo a base64
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+}
 
 export default function EditInvoiceForm({ invoice, customers }: { invoice: InvoiceForm; customers: CustomerField[] }) {
   const router = useRouter();
+  // El estado "currentFile" se inicializa con el PDF actual de la DB
+  const [currentFile, setCurrentFile] = useState<string>(invoice.file || "");
+  // Estado para guardar un nuevo archivo si se selecciona
+  const [newFile, setNewFile] = useState<File | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setNewFile(file);
+      try {
+        const base64 = await fileToBase64(file);
+        // Actualizamos currentFile con el nuevo valor si se selecciona
+        setCurrentFile(base64);
+      } catch (error) {
+        console.error("Error converting file", error);
+      }
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Creamos el FormData del formulario
     const formData = new FormData(event.currentTarget);
+    // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
+    // que ya fue precargado en el formulario.
+    // (Si se selecciona un nuevo archivo, la lógica del backend usará ese valor)
 
     try {
       const result = await Swal.fire({
-        title: 'Confirm Update',
-        text: 'Are you sure you want to update this invoice?',
-        icon: 'question',
+        title: "Confirm Update",
+        text: "Are you sure you want to update this invoice?",
+        icon: "question",
         showCancelButton: true,
-        confirmButtonText: 'Yes, update it',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: "Yes, update it",
+        cancelButtonText: "Cancel",
       });
-
       if (!result.isConfirmed) return;
 
-      const response = await updateInvoice(invoice.id, '', formData);
+      const response = await updateInvoice(invoice.id, formData);
       if (!response.success) throw new Error(response.message);
-
-      await Swal.fire('Updated!', 'The invoice was updated successfully.', 'success');
-
-      router.push('/dashboard/invoices');
+      await Swal.fire("Updated!", "The invoice was updated successfully.", "success");
       router.refresh();
-    } catch (error) {
+      router.push("/dashboard/invoices");
+    } catch (error: any) {
       console.error(error);
-      await Swal.fire('Error!', 'Failed to update the invoice.', 'error');
+      await Swal.fire("Error!", error.message || "Failed to update the invoice.", "error");
     }
   };
 
@@ -59,8 +83,9 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
             <select
               id="customer"
               name="customerId"
-              className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+              className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm"
               defaultValue={invoice.customer_id}
+              required
             >
               <option value="" disabled>
                 Select a customer
@@ -89,9 +114,10 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
                 step="0.01"
                 defaultValue={invoice.amount}
                 placeholder="Enter USD amount"
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm"
+                required
               />
-              <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
+              <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
             </div>
           </div>
         </div>
@@ -103,46 +129,54 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
           </legend>
           <div className="rounded-md border border-gray-200 bg-white px-[14px] py-3">
             <div className="flex gap-4">
-              <div className="flex items-center">
-                <input
-                  id="pending"
-                  name="status"
-                  type="radio"
-                  value="pending"
-                  defaultChecked={invoice.status === 'pending'}
-                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-                />
-                <label
-                  htmlFor="pending"
-                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600"
-                >
-                  Pending <ClockIcon className="h-4 w-4" />
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  id="paid"
-                  name="status"
-                  type="radio"
-                  value="paid"
-                  defaultChecked={invoice.status === 'paid'}
-                  className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
-                />
-                <label
-                  htmlFor="paid"
-                  className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full bg-green-500 px-3 py-1.5 text-xs font-medium text-white"
-                >
-                  Paid <CheckIcon className="h-4 w-4" />
-                </label>
-              </div>
+              {["presentado", "aprobado", "pagado", "rechazado"].map((stat) => (
+                <div key={stat} className="flex items-center">
+                  <input
+                    id={stat}
+                    name="status"
+                    type="radio"
+                    value={stat}
+                    defaultChecked={invoice.status === stat}
+                    className="h-4 w-4 cursor-pointer border-gray-300 bg-gray-100 text-gray-600 focus:ring-2"
+                  />
+                  <label
+                    htmlFor={stat}
+                    className="ml-2 flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                  >
+                    {stat.charAt(0).toUpperCase() + stat.slice(1)}
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
         </fieldset>
+
+        {/* Input File para el PDF */}
+        <div className="mb-4">
+          <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
+            Upload New PDF (optional)
+          </label>
+          <input
+            id="pdfFile"
+            name="pdfFile"
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+          />
+          {currentFile && !newFile && (
+            <p className="mt-1 text-xs text-gray-500">
+              A current file exists. If you do not select a new file, the existing file will be kept.
+            </p>
+          )}
+          {/* Campo oculto para enviar el PDF actual */}
+          <input type="hidden" name="oldPdfFile" value={currentFile} />
+        </div>
       </div>
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/invoices"
-          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+          className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 hover:bg-gray-200"
         >
           Cancel
         </Link>

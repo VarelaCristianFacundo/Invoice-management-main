@@ -14,7 +14,7 @@ const FormSchema = z.object({
   amount: z.coerce
     .number()
     .gt(0, { message: 'Please enter an amount greater than $0.' }),
-  status: z.enum(['pending', 'paid'], {
+  status: z.enum(['presentado', 'aprobado', 'pagado', 'rechazado'], {
     invalid_type_error: 'Please select an invoice status.',
   }),
   date: z.string(),
@@ -65,7 +65,7 @@ export type CustomerState = {
 export async function createInvoice(formData: {
   customerId: string;
   amount: number;
-  status: 'pending' | 'paid';
+  status: 'presentado' | 'aprobado' | 'pagado' | 'rechazado';
   areaId: string;
   year: number;
   budgetAllocationId: string;
@@ -210,32 +210,58 @@ const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(
   id: string,
-  file: string = '', // valor por defecto
   formData: FormData,
-  company_id: number = 0, // valor por defecto
-  //descomentar cuando se pase el usuario logoneado
-  //changedBy: string,
+  company_id: number = 0,
 ) {
+  // Obtener el valor del campo "pdfFile"
+  let file = '';
+  const pdfVal = formData.get('pdfFile');
+
+  if (pdfVal instanceof Blob) {
+    // Si se envió un nuevo archivo, lo convertimos a base64 con prefijo
+    const arrayBuffer = await pdfVal.arrayBuffer();
+    file =
+      'data:application/pdf;base64,' +
+      Buffer.from(arrayBuffer).toString('base64');
+  } else if (typeof pdfVal === 'string' && pdfVal.trim() !== '') {
+    // Si se recibió una cadena, nos aseguramos de que tenga el prefijo
+    file = pdfVal.startsWith('data:application/pdf;base64,')
+      ? pdfVal
+      : 'data:application/pdf;base64,' + pdfVal;
+  }
+
+  // Si file sigue vacío, usamos el valor enviado en el campo oculto "oldPdfFile"
+  if (!file || file === 'data:application/pdf;base64,') {
+    const oldPdf = formData.get('oldPdfFile');
+    if (typeof oldPdf === 'string' && oldPdf.trim() !== '') {
+      file = oldPdf;
+    }
+  }
+
+  // Extraer datos del formulario y convertir el monto a centavos
   const data = {
     customerId: formData.get('customerId') as string,
-    amount: Number(formData.get('amount') as unknown as string),
+    amount: parseFloat(formData.get('amount') as string) * 100,
     newStatus: formData.get('status') as string,
   };
-  console.log(id);
-  console.log(formData);
+
+  console.log('Updating invoice id:', id);
+  console.log('FormData:', formData);
+
   try {
-    // Obtener el estado actual de la factura
+    // Obtener la factura actual para otros procesos
     const invoice = await getInvoiceData(pool, id);
-    console.log('invoice', invoice);
+    console.log('Invoice data from DB:', invoice);
     const currentStatus = invoice.status;
-    const currentAmount = invoice.amount;
+    const currentAmount = invoice.amount; // ya en centavos
+
+    // Chequeo de fondos (según reglas existentes)
     const fundsAvailable = await checkProjectFundsByInoviceId(
       pool,
-      data.amount,
+      parseFloat(formData.get('amount') as string),
       id,
     );
-    const finalStatus =
-      data.newStatus === null ? currentStatus : data.newStatus;
+
     if (!fundsAvailable && data.newStatus === 'paid') {
       return {
         success: false,
@@ -243,7 +269,7 @@ export async function updateInvoice(
       };
     } else {
       console.log('currentStatus:', currentStatus);
-      console.log('newStatus :', data.newStatus);
+      console.log('newStatus:', data.newStatus);
       if (currentStatus !== data.newStatus) {
         if (data.newStatus === 'pending') {
           await updateAvailableAreaFounds(
@@ -255,38 +281,34 @@ export async function updateInvoice(
         } else {
           await updateAvailableAreaFounds(
             pool,
-            data.amount,
+            parseFloat(formData.get('amount') as string),
             invoice.budgetAllocationId,
             data.newStatus,
           );
         }
       }
     }
+
     // Actualizar la factura
     const updateQuery = `
       UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3, file = $5, company_id = $6
-      WHERE id = $4
+      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5
+      WHERE id = $6
     `;
     const updateParams = [
       data.customerId,
       data.amount,
       data.newStatus,
-      id,
       file,
       company_id,
+      id,
     ];
     await pool.query(updateQuery, updateParams);
-    console.log('Invoice updated:', updateParams);
-    await logInvoiceAudit(
-      pool,
-      id,
-      data.customerId,
-      data.amount,
-      data.newStatus,
-      'UPDATE',
-      'changedBy',
-    );
+    console.log('Invoice updated with params:', updateParams);
+
+    // Revalida la ruta para que se vean los datos actualizados
+    revalidatePath('/dashboard/invoices');
+
     return {
       success: true,
       message: 'Invoice updated successfully.',
