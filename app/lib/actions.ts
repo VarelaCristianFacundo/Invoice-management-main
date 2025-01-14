@@ -28,6 +28,9 @@ const CustomerFormSchema = z.object({
   email: z.string({
     invalid_type_error: 'Please enter an email.',
   }),
+  cuit: z.string({
+    invalid_type_error: 'Please enter a cuit.',
+  }),
 });
 const CreateInvoice = FormSchema.extend({
   customerId: z.string(),
@@ -95,8 +98,6 @@ export async function createInvoice(formData: {
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
 
-  const half = await getHalfByBudgetAllocationId(pool, budgetAllocationId);
-
   try {
     const queryText = `
       INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file,company_id)
@@ -104,7 +105,7 @@ export async function createInvoice(formData: {
     `;
     const params = [
       customerId,
-      amountInCents,
+      amountInCents, 
       status,
       date,
       areaId,
@@ -175,7 +176,7 @@ export async function updateAreaFunds(
   }
 }
 
-export async function addCustomer(formData: { name: string; email: string }) {
+export async function addCustomer(formData: { name: string; email: string, cuit: string }) {
   const validatedFields = AddCustomer.safeParse(formData);
 
   if (!validatedFields.success) {
@@ -185,14 +186,14 @@ export async function addCustomer(formData: { name: string; email: string }) {
     };
   }
 
-  const { name, email } = validatedFields.data;
+  const { name, email, cuit } = validatedFields.data;
 
   try {
     const queryText = `
-      INSERT INTO customers (name, email, image_url)
-      VALUES ($1, $2, $3)
+      INSERT INTO customers (name, email, image_url, cuit)
+      VALUES ($1, $2, $3,$ 4)
     `;
-    const params = [name, email, '/customers/emil-kowalski.png'];
+    const params = [name, email, '/customers/emil-kowalski.png', cuit];
     await pool.query(queryText, params);
   } catch (error) {
     console.error('Database Error:', error);
@@ -548,14 +549,14 @@ export async function deleteBudget(id: string) {
 
 export async function updateCustomer(
   id: string,
-  data: { name: string; email: string },
+  data: { name: string; email: string; cuit: string },
 ) {
   const queryText = `
     UPDATE customers
-    SET name = $1, email = $2
-    WHERE id = $3
+    SET name = $1, email = $2, cuit = $3
+    WHERE id = $4
   `;
-  const params = [data.name, data.email, id];
+  const params = [data.name, data.email, data.cuit, id];
 
   try {
     const result = await pool.query(queryText, params);

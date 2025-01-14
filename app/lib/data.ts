@@ -242,8 +242,45 @@ export async function fetchCustomers() {
   return await queryDatabase<CustomerField>(queryText);
 }
 
+export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ areaId: string, name: string, year: number, half: number, totalExecutedAmount: number, totalAllocatedAmount: number }[]> {
+  const queryText = `
+    SELECT 
+      area_id,
+      name,
+      year,
+      half,
+      SUM(executed_amount) AS total_executed_amount,
+      SUM(allocated_amount) AS total_allocated_amount
+    FROM 
+      budget_allocations
+    GROUP BY 
+      area_id, year, half
+  `;
+
+  try {
+    const result = await pool.query(queryText);
+    if (result.rows.length === 0) {
+      throw new Error('No budget allocations found');
+    }
+    return result.rows.map(row => ({
+      areaId: row.area_id,
+      name: row.name,
+      year: row.year,
+      half: row.half,
+      totalExecutedAmount: row.total_executed_amount || 0,
+      totalAllocatedAmount: row.total_allocated_amount || 0
+    }));
+  } catch (error) {
+    console.error('Error fetching budget allocations:', error);
+    throw new Error('Error fetching budget allocations');
+  }
+}
+
 export async function fetchAreas(): Promise<Area[]> {
   const queryText = 'SELECT * FROM areas ORDER BY name ASC';
+  
+  
+  
   const result = await pool.query(queryText);
   return result.rows;
 }
@@ -479,5 +516,34 @@ export async function getAllYears(): Promise<number[]> {
   } catch (error) {
     console.error('Error fetching years:', error);
     throw new Error('Error fetching years');
+  }
+}
+
+export async function fetchCustomersByCuit(cuit: string): Promise<{ id: string, name: string, cuit: string }[]> {
+  const queryText = `
+    SELECT
+      id,
+      name,
+      cuit
+    FROM
+      customers
+    WHERE
+      cuit = $1
+  `;
+  const queryParams = [cuit];
+
+  try {
+    const result = await pool.query(queryText, queryParams);
+    if (result.rows.length === 0) {
+      throw new Error(`No customers found with cuit: ${cuit}`);
+    }
+    return result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      cuit: row.cuit
+    }));
+  } catch (error) {
+    console.error('Error fetching customers by cuit:', error);
+    throw new Error('Error fetching customers by cuit');
   }
 }
