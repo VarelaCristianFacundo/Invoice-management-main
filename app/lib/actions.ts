@@ -971,3 +971,21 @@ export async function getHalfByBudgetAllocationId(
     throw new Error('Error fetching half');
   }
 }
+
+export async function createProgram(name: string) {
+  try {
+    const queryText = `
+      INSERT INTO programs (name)
+      VALUES ($1)
+      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `;
+    const params = [name];
+    const result = await pool.query(queryText, params);
+    const programId = result.rows[0].id as string;
+    return programId;
+  } catch (error) {
+    console.error('Error creating program:', error);
+    throw new Error('Failed to create or fetch program');
+  }
+}

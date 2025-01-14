@@ -2,18 +2,15 @@
 
 import {
   createBudgetAllocation,
-  createProject
+  createProgram,
+  createProject,
 } from '@/app/lib/actions';
-import { CustomerField } from '@/app/lib/definitions';
+import { AreaType, CustomerField } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
-
-export type AreaType = {
-  id: string;
-  name: string;
-};
+import CustomAutocompleteProgram from '../autocomplete';
 
 export default function CreateBudgetForm({
   areas,
@@ -29,26 +26,33 @@ export default function CreateBudgetForm({
   const [years, setYears] = useState<number[]>([]);
   const [isLoadingYears, setIsLoadingYears] = useState(true);
 
-  // Datos del form
+  // (Opcional) Cargar programas para otros fines
+  const [programs, setPrograms] = useState<{ id: string; name: string }[]>([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+
+  // Estado para almacenar un candidato nuevo (texto) que se quiere crear
+  const [newProgramCandidate, setNewProgramCandidate] = useState<string>("");
+
+  // Form data
   const [formData, setFormData] = useState({
     project_name: '',
     year: '',
     allocated_amount: 0,
     program: '',
     areaId: '',
-    half: 1
+    half: 1,
   });
 
   const router = useRouter();
 
-  // 1. Cargar años desde la API
+  // 1. Cargar años
   useEffect(() => {
     const getYears = async () => {
       try {
         const res = await fetch('/api/year');
         if (!res.ok) throw new Error('Error fetching years data');
         const data: number[] = await res.json();
-        const validYears = data.filter(y => typeof y === 'number');
+        const validYears = data.filter((y) => typeof y === 'number');
         setYears(validYears);
       } catch (error) {
         console.error('Error fetching years:', error);
@@ -60,16 +64,36 @@ export default function CreateBudgetForm({
     getYears();
   }, []);
 
-  // 2. Manejo de cambios en inputs
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // (Opcional) 2. Cargar programas
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const res = await fetch('/api/programs');
+        if (!res.ok) throw new Error('Error fetching programs');
+        const data = await res.json();
+        setPrograms(data);
+      } catch (error) {
+        console.error(error);
+        Swal.fire('Error', 'Error fetching programs.', 'error');
+      } finally {
+        setIsLoadingPrograms(false);
+      }
+    };
+    fetchPrograms();
+  }, []);
+
+  // 3. Manejo de cambios en inputs
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'allocated_amount' ? parseFloat(value) : value
+      [name]: name === 'allocated_amount' ? parseFloat(value) : value,
     }));
   };
 
-  // 3. Paso 1: Crear solo el proyecto (budgets)
+  // 4. Paso 1: Crear el Project
   const handleSubmitStep1 = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
@@ -78,26 +102,21 @@ export default function CreateBudgetForm({
         Swal.fire('Error', 'Please provide project name and valid year.', 'error');
         return;
       }
-
-      // Llamamos a createProject
       const res = await createProject(formData.project_name, yearNumber);
       if (!res.success) {
         Swal.fire('Error', res.message, 'error');
         return;
       }
-
-      // Guardamos ID y pasamos a step 2
       setProjectId(res.projectId || null);
       Swal.fire('Success', res.message, 'success');
       setStep(2);
-
     } catch (error) {
       console.error('Error creating project:', error);
       Swal.fire('Error', 'Unexpected error', 'error');
     }
   };
 
-  // 4. Paso 2: Crear la asignación (budget_allocations)
+  // 5. Paso 2: Asignar Área y Program
   const handleSubmitStep2 = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
@@ -111,16 +130,27 @@ export default function CreateBudgetForm({
       }
       const yearNumber = parseInt(formData.year);
 
-      // Llamamos a createBudgetAllocation
+      // Si hay un candidato nuevo, crearlo
+      let programToUse = formData.program;
+      if (newProgramCandidate.trim().length > 0) {
+        const result = await createProgram(newProgramCandidate);
+        console.log('New program created with ID:', result);
+        programToUse = newProgramCandidate;
+        setNewProgramCandidate(""); // Limpiar candidato
+        setFormData((prev) => ({ ...prev, program: programToUse }));
+      } else {
+        console.log("Using existing program:", formData.program);
+      }
+
+      // Crear la asignación con createBudgetAllocation
       const res = await createBudgetAllocation(
         projectId,
         formData.areaId,
         formData.allocated_amount,
         formData.half,
-        formData.program,
-        yearNumber  // <--- Mandamos el año
+        programToUse,
+        yearNumber
       );
-
       if (!res.success) {
         Swal.fire('Error', res.message, 'error');
         return;
@@ -153,7 +183,7 @@ export default function CreateBudgetForm({
                 required
               >
                 <option value="">Select a year</option>
-                {years.map(y => (
+                {years.map((y) => (
                   <option key={y} value={y}>
                     {y}
                   </option>
@@ -201,8 +231,10 @@ export default function CreateBudgetForm({
               className="block w-full rounded-md border py-2 px-3 text-sm"
               required
             >
-              <option value="" disabled>Select an area</option>
-              {areas.map(area => (
+              <option value="" disabled>
+                Select an area
+              </option>
+              {areas.map((area) => (
                 <option key={area.id} value={area.id}>
                   {area.name}
                 </option>
@@ -225,18 +257,17 @@ export default function CreateBudgetForm({
             />
           </div>
 
+          {/* Autocomplete de Program con callback */}
           <div className="mb-4">
-            <label htmlFor="program" className="mb-2 block text-sm font-medium">
-              Program
-            </label>
-            <input
-              id="program"
-              name="program"
-              type="text"
-              value={formData.program}
-              onChange={handleChange}
-              className="block w-full rounded-md border py-2 px-3 text-sm"
-              required
+            <CustomAutocompleteProgram
+              onProgramSelected={(programName: string, isNew?: boolean) => {
+                setFormData((prev) => ({ ...prev, program: programName }));
+                if (isNew) {
+                  setNewProgramCandidate(programName);
+                } else {
+                  setNewProgramCandidate("");
+                }
+              }}
             />
           </div>
 

@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
-import { AreaType } from '../ui/budgets/create-form';
 import {
   AreaFund,
+  AreaType,
   CustomerField,
   CustomerForm,
   CustomersTableType,
@@ -487,4 +487,10 @@ export async function getAllYears(): Promise<number[]> {
     console.error('Error fetching years:', error);
     throw new Error('Error fetching years');
   }
+}
+
+export async function fetchPrograms(): Promise<{ id: string; name: string }[]> {
+  const query = 'SELECT id, name FROM programs ORDER BY name ASC';
+  const { rows } = await pool.query(query);
+  return rows;
 }

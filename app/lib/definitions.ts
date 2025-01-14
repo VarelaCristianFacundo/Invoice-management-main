@@ -128,3 +128,8 @@ export interface AreaFund {
   area_id: number;
   allocated_funds: number;
 }
+
+export type AreaType = {
+  id: string;
+  name: string;
+};
