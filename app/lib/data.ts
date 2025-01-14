@@ -233,12 +233,12 @@ export async function fetchInvoiceById(id: string) {
   }));
   return invoice[0];
 }
-
 export async function fetchCustomers() {
   const queryText = `
     SELECT
       id,
-      name
+      name,
+      cuit_cuil
     FROM customers
     ORDER BY name ASC
   `;

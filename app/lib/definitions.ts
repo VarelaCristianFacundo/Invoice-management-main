@@ -88,6 +88,7 @@ export type FormattedCustomersTable = {
 export type CustomerField = {
   id: string;
   name: string;
+  cuit_cuil: string;
 };
 
 export type InvoiceForm = {

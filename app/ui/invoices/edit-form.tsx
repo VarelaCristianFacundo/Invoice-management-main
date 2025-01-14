@@ -27,7 +27,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
   // Estado para guardar un nuevo archivo si se selecciona
   const [newFile, setNewFile] = useState<File | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setNewFile(file);
@@ -154,15 +154,15 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
         {/* Input File para el PDF */}
         <div className="mb-4">
           <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-            Upload New PDF (optional)
+            Upload PDF (optional)
           </label>
           <input
             id="pdfFile"
             name="pdfFile"
             type="file"
             accept="application/pdf"
-            onChange={handleFileChange}
-            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+            onChange={handlePdfChange}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"
           />
           {currentFile && !newFile && (
             <p className="mt-1 text-xs text-gray-500">

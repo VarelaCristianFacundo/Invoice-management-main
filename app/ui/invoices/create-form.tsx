@@ -6,8 +6,9 @@ import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
-// Tipos mínimos (ajusta según tus definiciones)
-type CustomerField = { id: string; name: string };
+// Actualizá el tipo para incluir CUIT/CUIL
+type CustomerField = { id: string; name: string; cuit_cuil: string };
+
 type BudgetAllocationItem = {
   id: string;
   project_name: string;
@@ -22,6 +23,9 @@ export default function CreateInvoiceForm({
   customers: CustomerField[];
 }) {
   const [budgetAllocations, setBudgetAllocations] = useState<BudgetAllocationItem[]>([]);
+  // En vez de usar select, usaremos dos estados:
+  // uno para el valor del input y otro para el id seleccionado
+  const [customerInput, setCustomerInput] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState(0);
   // Este formulario siempre crea facturas en estado "presentado"
@@ -75,9 +79,21 @@ export default function CreateInvoiceForm({
     });
   }
 
+  // Función para filtrar los customers según lo ingresado
+  const filteredCustomers = customerInput.length >= 3
+    ? customers.filter(c =>
+      c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
+      c.cuit_cuil.includes(customerInput)
+    )
+    : [];
+
+  const handleCustomerSelect = (selected: CustomerField) => {
+    setCustomerInput(`${selected.name} (${selected.cuit_cuil})`);
+    setCustomerId(selected.id);
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!customerId || !selectedAllocationId) {
       Swal.fire("Incomplete", "Selecciona cliente y proyecto/área", "info");
       return;
@@ -98,7 +114,6 @@ export default function CreateInvoiceForm({
       return;
     }
 
-    // Se arma el objeto a enviar con status fijado a "presentado"
     const formDataObj = {
       customerId,
       amount,
@@ -137,26 +152,38 @@ export default function CreateInvoiceForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 rounded-md bg-gray-50 p-4 md:p-6">
-      {/* Cliente */}
+      {/* Autocomplete para Customer */}
       <div>
-        <label htmlFor="customerId" className="mb-2 block text-sm font-medium">
-          Choose customer
+        <label htmlFor="customerInput" className="mb-2 block text-sm font-medium">
+          Choose customer (by name or CUIT/CUIL)
         </label>
-        <select
-          id="customerId"
-          name="customerId"
-          value={customerId}
-          onChange={(e) => setCustomerId(e.target.value)}
+        <input
+          type="text"
+          id="customerInput"
+          name="customerInput"
+          value={customerInput}
+          onChange={(e) => {
+            setCustomerInput(e.target.value);
+            setCustomerId(""); // Limpiamos el id cuando se escribe
+          }}
+          placeholder="Empieza a escribir..."
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-          required
-        >
-          <option value="">Select a customer</option>
-          {customers.map((cus) => (
-            <option key={cus.id} value={cus.id}>
-              {cus.name}
-            </option>
-          ))}
-        </select>
+          autoComplete="off"
+        />
+        {/* Mostrar sugerencias */}
+        {customerInput.length >= 3 && filteredCustomers.length > 0 && (
+          <ul className="border border-gray-200 rounded-md bg-white mt-1 max-h-60 overflow-y-auto">
+            {filteredCustomers.map((customer) => (
+              <li
+                key={customer.id}
+                className="p-2 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleCustomerSelect(customer)}
+              >
+                {customer.name} — {customer.cuit_cuil}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Project + Area */}
