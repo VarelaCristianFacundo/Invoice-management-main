@@ -1,26 +1,15 @@
 import { updateAreaFunds } from '@/app/lib/actions';
 import { db } from '@/app/lib/db';
 import { NextResponse } from 'next/server';
+import { sumBudgetAllocationsByAreaYearHalf } from '@/app/lib/data';
 
 export async function GET() {
+    
   try {
     // Hacemos la consulta
-    const result = await db.query(`
-      SELECT 
-        af.id AS fund_id,
-        af.area_id,
-        a.name AS area_name,
-        af.allocated_funds,
-        af.executed_funds,
-        af.year,
-        af.half
-      FROM area_funds af
-      INNER JOIN areas a ON af.area_id = a.id
-      ORDER BY a.name, af.year, af.half
-    `);
-
-    // Devolvemos solo las rows
-    return NextResponse.json(result.rows);
+    const result = await sumBudgetAllocationsByAreaYearHalf();
+    console.log("pase por aca");    // Devolvemos solo las rows
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching area funds:', error);
     return NextResponse.json(
