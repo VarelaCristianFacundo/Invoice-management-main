@@ -252,7 +252,7 @@ export async function updateInvoice(
       id,
     );
 
-    if (!fundsAvailable && data.newStatus === 'paid') {
+    if (!fundsAvailable && data.newStatus === 'aprobado') {
       return {
         success: false,
         message: 'Insufficent funds available',
@@ -827,9 +827,9 @@ async function updateBudgetAllocation(
     SET 
       executed_amount = executed_amount + 
         CASE 
-          WHEN $3 = 'aprobado' THEN -CAST($1 AS NUMERIC) 
+          WHEN $3 = 'aprobado' THEN CAST($1 AS NUMERIC) 
           WHEN $3 = 'pagado' THEN 0 
-          ELSE CAST($1 AS NUMERIC) 
+          ELSE -CAST($1 AS NUMERIC) 
         END
     WHERE id = $2
   `;
