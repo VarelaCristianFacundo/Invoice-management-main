@@ -99,7 +99,7 @@ export async function createInvoice(formData: {
 
   try {
     const queryText = `
-      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file,company_id)
+      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
     `;
     const params = [
@@ -116,16 +116,6 @@ export async function createInvoice(formData: {
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
 
-    if (status === 'paid') {
-      if (await checkProjectFunds(pool, budgetAllocationId, amount)) {
-        updateBudgetAllocation(pool, budgetAllocationId, amount, status);
-      } else {
-        return {
-          success: false,
-          message: 'Insufficent funds available',
-        };
-      }
-    }
     await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
     return {
       success: true,
@@ -835,8 +825,13 @@ async function updateBudgetAllocation(
   const updateAllocationQuery = `
     UPDATE budget_allocations
     SET 
-      executed_amount = executed_amount + CASE WHEN $3 = 'pending' THEN -CAST($1 AS NUMERIC) ELSE CAST($1 AS NUMERIC) END
-    WHERE id =$2
+      executed_amount = executed_amount + 
+        CASE 
+          WHEN $3 = 'aprobado' THEN -CAST($1 AS NUMERIC) 
+          WHEN $3 = 'pagado' THEN 0 
+          ELSE CAST($1 AS NUMERIC) 
+        END
+    WHERE id = $2
   `;
   const updateAllocationParams = [amount, budgetAllocationId, status];
 
