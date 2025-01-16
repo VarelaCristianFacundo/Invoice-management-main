@@ -1,43 +1,82 @@
-// app/ui/invoices/InvoicesTable.tsx
+"use client";
 
-import { fetchFilteredInvoices } from "@/app/lib/data";
-import { Invoice } from "@/app/lib/definitions"; // Importa la interfaz Invoice
+import { Invoice } from "@/app/lib/definitions";
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
-export default async function InvoicesTable({
-  query,
-  currentPage,
-}: {
-  query: string;
-  currentPage: number;
-}) {
+export default function InvoicesTable({ query, currentPage }: { query: string; currentPage: number; }) {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default: CAMARCO
 
-  const invoices: Invoice[] = await fetchFilteredInvoices(query, currentPage); // Especifica el tipo
+  // Función para cargar facturas
+  const loadInvoices = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/invoices?query=${encodeURIComponent(query)}&currentPage=${currentPage}&companyId=${selectedCompany}`
+      );
+      const data = await res.json();
+      setInvoices(data);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar facturas al cambiar el query, la página o la empresa seleccionada
+  useEffect(() => {
+    loadInvoices();
+  }, [query, currentPage, selectedCompany]);
 
   return (
-    <div className="mt-6 flow-root">
-      <div className="inline-block min-w-full align-middle">
-        <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
-          <table className="min-w-full text-gray-900">
-            <thead className="rounded-lg text-left text-sm font-normal">
+    <div className="p-6 bg-gray-100 rounded-md shadow-md">
+      <h2 className="text-lg font-semibold mb-4">Invoices by Company</h2>
+
+      {/* Botonera para seleccionar la empresa */}
+      <div className="flex gap-4 mb-4">
+        <button
+          className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
+          onClick={() => setSelectedCompany(1)}
+        >
+          CAMARCO
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
+          onClick={() => setSelectedCompany(2)}
+        >
+          FODECO
+        </button>
+      </div>
+
+      {/* Tabla de facturas */}
+      <div className="overflow-x-auto bg-white rounded-md shadow">
+        {loading ? (
+          <p className="p-4">Loading invoices...</p>
+        ) : invoices.length === 0 ? (
+          <p className="p-4">No invoices found.</p>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-200 text-left">
               <tr>
-                <th scope="col" className="px-4 py-5 font-medium">Customer</th>
-                <th scope="col" className="px-3 py-5 font-medium">Area - Programa - Proyecto</th> {/* Actualizado */}
-                <th scope="col" className="px-3 py-5 font-medium">Amount</th>
-                <th scope="col" className="px-3 py-5 font-medium">Date</th>
-                <th scope="col" className="px-3 py-5 font-medium">Status</th>
-                <th scope="col" className="px-3 py-5 font-medium">File</th>
-                <th scope="col" className="px-3 py-5"></th>
+                <th className="px-4 py-2">Customer</th>
+                <th className="px-4 py-2">Area - Program - Project</th>
+                <th className="px-4 py-2">Amount</th>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">File</th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
-            <tbody className="bg-white">
-              {invoices?.map((invoice) => (
-                <tr key={invoice.id} className="border-b last:border-none">
-                  <td className="px-4 py-3">
+            <tbody>
+              {invoices.map((invoice) => (
+                <tr key={invoice.id}>
+                  <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       <Image
                         src={invoice.image_url}
@@ -49,21 +88,17 @@ export default async function InvoicesTable({
                       {invoice.name}
                     </div>
                   </td>
-
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-2">
                     {invoice.area_name && invoice.program && invoice.project_name
                       ? `${invoice.area_name} - ${invoice.program} - ${invoice.project_name}`
                       : "N/A"}
                   </td>
-
-                  <td className="px-3 py-3">{formatCurrency(invoice.amount)}</td>
-                  <td className="px-3 py-3">{formatDateToLocal(invoice.date)}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-4 py-2">{formatCurrency(invoice.amount)}</td>
+                  <td className="px-4 py-2">{formatDateToLocal(invoice.date)}</td>
+                  <td className="px-4 py-2">
                     <InvoiceStatus status={invoice.status} />
                   </td>
-
-                  <td className="px-3 py-3">
-                    {/* PDF Link o ícono */}
+                  <td className="px-4 py-2">
                     {invoice.file ? (
                       <a
                         href={invoice.file}
@@ -78,18 +113,15 @@ export default async function InvoicesTable({
                       <span className="text-xs text-gray-400">No file</span>
                     )}
                   </td>
-
-                  <td className="px-3 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <UpdateInvoice id={invoice.id} />
-                      <DeleteInvoice id={invoice.id} />
-                    </div>
+                  <td className="px-4 py-2 flex gap-2 justify-end">
+                    <UpdateInvoice id={invoice.id} />
+                    <DeleteInvoice id={invoice.id} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        )}
       </div>
     </div>
   );
