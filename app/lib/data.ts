@@ -494,3 +494,39 @@ export async function fetchPrograms(): Promise<{ id: string; name: string }[]> {
   const { rows } = await pool.query(query);
   return rows;
 }
+
+export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ area_id: string, area_name: string, year: number, half: number, executed_funds: number, allocated_funds: number }[]> {
+  const queryText = `
+  SELECT 
+    ba.area_id,
+    a.name AS area_name,
+    ba.year,
+    ba.half,
+    SUM(ba.executed_amount) AS executed_funds,
+    SUM(ba.allocated_amount) AS allocated_funds
+  FROM 
+    budget_allocations ba
+  INNER JOIN 
+    areas a ON ba.area_id = a.id
+  GROUP BY 
+    ba.area_id, a.name, ba.year, ba.half
+  `;
+
+  try {
+    const result = await pool.query(queryText);
+    if (result.rows.length === 0) {
+      throw new Error('No budget allocations found');
+    }
+    return result.rows.map(row => ({
+      area_id: row.area_id,
+      area_name: row.area_name,
+      year: row.year,
+      half: row.half,
+      executed_funds: row.executed_funds || 0,
+      allocated_funds: row.allocated_funds || 0
+    }));
+  } catch (error) {
+    console.error('Error fetching budget allocations:', error);
+    throw new Error('Error fetching budget allocations');
+  }
+}

@@ -1,4 +1,4 @@
-import { getAreaFunds } from '@/app/lib/data';
+import { sumBudgetAllocationsByAreaYearHalf } from '@/app/lib/data';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   const areaId = params.id;
 
   try {
-    const funds = await getAreaFunds(areaId);
+    const funds = await sumBudgetAllocationsByAreaYearHalf();
     return NextResponse.json({ allocated_funds: funds });
   } catch (error) {
     console.error('Error fetching area funds:', error);
