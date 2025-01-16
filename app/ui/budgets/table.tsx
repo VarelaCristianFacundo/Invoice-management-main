@@ -15,7 +15,12 @@ type Budget = {
   area_names: string;
 };
 
-export default function BudgetsTable() {
+type TableProps = {
+  query: string;
+  currentPage: number;
+};
+
+export default function BudgetsTable({ query, currentPage }: TableProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number | null>(1); // Default CAMARCO
