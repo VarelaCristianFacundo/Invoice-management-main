@@ -495,19 +495,21 @@ export async function fetchPrograms(): Promise<{ id: string; name: string }[]> {
   return rows;
 }
 
-export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ areaId: string, name: string, year: number, half: number, totalExecutedAmount: number, totalAllocatedAmount: number }[]> {
+export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ area_id: string, area_name: string, year: number, half: number, executed_funds: number, allocated_funds: number }[]> {
   const queryText = `
-    SELECT 
-      area_id,
-      name,
-      year,
-      half,
-      SUM(executed_amount) AS total_executed_amount,
-      SUM(allocated_amount) AS total_allocated_amount
-    FROM 
-      budget_allocations
-    GROUP BY 
-      area_id, year, half
+  SELECT 
+    ba.area_id,
+    a.name AS area_name,
+    ba.year,
+    ba.half,
+    SUM(ba.executed_amount) AS executed_funds,
+    SUM(ba.allocated_amount) AS allocated_funds
+  FROM 
+    budget_allocations ba
+  INNER JOIN 
+    areas a ON ba.area_id = a.id
+  GROUP BY 
+    ba.area_id, a.name, ba.year, ba.half
   `;
 
   try {
@@ -516,12 +518,12 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ areaId: st
       throw new Error('No budget allocations found');
     }
     return result.rows.map(row => ({
-      areaId: row.area_id,
-      name: row.name,
+      area_id: row.area_id,
+      area_name: row.area_name,
       year: row.year,
       half: row.half,
-      totalExecutedAmount: row.total_executed_amount || 0,
-      totalAllocatedAmount: row.total_allocated_amount || 0
+      executed_funds: row.executed_funds || 0,
+      allocated_funds: row.allocated_funds || 0
     }));
   } catch (error) {
     console.error('Error fetching budget allocations:', error);
