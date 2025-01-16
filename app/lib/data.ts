@@ -495,7 +495,16 @@ export async function fetchPrograms(): Promise<{ id: string; name: string }[]> {
   return rows;
 }
 
-export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ area_id: string, area_name: string, year: number, half: number, executed_funds: number, allocated_funds: number }[]> {
+export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
+  {
+    area_id: string;
+    area_name: string;
+    year: number;
+    half: number;
+    executed_funds: number;
+    allocated_funds: number;
+  }[]
+> {
   const queryText = `
   SELECT 
     ba.area_id,
@@ -517,16 +526,52 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<{ area_id: s
     if (result.rows.length === 0) {
       throw new Error('No budget allocations found');
     }
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       area_id: row.area_id,
       area_name: row.area_name,
       year: row.year,
       half: row.half,
       executed_funds: row.executed_funds || 0,
-      allocated_funds: row.allocated_funds || 0
+      allocated_funds: row.allocated_funds || 0,
     }));
   } catch (error) {
     console.error('Error fetching budget allocations:', error);
     throw new Error('Error fetching budget allocations');
+  }
+}
+
+export async function fetchBudgetsByCompany(
+  companyId: number,
+  query: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * 10; // 10 elementos por página
+  const sql = `
+    SELECT 
+      budgets.id,
+      budgets.project_name,
+      budgets.year,
+      budgets.company_id,
+      COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
+      COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
+      STRING_AGG(DISTINCT areas.name, ', ') AS area_names
+    FROM budgets
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE 
+      budgets.company_id = $1 AND 
+      (budgets.project_name ILIKE $2 OR budgets.year::text ILIKE $2)
+    GROUP BY budgets.id
+    ORDER BY budgets.year DESC
+    LIMIT 10 OFFSET $3;
+  `;
+  const values = [companyId, `%${query}%`, offset];
+
+  try {
+    const result = await pool.query(sql, values);
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching budgets by company:', error);
+    throw new Error('Failed to fetch budgets.');
   }
 }

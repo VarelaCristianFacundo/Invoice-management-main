@@ -1,94 +1,122 @@
-import { fetchFilteredBudgets } from '@/app/lib/data';
-import { formatCurrency } from '@/app/lib/utils';
-import { DeleteBudget, RejectBudget, UpdateBudget } from '@/app/ui/budgets/buttons';
-import BudgetStatus from '@/app/ui/budgets/status';
+"use client";
 
-export default async function BudgetsTable({
-  query,
-  currentPage,
-}: {
-  query: string;
-  currentPage: number;
-}) {
-  console.log('Rendering BudgetsTable with query:', query, 'and currentPage:', currentPage);
+import { formatCurrency } from "@/app/lib/utils";
+import { DeleteBudget, RejectBudget, UpdateBudget } from "@/app/ui/budgets/buttons";
+import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 
-  try {
-    const budgets = await fetchFilteredBudgets(query, currentPage);
-    console.log('Budgets fetched:', budgets);
+type Budget = {
+  id: string;
+  project_name: string;
+  program: string;
+  year: number;
+  total_allocated_amount: number;
+  total_executed_amount: number;
+  area_names: string;
+};
 
-    if (!budgets || budgets.length === 0) {
-      console.log('No budgets found.');
+export default function BudgetsTable() {
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedCompany, setSelectedCompany] = useState<number | null>(1); // Default CAMARCO
+  const [search, setSearch] = useState<string>("");
+
+  const fetchBudgets = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `/api/budgets?query=${search}&currentPage=1&companyId=${selectedCompany || ""}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch budgets");
+
+      const data = await res.json();
+      setBudgets(data);
+    } catch (error) {
+      console.error("Error fetching budgets:", error);
+      Swal.fire("Error", "Failed to fetch budgets. Please try again later.", "error");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return (
-      <div className="mt-6 flow-root">
-        <div className="inline-block min-w-full align-middle">
-          <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
-            {/* Responsive Cards for Small Screens */}
-            <div className="md:hidden">
-              {budgets?.map((budget) => {
-                console.log('Rendering budget card for:', budget);
-                return (
-                  <div key={budget.id} className="mb-2 w-full rounded-md bg-white p-4">
-                    <div className="flex items-center justify-between border-b pb-4">
-                      <div>
-                        <p className="font-semibold">{budget.project_name}</p>
-                        <p className="text-sm text-gray-500">{budget.program}</p>
-                        <p className="text-sm text-gray-500">{budget.area_names}</p> {/* Muestra las áreas */}
-                      </div>
-                      <BudgetStatus status={budget.status} />
-                    </div>
-                    <div className="flex justify-between mt-4">
-                      <p className="font-semibold">Allocated: {formatCurrency(budget.total_allocated_amount)}</p>
-                      <p className="font-semibold">Executed: {formatCurrency(budget.total_executed_amount)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+  useEffect(() => {
+    fetchBudgets();
+  }, [selectedCompany, search]);
 
-            {/* Table for Medium and Larger Screens */}
-            <table className="hidden min-w-full text-gray-900 md:table">
-              <thead className="rounded-lg text-left text-sm font-normal">
-                <tr>
-                  <th scope="col" className="px-4 py-5 font-medium sm:pl-6">Project</th>
-                  <th scope="col" className="px-3 py-5 font-medium">Program</th>
-                  <th scope="col" className="px-3 py-5 font-medium">Allocated</th>
-                  <th scope="col" className="px-3 py-5 font-medium">Executed</th>
-                  <th scope="col" className="px-3 py-5 font-medium">Areas</th>
-                  <th scope="col" className="relative py-3 pl-6 pr-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white">
-                {budgets?.map((budget) => {
-                  console.log('Rendering budget row for:', budget);
-                  return (
-                    <tr key={budget.id}>
-                      <td className="px-3 py-3">{budget.project_name || 'N/A'}</td>
-                      <td className="px-3 py-3">{budget.program || 'N/A'}</td>
-                      <td className="px-3 py-3">{formatCurrency(budget.total_allocated_amount || 0)}</td>
-                      <td className="px-3 py-3">{formatCurrency(budget.total_executed_amount || 0)}</td>
-                      <td className="px-3 py-3">{budget.area_names || 'N/A'}</td>
-                      <td className="py-3 pl-6 pr-3">
-                        <div className="flex justify-end gap-3">
-                          <RejectBudget id={budget.id} />
-                          <UpdateBudget id={budget.id} />
-                          <DeleteBudget id={budget.id} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  return (
+    <div className="p-6 bg-gray-100 rounded-md shadow-md">
+      <h2 className="text-lg font-semibold mb-4">Budgets by Company</h2>
+
+      {/* Selector de empresa */}
+      <div className="flex gap-4 mb-4">
+        <button
+          className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
+          onClick={() => setSelectedCompany(1)}
+        >
+          CAMARCO
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
+          onClick={() => setSelectedCompany(2)}
+        >
+          FODECO
+        </button>
       </div>
-    );
-  } catch (error) {
-    console.error('Error rendering BudgetsTable:', error);
-    return <div>Error loading budgets. Please try again later.</div>;
-  }
+
+      {/* Barra de búsqueda */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search budgets..."
+          value={search}
+          onChange={handleSearchChange}
+          className="w-full rounded-md border border-gray-300 py-2 px-3 text-sm"
+        />
+      </div>
+
+      {/* Tabla de presupuestos */}
+      <div className="overflow-x-auto bg-white rounded-md shadow">
+        {loading ? (
+          <p className="p-4">Loading budgets...</p>
+        ) : budgets.length === 0 ? (
+          <p className="p-4">No budgets found.</p>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-200 text-left">
+              <tr>
+                <th className="px-4 py-2">Project</th>
+                <th className="px-4 py-2">Program</th>
+                <th className="px-4 py-2">Year</th>
+                <th className="px-4 py-2">Allocated</th>
+                <th className="px-4 py-2">Executed</th>
+                <th className="px-4 py-2">Areas</th>
+                <th className="px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {budgets.map((budget) => (
+                <tr key={budget.id}>
+                  <td className="px-4 py-2">{budget.project_name}</td>
+                  <td className="px-4 py-2">{budget.program || "N/A"}</td>
+                  <td className="px-4 py-2">{budget.year}</td>
+                  <td className="px-4 py-2">{formatCurrency(budget.total_allocated_amount)}</td>
+                  <td className="px-4 py-2">{formatCurrency(budget.total_executed_amount)}</td>
+                  <td className="px-4 py-2">{budget.area_names}</td>
+                  <td className="px-4 py-2 flex gap-2">
+                    <RejectBudget id={budget.id} />
+                    <UpdateBudget id={budget.id} />
+                    <DeleteBudget id={budget.id} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
 }

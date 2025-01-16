@@ -4,8 +4,23 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, year, areaId, program, projectId, allocated_amount, half } =
-      body;
+    const {
+      id,
+      year,
+      areaId,
+      program,
+      projectId,
+      allocated_amount,
+      half,
+      company_id,
+    } = body; // Incluimos company_id
+
+    if (!company_id) {
+      return NextResponse.json(
+        { error: 'Company ID is required' },
+        { status: 400 },
+      );
+    }
 
     await createBudget({
       id,
@@ -15,6 +30,7 @@ export async function POST(request: Request) {
       projectId,
       allocated_amount,
       half,
+      company_id, // Enviamos company_id a la función
     });
 
     return NextResponse.json(

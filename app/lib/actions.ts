@@ -315,14 +315,18 @@ export async function updateInvoice(
 // ----------------------------------------------------------------------------------
 // 1. createProject
 // ----------------------------------------------------------------------------------
-export async function createProject(project_name: string, year: number) {
+export async function createProject(
+  project_name: string,
+  year: number,
+  company_id: number,
+) {
   try {
     const queryText = `
-      INSERT INTO budgets (project_name, year)
-      VALUES ($1, $2)
+      INSERT INTO budgets (project_name, year, company_id)
+      VALUES ($1, $2, $3)
       RETURNING id
     `;
-    const params = [project_name, year];
+    const params = [project_name, year, company_id];
     const result = await pool.query(queryText, params);
 
     // Obtenemos el nuevo ID
@@ -401,6 +405,7 @@ export async function createBudget({
   year,
   half,
   program,
+  company_id, // Añadimos company_id aquí
 }: {
   id: string;
   projectId: string;
@@ -409,22 +414,23 @@ export async function createBudget({
   year: number;
   half: number;
   program: string;
+  company_id: string; // Tipo de company_id
 }) {
   try {
     if (id === 'new') {
       // Primero creamos el proyecto en la tabla 'budgets'
       const queryText = `
-        INSERT INTO budgets (project_name, year)
-        VALUES ($1, $2) RETURNING id
+        INSERT INTO budgets (project_name, year, company_id)
+        VALUES ($1, $2, $3) RETURNING id
       `;
-      const params = [, year];
+      const params = [, year, company_id]; // Incluimos company_id en los parámetros
       const result = await pool.query(queryText, params);
       const projectId = result.rows[0].id; // Obtenemos el ID del nuevo proyecto.
 
       // Ahora asignamos los fondos y áreas en 'budget_allocations'
       const queryTextInsert = `
-        INSERT INTO budget_allocations (project_id, area_id, allocated_amount, executed_amount, program, half)
-        VALUES ($1, $2, $3, 0, $4, $5)
+        INSERT INTO budget_allocations (project_id, area_id, allocated_amount, executed_amount, program, half, year)
+        VALUES ($1, $2, $3, 0, $4, $5, $6)
       `;
       const paramsAllocations = [
         projectId,
@@ -432,6 +438,7 @@ export async function createBudget({
         allocated_amount,
         program,
         half,
+        year, // Año incluido aquí
       ];
       await pool.query(queryTextInsert, paramsAllocations);
       console.log('Budget created and areas assigned:', paramsAllocations);
@@ -444,19 +451,26 @@ export async function createBudget({
       // Si no es un proyecto nuevo, actualizamos
       const queryText = `
         UPDATE budgets
-        SET project_name = $1, year = $2
-        WHERE id = $3
+        SET project_name = $1, year = $2, company_id = $3
+        WHERE id = $4
       `;
-      const params = [projectId, year, id];
+      const params = [projectId, year, company_id, id]; // Incluimos company_id en los parámetros
       await pool.query(queryText, params);
 
       // Actualizamos los fondos
       const queryTextUpdate = `
         UPDATE budget_allocations
-        SET allocated_amount = $3, executed_amount = 0, program = $4, half = $5
+        SET allocated_amount = $3, executed_amount = 0, program = $4, half = $5, year = $6
         WHERE project_id = $1 AND area_id = $2
       `;
-      const paramsUpdate = [projectId, areaId, allocated_amount, program, half];
+      const paramsUpdate = [
+        projectId,
+        areaId,
+        allocated_amount,
+        program,
+        half,
+        year, // Año incluido aquí
+      ];
       await pool.query(queryTextUpdate, paramsUpdate);
 
       console.log('Project and area updated:', paramsUpdate);
