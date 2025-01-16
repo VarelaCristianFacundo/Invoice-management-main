@@ -22,17 +22,19 @@ export default function AreaFundsView() {
     const [loading, setLoading] = useState<boolean>(true);
     const [selectedArea, setSelectedArea] = useState<Area | null>(null);
     const [search, setSearch] = useState<string>("");
+    const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default CAMARCO
 
     const fetchAreaFunds = async () => {
         try {
             setLoading(true);
 
-            const res = await fetch("/api/area-funds-summary");
+            const res = await fetch(
+                `/api/area-funds-summary?companyId=${selectedCompany}`
+            );
             if (!res.ok) throw new Error("Error fetching area funds data");
 
             const data = await res.json();
             setAreas(data);
-
             setSelectedArea(data[0] || null);
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -48,7 +50,7 @@ export default function AreaFundsView() {
 
     useEffect(() => {
         fetchAreaFunds();
-    }, []);
+    }, [selectedCompany]);
 
     const filteredAreas = areas.filter((area) =>
         area.name.toLowerCase().includes(search.toLowerCase())
@@ -61,6 +63,24 @@ export default function AreaFundsView() {
     return (
         <div className="p-6 bg-gray-100 rounded-md shadow-md">
             <h2 className="text-lg font-semibold mb-4">Fondos por Área y Semestre</h2>
+
+            {/* Selector de compañía */}
+            <div className="flex gap-4 mb-4">
+                <button
+                    className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-blue-500 text-white" : "bg-gray-300"
+                        }`}
+                    onClick={() => setSelectedCompany(1)}
+                >
+                    CAMARCO
+                </button>
+                <button
+                    className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-blue-500 text-white" : "bg-gray-300"
+                        }`}
+                    onClick={() => setSelectedCompany(2)}
+                >
+                    FODECO
+                </button>
+            </div>
 
             {/* Search Bar */}
             <div className="mb-4">

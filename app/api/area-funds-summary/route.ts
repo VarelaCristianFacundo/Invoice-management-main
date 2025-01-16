@@ -5,9 +5,18 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-// Handler para el método GET
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = req.nextUrl;
+    const companyId = parseInt(searchParams.get('companyId') || '0', 10);
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'CompanyId is required' },
+        { status: 400 },
+      );
+    }
+
     const query = `
       SELECT 
         a.id AS area_id,
@@ -18,11 +27,13 @@ export async function GET(req: NextRequest) {
         SUM(ba.executed_amount) AS total_executed
       FROM areas a
       JOIN budget_allocations ba ON a.id = ba.area_id
+      JOIN budgets b ON ba.project_id = b.id
+      WHERE b.company_id = $1
       GROUP BY a.id, a.name, ba.year, ba.half
       ORDER BY a.name, ba.year, ba.half
     `;
 
-    const result = await pool.query(query);
+    const result = await pool.query(query, [companyId]);
 
     const areas = result.rows.reduce((acc, row) => {
       const existingArea = acc.find((area: any) => area.id === row.area_id);
