@@ -92,7 +92,7 @@ export async function createInvoice(formData: {
     file,
     company_id,
   } = validatedFields.data;
-  const amountInCents = amount * 100;
+  const amountInCents = amount * 1;
   const date = new Date().toISOString().split('T')[0];
 
   const half = await getHalfByBudgetAllocationId(pool, budgetAllocationId);
@@ -231,7 +231,7 @@ export async function updateInvoice(
   // Extraer datos del formulario y convertir el monto a centavos
   const data = {
     customerId: formData.get('customerId') as string,
-    amount: parseFloat(formData.get('amount') as string) * 100,
+    amount: parseFloat(formData.get('amount') as string),
     newStatus: formData.get('status') as string,
   };
 

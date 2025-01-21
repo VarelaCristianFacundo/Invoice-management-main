@@ -229,7 +229,7 @@ export async function fetchInvoiceById(id: string) {
   const invoices = await queryDatabase<InvoiceForm>(queryText, params);
   const invoice = invoices.map((invoice) => ({
     ...invoice,
-    amount: invoice.amount / 100, // Convertir de centavos a dólares
+    amount: invoice.amount, // Convertir de centavos a dólares
   }));
   return invoice[0];
 }
