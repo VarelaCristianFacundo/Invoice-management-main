@@ -19,10 +19,10 @@ input[type='number']::-webkit-outer-spin-button {
 
 
 .swal2-confirm {
-  background-color: "#7066e0" !important;
+  background-color: #1F2937 !important;
 }
 
 .swal2-cancel {
-  background-color: #6e7881 !important;
-
+  background-color: #d0d4d7 !important;
+  color: black;
 }

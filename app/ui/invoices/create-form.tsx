@@ -131,6 +131,7 @@ export default function CreateInvoiceForm({
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Sí, crearla",
+      confirmButtonColor: "#3085d6",
       cancelButtonText: "Cancelar",
     });
     if (!confirmation.isConfirmed) return;

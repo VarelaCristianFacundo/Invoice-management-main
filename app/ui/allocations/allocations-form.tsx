@@ -67,14 +67,14 @@ export default function AreaFundsView() {
             {/* Selector de compañía */}
             <div className="flex gap-4 mb-4">
                 <button
-                    className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-blue-500 text-white" : "bg-gray-300"
+                    className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-gray-800 text-white" : "bg-gray-300"
                         }`}
                     onClick={() => setSelectedCompany(1)}
                 >
                     CAMARCO
                 </button>
                 <button
-                    className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-blue-500 text-white" : "bg-gray-300"
+                    className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-gray-800 text-white" : "bg-gray-300"
                         }`}
                     onClick={() => setSelectedCompany(2)}
                 >

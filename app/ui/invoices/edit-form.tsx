@@ -55,6 +55,8 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
         text: "¿Está seguro de que desea actualizar esta factura?",
         icon: "question",
         showCancelButton: true,
+        confirmButtonColor: "#1F2937",
+
         confirmButtonText: "Sí, actualizarla",
         cancelButtonText: "Cancelar",
       });
