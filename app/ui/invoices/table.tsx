@@ -36,7 +36,7 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
 
   return (
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Invoices by Company</h2>
+      <h2 className="text-lg font-semibold mb-4">Facturas por Compañía</h2>
 
       {/* Botonera para seleccionar la empresa */}
       <div className="flex gap-4 mb-4">
@@ -57,19 +57,19 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
       {/* Tabla de facturas */}
       <div className="overflow-x-auto bg-white rounded-md shadow">
         {loading ? (
-          <p className="p-4">Loading invoices...</p>
+          <p className="p-4">Cargando facturas...</p>
         ) : invoices.length === 0 ? (
-          <p className="p-4">No invoices found.</p>
+          <p className="p-4">No se encontraron facturas.</p>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-200 text-left">
               <tr>
-                <th className="px-4 py-2">Customer</th>
-                <th className="px-4 py-2">Area - Program - Project</th>
-                <th className="px-4 py-2">Amount</th>
-                <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Status</th>
-                <th className="px-4 py-2">File</th>
+                <th className="px-4 py-2">Proveedor</th>
+                <th className="px-4 py-2">Área - Programa - Proyecto</th>
+                <th className="px-4 py-2">Cantidad</th>
+                <th className="px-4 py-2">Fecha</th>
+                <th className="px-4 py-2">Estado</th>
+                <th className="px-4 py-2">Archivo</th>
                 <th className="px-4 py-2"></th>
               </tr>
             </thead>
@@ -110,7 +110,7 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
                         View PDF
                       </a>
                     ) : (
-                      <span className="text-xs text-gray-400">No file</span>
+                      <span className="text-xs text-gray-400">Ningún archivo</span>
                     )}
                   </td>
                   <td className="px-4 py-2 flex gap-2 justify-end">

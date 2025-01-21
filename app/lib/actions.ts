@@ -119,7 +119,7 @@ export async function createInvoice(formData: {
     await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
     return {
       success: true,
-      message: 'Invoice created successfully.',
+      message: 'Factura creada satisfactoriamente.',
     };
   } catch (error) {
     console.error('Database Error:', error);
@@ -335,10 +335,10 @@ export async function createProject(
     return {
       success: true,
       projectId: newProjectId,
-      message: 'Project created successfully.',
+      message: 'Proyecto creado satisfactoriamente.',
     };
   } catch (error) {
-    console.error('Error creating project:', error);
+    console.error('Error al crear el proyecto:', error);
     return {
       success: false,
       message: 'Database Error: Failed to create project in budgets.',
@@ -377,13 +377,16 @@ export async function createBudgetAllocation(
 
     return {
       success: true,
-      message: 'Budget allocation created successfully.',
+      message: 'Asignación de proyecto creada exitosamente.',
     };
   } catch (error) {
     if (error instanceof Error) {
-      console.error('Error creating budget allocation:', error.message);
+      console.error(
+        'Error al crear la asignación del proyecto:',
+        error.message,
+      );
     } else {
-      console.error('Error creating budget allocation:', error);
+      console.error('Error al crear la asignación del proyecto:', error);
     }
     if (error instanceof Error) {
       console.error(error.stack);

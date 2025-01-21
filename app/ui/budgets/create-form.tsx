@@ -109,7 +109,7 @@ export default function CreateBudgetForm({
         return;
       }
       setProjectId(res.projectId || null);
-      Swal.fire("Success", res.message, "success");
+      Swal.fire("Éxito", res.message, "success");
       setStep(2);
     } catch (error) {
       console.error("Error creating project:", error);
@@ -148,7 +148,7 @@ export default function CreateBudgetForm({
         Swal.fire("Error", res.message, "error");
         return;
       }
-      Swal.fire("Success", res.message, "success");
+      Swal.fire("Éxito", res.message, "success");
       router.push("/dashboard/budgets");
     } catch (error) {
       console.error("Error assigning budget allocation:", error);
@@ -163,7 +163,7 @@ export default function CreateBudgetForm({
           {/* Selector de compañía */}
           <div className="mb-4">
             <label htmlFor="company_id" className="mb-2 block text-sm font-medium">
-              Company
+              Compañía
             </label>
             <select
               id="company_id"
@@ -181,7 +181,7 @@ export default function CreateBudgetForm({
           {/* Selector de año */}
           <div className="mb-4">
             <label htmlFor="year" className="mb-2 block text-sm font-medium">
-              Year
+              Año
             </label>
             {isLoadingYears ? (
               <p>Loading years...</p>
@@ -194,7 +194,7 @@ export default function CreateBudgetForm({
                 className="block w-full rounded-md border py-2 px-3 text-sm"
                 required
               >
-                <option value="">Select a year</option>
+                <option value="">Seleccione un año</option>
                 {years.map((y) => (
                   <option key={y} value={y}>
                     {y}
@@ -207,7 +207,7 @@ export default function CreateBudgetForm({
           {/* Nombre del proyecto */}
           <div className="mb-4">
             <label htmlFor="project_name" className="mb-2 block text-sm font-medium">
-              Project Name
+              Nombre de Proyecto
             </label>
             <input
               id="project_name"
@@ -221,7 +221,7 @@ export default function CreateBudgetForm({
           </div>
 
           <div className="mt-6 flex justify-end gap-4">
-            <Button type="submit">Create Project</Button>
+            <Button type="submit">Crear Proyecto</Button>
           </div>
         </form>
       )}
@@ -229,13 +229,13 @@ export default function CreateBudgetForm({
       {step === 2 && projectId && (
         <form onSubmit={handleSubmitStep2}>
           <h2 className="mb-4 text-lg font-semibold text-gray-700">
-            Assigning funds to &quot;{formData.project_name}&quot; ({formData.year})
+            Asignar fondos a &quot;{formData.project_name}&quot; ({formData.year})
           </h2>
 
           {/* Área */}
           <div className="mb-4">
             <label htmlFor="areaId" className="mb-2 block text-sm font-medium">
-              Select Area
+              Seleccionar Área
             </label>
             <select
               id="areaId"
@@ -245,7 +245,7 @@ export default function CreateBudgetForm({
               className="block w-full rounded-md border py-2 px-3 text-sm"
               required
             >
-              <option value="">Select an area</option>
+              <option value="">Seleccionar un área</option>
               {areas.map((area) => (
                 <option key={area.id} value={area.id}>
                   {area.name}
@@ -257,7 +257,7 @@ export default function CreateBudgetForm({
           {/* Monto asignado */}
           <div className="mb-4">
             <label htmlFor="allocated_amount" className="mb-2 block text-sm font-medium">
-              Allocated Amount
+              Monto Asignado
             </label>
             <input
               id="allocated_amount"
@@ -287,7 +287,7 @@ export default function CreateBudgetForm({
           {/* Semestre */}
           <div className="mb-4">
             <label htmlFor="half" className="mb-2 block text-sm font-medium">
-              Semester
+              Semestre
             </label>
             <select
               id="half"
@@ -296,13 +296,13 @@ export default function CreateBudgetForm({
               onChange={handleChange}
               className="block w-full rounded-md border py-2 px-3 text-sm"
             >
-              <option value={1}>First Semester</option>
-              <option value={2}>Second Semester</option>
+              <option value={1}>Primer Semestre</option>
+              <option value={2}>Segundo Semestre</option>
             </select>
           </div>
 
           <div className="mt-6 flex justify-end gap-4">
-            <Button type="submit">Assign Area</Button>
+            <Button type="submit">Asignar Área</Button>
           </div>
         </form>
       )}

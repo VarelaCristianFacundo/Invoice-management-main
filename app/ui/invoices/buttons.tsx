@@ -13,7 +13,7 @@ export function CreateInvoice() {
       className="flex h-10 items-center rounded-lg bg-gray-800 px-4 text-sm font-medium text-white transition-colors hover:bg-gray-700"
     >
       <PlusIcon className="w-5" />
-      <span>Create Invoice</span>
+      <span>Crear Factura</span>
     </Link>
   );
 }
@@ -34,12 +34,12 @@ export function DeleteInvoice({ id }: { id: string }) {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: 'Confirm Deletion',
-      text: 'Are you sure you want to delete this invoice?',
+      title: 'Confirmar Eliminación',
+      text: '¿Está seguro de que desea eliminar esta factura?',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Sí, eliminarla',
+      cancelButtonText: 'Cancelar',
     });
 
     if (!result.isConfirmed) return;

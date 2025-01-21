@@ -49,7 +49,7 @@ export default function Form() {
         {/* Customer Fullname */}
         <div className="mb-4">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
-            Customer FullName
+            Nombre del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
             <div className="relative">
@@ -58,7 +58,7 @@ export default function Form() {
                 name="name"
                 type="text"
                 aria-describedby="name-error"
-                placeholder="enter fullname"
+                placeholder="Ingresar el nombre completo"
                 className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
               />
               <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
@@ -77,7 +77,7 @@ export default function Form() {
         {/* Customer Email */}
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm font-medium">
-            Customer Email
+            Correo del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
             <div className="relative">
@@ -114,9 +114,9 @@ export default function Form() {
           href="/dashboard/customers"
           className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 hover:bg-gray-200"
         >
-          Cancel
+          Cancelar
         </Link>
-        <Button type="submit">Add Customer</Button>
+        <Button type="submit">Agregar Proveedor</Button>
       </div>
     </form>
   );

@@ -126,19 +126,19 @@ export default function CreateInvoiceForm({
     };
 
     const confirmation = await Swal.fire({
-      title: "Confirm Creation",
-      text: "Are you sure you want to create this invoice?",
+      title: "Confirmar Creación",
+      text: "¿Está seguro de que desea crear esta factura?",
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Yes, create it",
-      cancelButtonText: "Cancel",
+      confirmButtonText: "Sí, crearla",
+      cancelButtonText: "Cancelar",
     });
     if (!confirmation.isConfirmed) return;
 
     try {
       const response = await createInvoice(formDataObj);
       if (response.success) {
-        Swal.fire("Success", response.message, "success").then(() => {
+        Swal.fire("Éxito", response.message, "success").then(() => {
           router.push("/dashboard/invoices");
         });
       } else {
@@ -155,7 +155,7 @@ export default function CreateInvoiceForm({
       {/* Autocomplete para Customer */}
       <div>
         <label htmlFor="customerInput" className="mb-2 block text-sm font-medium">
-          Choose customer (by name or CUIT/CUIL)
+          Elegir Proveedor (Por nombre o CUIT/CUIL)
         </label>
         <input
           type="text"
@@ -189,7 +189,7 @@ export default function CreateInvoiceForm({
       {/* Project + Area */}
       <div>
         <label htmlFor="allocation" className="mb-2 block text-sm font-medium">
-          Choose Project + Area
+          Elegir Proyecto + Área (Año)
         </label>
         <select
           id="allocation"
@@ -199,7 +199,7 @@ export default function CreateInvoiceForm({
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
           required
         >
-          <option value="">Select Project/Area</option>
+          <option value="">Seleccionar Proyecto/Área</option>
           {budgetAllocations.map((alloc) => (
             <option key={alloc.id} value={alloc.id}>
               {`${alloc.project_name} - ${alloc.area_name} (Año ${alloc.year})`}
@@ -211,7 +211,7 @@ export default function CreateInvoiceForm({
       {/* Monto */}
       <div>
         <label htmlFor="amount" className="mb-2 block text-sm font-medium">
-          Amount
+          Cantidad
         </label>
         <input
           id="amount"
@@ -228,7 +228,7 @@ export default function CreateInvoiceForm({
       {/* PDF Upload */}
       <div>
         <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-          Upload PDF (optional)
+          Cargar PDF (Opcional)
         </label>
         <input
           id="pdfFile"
@@ -247,13 +247,13 @@ export default function CreateInvoiceForm({
           onClick={() => router.push("/dashboard/invoices")}
           className="rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-300"
         >
-          Cancel
+          Cancelar
         </button>
         <button
           type="submit"
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
-          Create Invoice
+          Crear Factura
         </button>
       </div>
     </form>

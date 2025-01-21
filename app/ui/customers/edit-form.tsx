@@ -22,12 +22,12 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
 
     try {
       const result = await Swal.fire({
-        title: 'Confirm Update',
-        text: 'Are you sure you want to update this customer?',
+        title: 'Confirmar Actualización',
+        text: '¿Está seguro de que desea actualizar este cliente?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Yes, update it',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: 'Sí, actualizarlo',
+        cancelButtonText: 'Cancelar',
       });
 
       if (!result.isConfirmed) return;
@@ -52,7 +52,7 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
         {/* Customer Fullname */}
         <div className="mb-4">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
-            Customer FullName
+            Nombre del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
             <div className="relative">
@@ -71,7 +71,7 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
         {/* Customer Email */}
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm font-medium">
-            Customer Email
+            Correo del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
             <div className="relative">
@@ -93,9 +93,9 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
           href="/dashboard/customers"
           className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 hover:bg-gray-200"
         >
-          Cancel
+          Cancelar
         </Link>
-        <Button type="submit">Edit Customer</Button>
+        <Button type="submit">Editar Proveedor</Button>
       </div>
     </form>
   );

@@ -101,8 +101,8 @@ export default function AreaFundsView() {
                             <li
                                 key={area.id}
                                 className={`p-3 cursor-pointer ${selectedArea?.id === area.id
-                                        ? "bg-blue-100 text-blue-600"
-                                        : "hover:bg-gray-200"
+                                    ? "bg-blue-100 text-blue-600"
+                                    : "hover:bg-gray-200"
                                     }`}
                                 onClick={() => setSelectedArea(area)}
                             >
@@ -135,7 +135,7 @@ export default function AreaFundsView() {
                                                 Asignado
                                             </th>
                                             <th className="border border-gray-300 px-2 py-1 text-left">
-                                                Ejecutado
+                                                Abonado
                                             </th>
                                         </tr>
                                     </thead>

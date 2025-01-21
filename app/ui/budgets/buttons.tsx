@@ -20,12 +20,13 @@ export function RejectBudget({ id }: { id: string }) {
 
   const handleReject = async () => {
     const result = await Swal.fire({
-      title: 'Confirm Rejection',
-      text: 'Are you sure you want to reject this budget?',
-      icon: 'warning',
+      title: 'Confirmar Eliminación',
+      text: '¿Estás seguro/a que quieres eliminar este proyecto?',
+      icon: 'error',
       showCancelButton: true,
-      confirmButtonText: 'Yes, reject it',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Si, eliminarlo',
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: 'Cancelar',
     });
 
     if (!result.isConfirmed) return;
@@ -64,12 +65,12 @@ export function DeleteBudget({ id }: { id: string }) {
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: 'Confirm Deletion',
-      text: 'Are you sure you want to delete this budget?',
+      title: 'Confirmar Eliminación',
+      text: '¿Estás segura de que quieres eliminar este Proyecto?',
       icon: 'error',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Sí, eliminarlo',
+      cancelButtonText: 'Cancelar',
     });
 
     if (!result.isConfirmed) return;

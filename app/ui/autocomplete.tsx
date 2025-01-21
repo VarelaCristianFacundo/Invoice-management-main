@@ -86,13 +86,13 @@ export default function CustomAutocompleteProgram({
 
     return (
         <div ref={containerRef} style={{ position: "relative", width: 300 }}>
-            <label className="block text-sm font-medium mb-2">Program</label>
+            <label className="block text-sm font-medium mb-2">Programa</label>
             <input
                 type="text"
                 value={userInput}
                 onChange={handleInputChange}
                 className="border rounded w-full p-2"
-                placeholder="Type at least 3 letters..."
+                placeholder="Escriba las primeras 3 letras..."
             />
             {showSuggestions && (
                 <ul
@@ -120,7 +120,7 @@ export default function CustomAutocompleteProgram({
                             </li>
                         ))
                     ) : (
-                        <li style={{ padding: "8px", color: "#999" }}>No matches...</li>
+                        <li style={{ padding: "8px", color: "#999" }}>No hay resultados...</li>
                     )}
                     {/* Si no hay match exacto, mostrar botón para crear nuevo programa */}
                     {userInput.length >= 3 &&

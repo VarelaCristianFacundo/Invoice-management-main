@@ -25,7 +25,7 @@ export default function InvoiceStatus({ status }: InvoiceStatusProps) {
       icon: <CheckIcon className="ml-1 h-4 w-4 text-white" />,
     },
     pagado: {
-      label: "Pagado",
+      label: "Abonado",
       className: "bg-green-500 text-white",
       icon: <CheckIcon className="ml-1 h-4 w-4 text-white" />,
     },

@@ -51,12 +51,12 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
 
     try {
       const result = await Swal.fire({
-        title: "Confirm Update",
-        text: "Are you sure you want to update this invoice?",
+        title: "Confirmar Actualización",
+        text: "¿Está seguro de que desea actualizar esta factura?",
         icon: "question",
         showCancelButton: true,
-        confirmButtonText: "Yes, update it",
-        cancelButtonText: "Cancel",
+        confirmButtonText: "Sí, actualizarla",
+        cancelButtonText: "Cancelar",
       });
       if (!result.isConfirmed) return;
 
@@ -88,7 +88,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
               required
             >
               <option value="" disabled>
-                Select a customer
+                Seleccionar un Proveedor
               </option>
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
@@ -154,7 +154,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
         {/* Input File para el PDF */}
         <div className="mb-4">
           <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-            Upload PDF (optional)
+            Cargar PDF (opcional)
           </label>
           <input
             id="pdfFile"
@@ -178,9 +178,9 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
           href="/dashboard/invoices"
           className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 hover:bg-gray-200"
         >
-          Cancel
+          Cancelar
         </Link>
-        <Button type="submit">Edit Invoice</Button>
+        <Button type="submit">Editar Factura</Button>
       </div>
     </form>
   );

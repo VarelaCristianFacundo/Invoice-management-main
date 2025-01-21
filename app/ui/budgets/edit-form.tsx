@@ -18,12 +18,12 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
 
     try {
       const result = await Swal.fire({
-        title: 'Confirm Update',
-        text: 'Are you sure you want to update this budget?',
+        title: 'Confirmar Actualización',
+        text: '¿Estás segura de que quieres actualizar este Proyecto?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Yes, update it',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: 'Sí, actualizarlo',
+        cancelButtonText: 'Cancelar',
       });
 
       if (!result.isConfirmed) return;
@@ -52,21 +52,21 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
             name="year"
             type="number"
             defaultValue={budget.year}
-            placeholder="Enter Year"
+            placeholder="Ingrese un Año"
           />
           <input
             id="project_name"
             name="project_name"
             type="text"
             defaultValue={budget.project_name}
-            placeholder="Enter Project"
+            placeholder="Ingrese un Proyecto"
           />
           <input
             id="allocated_amount"
             name="allocated_amount"
             type="number"
             defaultValue={budget.allocated_amount}
-            placeholder="Enter Allocated Amount"
+            placeholder="Ingrese un monto"
           />
 
           <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" />
@@ -76,7 +76,7 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
       {/* Amount */}
       <div className="mb-4">
         <label htmlFor="amount" className="mb-2 block text-sm font-medium">
-          Amount
+          Cantidad
         </label>
         <div className="relative mt-2 rounded-md">
           <input
@@ -85,7 +85,7 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
             type="number"
             step="0.01"
             defaultValue={budget.amount}
-            placeholder="Enter Amount"
+            placeholder="Ingrese una Cantidad"
             className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
           />
           <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
@@ -141,9 +141,9 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
           href="/dashboard/budgets"
           className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
         >
-          Cancel
+          Cancelar
         </Link>
-        <Button type="submit">Edit Budget</Button>
+        <Button type="submit">Editar Proyecto</Button>
       </div>
     </form>
   );

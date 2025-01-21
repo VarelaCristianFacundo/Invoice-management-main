@@ -54,7 +54,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
 
   return (
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Budgets by Company</h2>
+      <h2 className="text-lg font-semibold mb-4">Presupuestos por Empresa</h2>
 
       {/* Selector de empresa */}
       <div className="flex gap-4 mb-4">
@@ -76,7 +76,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search budgets..."
+          placeholder="Buscar proyectos..."
           value={search}
           onChange={handleSearchChange}
           className="w-full rounded-md border border-gray-300 py-2 px-3 text-sm"
@@ -86,20 +86,20 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
       {/* Tabla de presupuestos */}
       <div className="overflow-x-auto bg-white rounded-md shadow">
         {loading ? (
-          <p className="p-4">Loading budgets...</p>
+          <p className="p-4">Cargando proyectos...</p>
         ) : budgets.length === 0 ? (
-          <p className="p-4">No budgets found.</p>
+          <p className="p-4">No se encontraron proyectos.</p>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-200 text-left">
               <tr>
-                <th className="px-4 py-2">Project</th>
-                <th className="px-4 py-2">Program</th>
-                <th className="px-4 py-2">Year</th>
-                <th className="px-4 py-2">Allocated</th>
-                <th className="px-4 py-2">Executed</th>
+                <th className="px-4 py-2">Proyecto</th>
+                <th className="px-4 py-2">Programa</th>
+                <th className="px-4 py-2">Año</th>
+                <th className="px-4 py-2">Monto Asignado</th>
+                <th className="px-4 py-2">Monto Abonado</th>
                 <th className="px-4 py-2">Areas</th>
-                <th className="px-4 py-2">Actions</th>
+                <th className="px-4 py-2">Acciones</th>
               </tr>
             </thead>
             <tbody>

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(
-      { message: 'Budget created successfully' },
+      { message: 'Proyecto  creado satisfactoriamente' },
       { status: 201 },
     );
   } catch (error) {

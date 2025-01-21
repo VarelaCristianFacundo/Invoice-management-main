@@ -15,10 +15,10 @@ export default async function CustomersTable({
   return (
     <div className="w-full">
       <h1 className={`${lusitana.className} mb-8 text-xl md:text-2xl`}>
-        Customers
+        Proveedores
       </h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
-        <Search placeholder="Search customers..." />
+        <Search placeholder="Buscar proveedores..." />
         <CreateCustomer />
       </div>
       <div className="mt-6 flow-root">
@@ -71,19 +71,19 @@ export default async function CustomersTable({
                 <thead className="rounded-md bg-gray-50 text-left text-sm font-normal">
                   <tr>
                     <th scope="col" className="px-2 py-5 font-medium sm:pl-6">
-                      Name
+                      Nombre
                     </th>
                     <th scope="col" className="px-2 py-5 font-medium">
-                      Email
+                      Correo
                     </th>
                     <th scope="col" className="px-0 py-5 font-medium">
-                      Total Invoices
+                      Total de facturas
                     </th>
                     <th scope="col" className="px-3 py-5 font-medium">
-                      Total Pending
+                      Total de pendientes
                     </th>
                     <th scope="col" className="px-4 py-5 font-medium">
-                      Total Paid
+                      Total Abonadas
                     </th>
                   </tr>
                 </thead>

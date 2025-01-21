@@ -1,25 +1,25 @@
 import Form from '@/app/ui/customers/create-form';
 import Breadcrumbs from '@/app/ui/invoices/breadcrumbs';
 import { Metadata } from 'next';
- 
+
 export const metadata: Metadata = {
-  title: 'Create Invoice',
+  title: 'Crear Factura',
 };
 export default async function Page() {
- 
+
   return (
     <main>
       <Breadcrumbs
         breadcrumbs={[
-          { label: 'Customers', href: '/dashboard/customers' },
+          { label: 'Proveedores', href: '/dashboard/customers' },
           {
-            label: 'Add Customer',
+            label: 'Agregar Proveedor',
             href: '/dashboard/customers/create',
             active: true,
           },
         ]}
       />
-      <Form/>
+      <Form />
     </main>
   );
 }

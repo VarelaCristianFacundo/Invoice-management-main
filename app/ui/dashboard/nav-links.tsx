@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  { name: 'Home', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos'] },
+  { name: 'Inicio', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos'] },
   {
     name: 'Proyectos',
     href: '/dashboard/budgets',

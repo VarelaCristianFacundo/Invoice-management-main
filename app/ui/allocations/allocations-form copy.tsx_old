@@ -135,7 +135,7 @@ export default function AllocationsForm() {
             Swal.fire({
                 icon: "success",
                 title: "Funds saved successfully!",
-                confirmButtonText: "OK",
+                confirmButtonText: "Seguir",
             }).then(() => {
                 // 4. Volvemos a cargar los datos
                 fetchAllData();

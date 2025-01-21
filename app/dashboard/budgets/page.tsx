@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: { query?: s
     <div>
       <h1>Proyectos</h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
-        <Search placeholder="Search budgets..." />
+        <Search placeholder="Buscar proyectos..." />
         <CreateBudget />
       </div>
       <Table query={query} currentPage={currentPage} />
