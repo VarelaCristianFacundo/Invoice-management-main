@@ -14,13 +14,13 @@ export default async function handler(
       const result = await pool.query(queryText, [id]);
 
       if (result.rowCount === 0) {
-        return res.status(404).json({ message: 'Budget not found' });
+        return res.status(404).json({ message: 'Proyecto no encontrado' });
       }
 
-      return res.status(200).json({ message: 'Budget deleted successfully' });
+      return res.status(200).json({ message: 'Proyecto eliminado con éxito' });
     } catch (error) {
       console.error('Error deleting budget:', error);
-      return res.status(500).json({ message: 'Failed to delete budget' });
+      return res.status(500).json({ message: 'Falló al eliminar un proyecto' });
     }
   }
 

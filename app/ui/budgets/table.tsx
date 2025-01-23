@@ -1,12 +1,12 @@
 "use client";
 
 import { formatCurrency } from "@/app/lib/utils";
-import { DeleteBudget, RejectBudget, UpdateBudget } from "@/app/ui/budgets/buttons";
+import { DeleteBudget } from "@/app/ui/budgets/buttons";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 type Budget = {
-  id: string;
+  budget_id: string;
   project_name: string;
   program: string;
   year: number;
@@ -104,7 +104,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
             </thead>
             <tbody>
               {budgets.map((budget) => (
-                <tr key={budget.id}>
+                <tr key={budget.budget_id}>
                   <td className="px-4 py-2">{budget.project_name}</td>
                   <td className="px-4 py-2">{budget.program || "N/A"}</td>
                   <td className="px-4 py-2">{budget.year}</td>
@@ -112,9 +112,8 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
                   <td className="px-4 py-2">{formatCurrency(budget.total_executed_amount)}</td>
                   <td className="px-4 py-2">{budget.area_names}</td>
                   <td className="px-4 py-2 flex gap-2">
-                    <RejectBudget id={budget.id} />
-                    <UpdateBudget id={budget.id} />
-                    <DeleteBudget id={budget.id} />
+                    {/* Aquí pasamos fetchBudgets como prop */}
+                    <DeleteBudget id={budget.budget_id} refreshBudgets={fetchBudgets} />
                   </td>
                 </tr>
               ))}

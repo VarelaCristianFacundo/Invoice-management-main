@@ -2,7 +2,6 @@
 
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
@@ -29,30 +28,34 @@ export function UpdateInvoice({ id }: { id: string }) {
   );
 }
 
-export function DeleteInvoice({ id }: { id: string }) {
-  const router = useRouter();
-
+export function DeleteInvoice({
+  id,
+  refreshInvoices,
+}: {
+  id: string;
+  refreshInvoices: () => Promise<void>;
+}) {
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: 'Confirmar Eliminación',
-      text: '¿Está seguro de que desea eliminar esta factura?',
-      icon: 'warning',
+      title: "Confirmar Eliminación",
+      text: "¿Está seguro de que desea eliminar esta factura?",
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Sí, eliminarla',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: "Sí, eliminarla",
+      cancelButtonText: "Cancelar",
     });
 
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/invoice/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error deleting invoice');
+      const res = await fetch(`/api/invoice/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Error deleting invoice");
 
-      Swal.fire('Deleted!', 'The invoice was deleted successfully.', 'success');
-      router.refresh();
+      await Swal.fire("Eliminada!", "La factura fue eliminada con éxito.", "success");
+      await refreshInvoices(); // Actualiza la lista de facturas
     } catch (error) {
-      console.error('Error deleting invoice:', error);
-      Swal.fire('Error!', 'There was an error deleting the invoice.', 'error');
+      console.error("Error deleting invoice:", error);
+      Swal.fire("Error!", "There was an error deleting the invoice.", "error");
     }
   };
 

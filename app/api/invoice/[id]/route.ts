@@ -26,7 +26,7 @@ export async function DELETE(
     }
 
     return NextResponse.json(
-      { message: 'Invoice deleted successfully' },
+      { message: 'Factura eliminada con éxito' },
       { status: 200 },
     );
   } catch (error) {

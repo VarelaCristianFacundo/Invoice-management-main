@@ -603,7 +603,7 @@ export async function deleteInvoice(id: string) {
     const params = [id];
     await pool.query(queryText, params);
     revalidatePath('/dashboard/invoices');
-    return { message: 'Deleted Invoice.' };
+    return { message: 'Eliminar Factura.' };
   } catch (error) {
     console.error('Database Error:', error);
     return { message: 'Database Error: Failed to Delete Invoice.' };

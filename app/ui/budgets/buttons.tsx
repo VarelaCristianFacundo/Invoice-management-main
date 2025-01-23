@@ -60,35 +60,47 @@ export function UpdateBudget({ id }: { id: string }) {
   );
 }
 
-export function DeleteBudget({ id }: { id: string }) {
-  const router = useRouter();
-
+export function DeleteBudget({
+  id,
+  refreshBudgets,
+}: {
+  id: string;
+  refreshBudgets: () => Promise<void>;
+}) {
   const handleDelete = async () => {
+    if (!id) {
+      console.error("Error: Invalid ID provided to DeleteBudget.");
+      Swal.fire("Error!", "No se pudo obtener el ID del proyecto.", "error");
+      return;
+    }
+
     const result = await Swal.fire({
-      title: 'Confirmar Eliminación',
-      text: '¿Estás segura de que quieres eliminar este Proyecto?',
-      icon: 'error',
+      title: "Confirmar Eliminación",
+      text: "¿Estás segura de que quieres eliminar este Proyecto?",
+      icon: "error",
       showCancelButton: true,
-      confirmButtonText: 'Sí, eliminarlo',
-      cancelButtonText: 'Cancelar',
+      confirmButtonText: "Sí, eliminarlo",
+      cancelButtonText: "Cancelar",
     });
 
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/budget/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Error deleting budget');
+      const res = await fetch(`/api/budget/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Error deleting budget");
 
-      Swal.fire('Deleted!', 'The budget was deleted successfully.', 'success');
-      router.refresh();
+      await Swal.fire("Eliminado!", "El proyecto fue eliminado con éxito.", "success");
+      await refreshBudgets(); // Actualizar la lista de presupuestos
     } catch (error) {
-      console.error('Error deleting budget:', error);
-      Swal.fire('Error!', 'There was an error deleting the budget.', 'error');
+      console.error("Error deleting budget:", error);
+      Swal.fire("Error!", "There was an error deleting the budget.", "error");
     }
   };
 
   return (
-    <button onClick={handleDelete} className="rounded-md border p-2 text-red-600 hover:bg-gray-100 hover:text-red-800"
+    <button
+      onClick={handleDelete}
+      className="rounded-md border p-2 text-red-600 hover:bg-gray-100 hover:text-red-800"
     >
       <TrashIcon className="w-5" />
     </button>

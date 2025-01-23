@@ -8,7 +8,13 @@ import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-export default function InvoicesTable({ query, currentPage }: { query: string; currentPage: number; }) {
+export default function InvoicesTable({
+  query,
+  currentPage,
+}: {
+  query: string;
+  currentPage: number;
+}) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default: CAMARCO
@@ -18,7 +24,9 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/invoices?query=${encodeURIComponent(query)}&currentPage=${currentPage}&companyId=${selectedCompany}`
+        `/api/invoices?query=${encodeURIComponent(
+          query,
+        )}&currentPage=${currentPage}&companyId=${selectedCompany}`,
       );
       const data = await res.json();
       setInvoices(data);
@@ -41,13 +49,15 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
       {/* Botonera para seleccionar la empresa */}
       <div className="flex gap-4 mb-4">
         <button
-          className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-gray-800 text-white" : "bg-gray-300"}`}
+          className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-gray-800 text-white" : "bg-gray-300"
+            }`}
           onClick={() => setSelectedCompany(1)}
         >
           CAMARCO
         </button>
         <button
-          className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-gray-800 text-white" : "bg-gray-300"}`}
+          className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-gray-800 text-white" : "bg-gray-300"
+            }`}
           onClick={() => setSelectedCompany(2)}
         >
           FODECO
@@ -110,12 +120,14 @@ export default function InvoicesTable({ query, currentPage }: { query: string; c
                         View PDF
                       </a>
                     ) : (
-                      <span className="text-xs text-gray-400">Ningún archivo</span>
+                      <span className="text-xs text-gray-400">
+                        Ningún archivo
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2 flex gap-2 justify-end">
                     <UpdateInvoice id={invoice.id} />
-                    <DeleteInvoice id={invoice.id} />
+                    <DeleteInvoice id={invoice.id} refreshInvoices={loadInvoices} />
                   </td>
                 </tr>
               ))}

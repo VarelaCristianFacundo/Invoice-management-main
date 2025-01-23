@@ -1,23 +1,42 @@
 import { pool } from '@/app/lib/db';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  const { id } = params;
+
+  if (!id || id === 'undefined') {
+    return NextResponse.json(
+      { message: 'Invalid ID provided' },
+      { status: 400 },
+    );
+  }
+
   try {
-    const budgetId = params.id;
     const queryText = `
       UPDATE budgets
       SET status = 'rejected'
       WHERE id = $1
     `;
-    await pool.query(queryText, [budgetId]);
-    return NextResponse.json({ message: 'Budget rejected successfully' });
+    const result = await pool.query(queryText, [id]);
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        { message: 'Budget not found' },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(
+      { message: 'Budget rejected successfully' },
+      { status: 200 },
+    );
   } catch (error) {
     console.error('Error rejecting budget:', error);
     return NextResponse.json(
-      { error: 'Failed to reject budget' },
+      { message: 'Failed to reject budget', error: error },
       { status: 500 },
     );
   }

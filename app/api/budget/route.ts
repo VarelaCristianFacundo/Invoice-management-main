@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       allocated_amount,
       half,
       company_id,
-    } = body; // Incluimos company_id
+    } = body;
 
     if (!company_id) {
       return NextResponse.json(
@@ -30,15 +30,15 @@ export async function POST(request: Request) {
       projectId,
       allocated_amount,
       half,
-      company_id, // Enviamos company_id a la función
+      company_id,
     });
 
     return NextResponse.json(
-      { message: 'Proyecto  creado satisfactoriamente' },
+      { message: 'Proyecto creado satisfactoriamente' },
       { status: 201 },
     );
   } catch (error) {
-    console.error('Error in /api/budget route:', error);
+    console.error('Error creating budget:', error);
     return NextResponse.json(
       { error: 'Error creating budget' },
       { status: 500 },
