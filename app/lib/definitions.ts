@@ -103,6 +103,8 @@ export type CustomerForm = {
   id: string;
   name: string;
   email: string;
+  cuit_cuil: string;
+  cbu_cvu: string;
   image_url: string;
 };
 

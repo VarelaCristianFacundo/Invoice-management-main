@@ -1,7 +1,6 @@
 'use server';
 // import { signIn } from 'next-auth/react';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { Pool } from 'pg';
 import { z } from 'zod';
 import { sendEmail } from './SendMail';
@@ -19,16 +18,22 @@ const FormSchema = z.object({
   }),
   date: z.string(),
 });
-
 const CustomerFormSchema = z.object({
-  id: z.string(),
-  name: z.string({
-    invalid_type_error: 'Please enter a customer name.',
-  }),
-  email: z.string({
-    invalid_type_error: 'Please enter an email.',
-  }),
+  name: z.string().min(1, { message: 'Por favor ingrese un nombre válido.' }),
+  email: z.string().email({ message: 'Por favor ingrese un email válido.' }),
+  cuit_cuil: z
+    .string()
+    .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' }),
+  cbu_cvu: z
+    .string()
+    .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
+    .optional(),
 });
+
+const CustomerUpdateSchema = CustomerFormSchema.extend({
+  id: z.string().uuid({ message: 'El ID debe ser un UUID válido.' }),
+});
+
 const CreateInvoice = FormSchema.extend({
   customerId: z.string(),
   amount: z.number(),
@@ -39,7 +44,6 @@ const CreateInvoice = FormSchema.extend({
   file: z.string(),
   company_id: z.number(),
 }).omit({ id: true, date: true });
-const AddCustomer = CustomerFormSchema.omit({ id: true, date: true });
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
@@ -165,38 +169,47 @@ export async function updateAreaFunds(
   }
 }
 
-export async function addCustomer(formData: { name: string; email: string }) {
-  const validatedFields = AddCustomer.safeParse(formData);
+export async function addCustomer(formData: {
+  name: string;
+  email: string;
+  cuit_cuil: string;
+  cbu_cvu?: string;
+}) {
+  const validatedFields = CustomerFormSchema.safeParse(formData);
 
   if (!validatedFields.success) {
     return {
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Add Customer.',
+      message:
+        'Falla en agregar proveedor. Algún campo es inválido o está faltante.',
     };
   }
 
-  const { name, email } = validatedFields.data;
+  const { name, email, cuit_cuil, cbu_cvu } = validatedFields.data;
 
   try {
     const queryText = `
-      INSERT INTO customers (name, email, image_url)
-      VALUES ($1, $2, $3)
+      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url)
+      VALUES ($1, $2, $3, $4, $5)
     `;
-    const params = [name, email, '/customers/emil-kowalski.png'];
+    const params = [
+      name,
+      email,
+      cuit_cuil,
+      cbu_cvu || null,
+      '/customers/default.png',
+    ];
     await pool.query(queryText, params);
+
+    return { success: true, message: 'Proveedor agregado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);
     return {
-      message: 'Database Error: Failed to Add Customer.',
+      success: false,
+      message: 'Error de base de datos: No se pudo agregar el proveedor.',
     };
   }
-
-  revalidatePath('/dashboard/customers');
-  redirect('/dashboard/customers');
 }
-
-const UpdateInvoice = FormSchema.omit({ id: true, date: true });
-const UpdateCustomer = CustomerFormSchema.omit({ id: true });
 
 export async function updateInvoice(
   id: string,
@@ -577,26 +590,45 @@ export async function deleteBudget(id: string) {
 
 export async function updateCustomer(
   id: string,
-  data: { name: string; email: string },
+  formData: {
+    name: string;
+    email: string;
+    cuit_cuil: string;
+    cbu_cvu?: string;
+  },
 ) {
+  const validatedFields = CustomerUpdateSchema.safeParse({ ...formData, id });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message:
+        'Falla en actualizar proveedor. Algún campo es inválido o está faltante.',
+    };
+  }
+
+  const { name, email, cuit_cuil, cbu_cvu } = validatedFields.data;
+
   const queryText = `
     UPDATE customers
-    SET name = $1, email = $2
-    WHERE id = $3
+    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4
+    WHERE id = $5
   `;
-  const params = [data.name, data.email, id];
+  const params = [name, email, cuit_cuil, cbu_cvu || null, id];
 
   try {
     const result = await pool.query(queryText, params);
+
     if (result.rowCount === 0) {
-      throw new Error('No customer found to update.');
+      throw new Error('No se encontró el cliente para actualizar.');
     }
-    return { success: true, message: 'Customer updated successfully.' };
+    return { success: true, message: 'Cliente actualizado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { success: false, message: 'Failed to update customer.' };
+    return { success: false, message: 'Error al actualizar el cliente.' };
   }
 }
+
 export async function deleteInvoice(id: string) {
   try {
     const queryText = 'DELETE FROM invoices WHERE id = $1';

@@ -7,22 +7,25 @@ import { notFound } from 'next/navigation';
 export const metadata: Metadata = {
   title: 'Editar Proveedor',
 };
-export default async function Page({ params }: { params: { id: string } }) {
-  const id = params.id;
-  const customer = await fetchCustomerById(id)
+
+export default async function Page({
+  params,
+}: {
+  params: { customer_id: string };
+}) {
+  const customer_id = params.customer_id;
+  const customer = await fetchCustomerById(customer_id);
+
   if (!customer) {
     notFound();
   }
+
   return (
     <main>
       <Breadcrumbs
         breadcrumbs={[
           { label: 'Proveedores', href: '/dashboard/customers' },
-          {
-            label: 'Editar Proveedor',
-            href: `/dashboard/customers/${id}/edit`,
-            active: true,
-          },
+          { label: 'Editar Proveedor', href: `/dashboard/customers/${customer_id}/edit`, active: true },
         ]}
       />
       <Form customer={customer} />

@@ -15,10 +15,10 @@ export function CreateCustomer() {
   );
 }
 
-export function UpdateCustomer({ id }: { id: string }) {
+export function UpdateCustomer({ customer_id }: { customer_id: string }) {
   return (
     <Link
-      href={`/dashboard/customers/${id}/edit`}
+      href={`/dashboard/customers/${customer_id}/edit`}
       className="rounded-md border p-2 hover:bg-gray-100"
     >
       <PencilIcon className="w-5" />
@@ -26,7 +26,7 @@ export function UpdateCustomer({ id }: { id: string }) {
   );
 }
 
-export function DeleteCustomer({ id }: { id: string }) {
+export function DeleteCustomer({ customer_id }: { customer_id: string }) {
   // const deleteCustomerWithId = deleteCustomer.bind(null, id);
   return (
     true

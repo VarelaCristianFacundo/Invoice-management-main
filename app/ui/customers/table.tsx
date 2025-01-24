@@ -1,8 +1,10 @@
 import { fetchFilteredCustomers } from '@/app/lib/data';
 import { lusitana } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
+import { DocumentTextIcon, PencilIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
-import { CreateCustomer, DeleteCustomer, UpdateCustomer } from './buttons';
+import Link from 'next/link';
+import { CreateCustomer } from './buttons';
 
 export default async function CustomersTable({
   query,
@@ -112,12 +114,25 @@ export default async function CustomersTable({
                       <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
                         {customer.total_pending}
                       </td>
-                      <td className="whitespace-nowrap bg-white px-4 py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md flex justify-between">
+                      <td className="whitespace-nowrap bg-white px-4 py-5 text-sm">
                         {customer.total_paid}
+                      </td>
+                      <td className="whitespace-nowrap bg-white  py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md flex justify-evenly">
                         <div className="flex justify-end gap-2">
-                          <UpdateCustomer id={customer.id} />
-                          <DeleteCustomer id={customer.id} />
+                          <Link
+                            href={`/dashboard/customers/${customer.id}/edit`}
+                            className="rounded-md border p-2 hover:bg-gray-100"
+                          >
+                            <PencilIcon className="w-5" />
+
+                          </Link>
                         </div>
+                        <Link
+                          href={`/dashboard/customers/${customer.id}/invoices`}
+                          className="rounded-md border p-2 hover:bg-gray-100"
+                        >
+                          <DocumentTextIcon className="w-5" />
+                        </Link>
                       </td>
                     </tr>
                   ))}

@@ -2,23 +2,23 @@
 
 import { addCustomer } from '@/app/lib/actions';
 import { Button } from '@/app/ui/button';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Swal from 'sweetalert2';
 
 interface State {
-  message: string | null;
   errors: {
     name?: string[];
     email?: string[];
-    [key: string]: string[] | undefined;
+    cuit_cuil?: string[];
+    cbu_cvu?: string[];
   };
+  message: string | null;
 }
 
 export default function Form() {
-  const initialState: State = { message: null, errors: {} };
-  const [state, setState] = useState<State>(initialState);
+  const [state, setState] = useState<State>({ errors: {}, message: null });
   const router = useRouter();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -27,88 +27,132 @@ export default function Form() {
     const formData = {
       name: (event.currentTarget as any).name.value,
       email: (event.currentTarget as any).email.value,
+      cuit_cuil: (event.currentTarget as any).cuit_cuil.value,
+      cbu_cvu: (event.currentTarget as any).cbu_cvu.value || null,
     };
 
     try {
-      await addCustomer(formData);
-      setState({ message: 'Customer added successfully', errors: {} });
-      router.push('/dashboard/customers');
-      router.refresh();
-    } catch (error: any) {
-      setState({
-        ...state,
-        errors: error.errors || {},
-        message: error.message || 'An error occurred',
+      const result = await Swal.fire({
+        title: 'Confirmar Creación',
+        text: '¿Está seguro de que desea agregar este proveedor?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, agregar',
+        cancelButtonText: 'Cancelar',
       });
+
+      if (!result.isConfirmed) return;
+
+      const response = await addCustomer(formData);
+
+      if (!response.success) {
+        // Captura errores de validación y muestra en pantalla
+        setState({ errors: response.errors || {}, message: response.message });
+        throw new Error(response.message);
+      }
+
+      await Swal.fire('Éxito', response.message, 'success');
+      router.push('/dashboard/customers');
+    } catch (error: any) {
+      console.error(error);
+      if (!error.errors) {
+        await Swal.fire('Error', error.message || 'Ocurrió un error.', 'error');
+      }
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
-        {/* Customer Fullname */}
+        {/* Nombre */}
         <div className="mb-4">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
             Nombre del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
-            <div className="relative">
-              <input
-                id="name"
-                name="name"
-                type="text"
-                aria-describedby="name-error"
-                placeholder="Ingresar el nombre completo"
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
-              />
-              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-            </div>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="Ingresar el nombre completo"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
           </div>
-          <div id="name-error" aria-live="polite" aria-atomic="true">
-            {state.errors?.name &&
-              state.errors.name.map((error: string) => (
-                <p className="mt-2 text-sm text-red-500" key={error}>
-                  {error}
-                </p>
-              ))}
-          </div>
+          {state.errors.name &&
+            state.errors.name.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            ))}
         </div>
 
-        {/* Customer Email */}
+        {/* Correo */}
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm font-medium">
             Correo del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
-            <div className="relative">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                aria-describedby="email-error"
-                placeholder="email@example.com"
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
-              />
-              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="email@example.com"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
           </div>
-          <div id="email-error" aria-live="polite" aria-atomic="true">
-            {state.errors?.email &&
-              state.errors.email.map((error: string) => (
-                <p className="mt-2 text-sm text-red-500" key={error}>
-                  {error}
-                </p>
-              ))}
-          </div>
+          {state.errors.email &&
+            state.errors.email.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            ))}
         </div>
 
-        {/* Mensaje de Éxito o Error */}
-        {state.message && (
-          <p className="mt-2 text-sm text-green-500">
-            {state.message}
-          </p>
-        )}
+        {/* CUIT/CUIL */}
+        <div className="mb-4">
+          <label htmlFor="cuit_cuil" className="mb-2 block text-sm font-medium">
+            CUIT/CUIL
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <input
+              id="cuit_cuil"
+              name="cuit_cuil"
+              type="text"
+              placeholder="Ingresar CUIT/CUIL"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
+          </div>
+          {state.errors.cuit_cuil &&
+            state.errors.cuit_cuil.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            ))}
+        </div>
+
+        {/* CBU/CVU */}
+        <div className="mb-4">
+          <label htmlFor="cbu_cvu" className="mb-2 block text-sm font-medium">
+            CBU/CVU
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <input
+              id="cbu_cvu"
+              name="cbu_cvu"
+              type="text"
+              placeholder="Ingresar CBU/CVU"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
+          </div>
+          {state.errors.cbu_cvu &&
+            state.errors.cbu_cvu.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            ))}
+        </div>
       </div>
+
       <div className="mt-6 flex justify-end gap-4">
         <Link
           href="/dashboard/customers"

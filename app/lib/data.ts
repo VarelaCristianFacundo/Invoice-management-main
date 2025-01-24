@@ -329,7 +329,9 @@ export async function fetchCustomerById(id: string) {
       customers.id,
       customers.name,
       customers.email,
-      customers.image_url
+      customers.image_url,
+      cuit_cuil, 
+      cbu_cvu
     FROM customers
     WHERE customers.id = $1
   `;

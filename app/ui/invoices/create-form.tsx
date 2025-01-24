@@ -212,7 +212,7 @@ export default function CreateInvoiceForm({
       {/* Monto */}
       <div>
         <label htmlFor="amount" className="mb-2 block text-sm font-medium">
-          Cantidad
+          Monto
         </label>
         <input
           id="amount"

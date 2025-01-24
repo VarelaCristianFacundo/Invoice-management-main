@@ -3,7 +3,6 @@
 import { updateCustomer } from '@/app/lib/actions';
 import { CustomerForm } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -16,8 +15,11 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
     event.preventDefault();
 
     const formData = {
+      id: customer.id,
       name: (event.currentTarget as any).name.value,
       email: (event.currentTarget as any).email.value,
+      cuit_cuil: (event.currentTarget as any).cuit_cuil.value,
+      cbu_cvu: (event.currentTarget as any).cbu_cvu.value,
     };
 
     try {
@@ -33,57 +35,82 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
       if (!result.isConfirmed) return;
 
       const response = await updateCustomer(customer.id, formData);
+
       if (!response.success) throw new Error(response.message);
 
-      await Swal.fire('Updated!', 'The customer was updated successfully.', 'success');
-
-      // Redirigir y actualizar la tabla
+      await Swal.fire('Actualizado', response.message, 'success');
       router.push('/dashboard/customers');
       router.refresh();
     } catch (error: any) {
       console.error(error);
-      await Swal.fire('Error!', error.message || 'Failed to update the customer.', 'error');
+      await Swal.fire('Error', error.message || 'Ocurrió un error.', 'error');
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
-        {/* Customer Fullname */}
+        {/* Nombre */}
         <div className="mb-4">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
             Nombre del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
-            <div className="relative">
-              <input
-                id="name"
-                name="name"
-                type="text"
-                defaultValue={customer.name}
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
-              />
-              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-            </div>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              defaultValue={customer.name}
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
           </div>
         </div>
 
-        {/* Customer Email */}
+        {/* Email */}
         <div className="mb-4">
           <label htmlFor="email" className="mb-2 block text-sm font-medium">
             Correo del Proveedor
           </label>
           <div className="relative mt-2 rounded-md">
-            <div className="relative">
-              <input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={customer.email}
-                className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm placeholder:text-gray-500"
-              />
-              <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
-            </div>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              defaultValue={customer.email}
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
+          </div>
+        </div>
+
+        {/* CUIT/CUIL */}
+        <div className="mb-4">
+          <label htmlFor="cuit_cuil" className="mb-2 block text-sm font-medium">
+            CUIT/CUIL
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <input
+              id="cuit_cuil"
+              name="cuit_cuil"
+              type="text"
+              defaultValue={customer.cuit_cuil}
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
+          </div>
+        </div>
+
+        {/* CBU/CVU */}
+        <div className="mb-4">
+          <label htmlFor="cbu_cvu" className="mb-2 block text-sm font-medium">
+            CBU/CVU
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <input
+              id="cbu_cvu"
+              name="cbu_cvu"
+              type="text"
+              defaultValue={customer.cbu_cvu || ''}
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+            />
           </div>
         </div>
       </div>
