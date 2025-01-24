@@ -6,8 +6,7 @@ import {
   DocumentDuplicateIcon,
   HomeIcon,
   UserGroupIcon,
-  UserIcon,
-  XMarkIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -39,12 +38,12 @@ const links = [
     icon: UserGroupIcon,
     roles: ['admin', 'tesorero'],
   },
-  {
-    name: 'Presupuestos Rechazados',
-    href: '/dashboard/budgets/rejected',
-    icon: XMarkIcon,
-    roles: ['admin', 'usuario_presupuestos'],
-  },
+  // {
+  //   name: 'Presupuestos Rechazados',
+  //   href: '/dashboard/budgets/rejected',
+  //   icon: XMarkIcon,
+  //   roles: ['admin', 'usuario_presupuestos'],
+  // },
   {
     name: 'Perfil',
     href: '/dashboard/profile',
