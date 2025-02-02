@@ -171,6 +171,7 @@ export async function fetchFilteredInvoices(
 
     file: r.file, // Añadido para incluir el archivo
     program: r.program, // Añadido para incluir el programa
+    observations: r.observations, // Añadido para incluir las observaciones
   }));
 }
 

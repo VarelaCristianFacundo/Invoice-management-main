@@ -122,7 +122,8 @@ export default function CreateInvoiceForm({
       year,
       budgetAllocationId: selectedAllocationId,
       file: base64File,
-      company_id: 1, // Ejemplo
+      company_id: 1,
+      observations: (e.target as any).observations.value || '',
     };
 
     const confirmation = await Swal.fire({
@@ -224,6 +225,20 @@ export default function CreateInvoiceForm({
           onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
           required
         />
+      </div>
+
+      {/* Observaciones */}
+      <div>
+        <label htmlFor="observations" className="mb-2 block text-sm font-medium">
+          Observaciones (Opcional)
+        </label>
+        <textarea
+          id="observations"
+          name="observations"
+          rows={3}
+          className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+          placeholder="Escribe aquí cualquier observación sobre la factura..."
+        ></textarea>
       </div>
 
       {/* PDF Upload */}

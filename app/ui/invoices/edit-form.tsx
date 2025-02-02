@@ -153,6 +153,21 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
           </div>
         </fieldset>
 
+        {/* Observaciones */}
+        <div className="mb-4">
+          <label htmlFor="observations" className="mb-2 block text-sm font-medium">
+            Observaciones
+          </label>
+          <textarea
+            id="observations"
+            name="observations"
+            defaultValue={invoice.observations || ''}
+            rows={3}
+            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+            placeholder="Actualiza las observaciones si es necesario..."
+          ></textarea>
+        </div>
+
         {/* Input File para el PDF */}
         <div className="mb-4">
           <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">

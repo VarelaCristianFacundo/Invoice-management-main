@@ -4,9 +4,10 @@ import { Invoice } from "@/app/lib/definitions";
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { DocumentTextIcon, EyeIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
 
 export default function InvoicesTable({
   query,
@@ -18,6 +19,7 @@ export default function InvoicesTable({
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default: CAMARCO
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // Estado para el modal
 
   // Función para cargar facturas
   const loadInvoices = async () => {
@@ -117,7 +119,7 @@ export default function InvoicesTable({
                         className="flex items-center text-blue-600 hover:underline"
                       >
                         <DocumentTextIcon className="h-5 w-5 mr-1" />
-                        View PDF
+                        Ver PDF
                       </a>
                     ) : (
                       <span className="text-xs text-gray-400">
@@ -126,6 +128,14 @@ export default function InvoicesTable({
                     )}
                   </td>
                   <td className="px-4 py-2 flex gap-2 justify-end">
+                    <button
+                      onClick={() => setSelectedInvoice(invoice)}
+                      className="rounded-md border p-2 hover:bg-gray-100 text-blue-500 hover:text-blue-700"
+
+                    // className="flex items-center gap-1 "
+                    >
+                      <EyeIcon className="h-5 w-5" />
+                    </button>
                     <UpdateInvoice id={invoice.id} />
                     <DeleteInvoice id={invoice.id} refreshInvoices={loadInvoices} />
                   </td>
@@ -135,6 +145,12 @@ export default function InvoicesTable({
           </table>
         )}
       </div>
+      {selectedInvoice && (
+        <InvoiceDetailsModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+        />
+      )}
     </div>
   );
 }

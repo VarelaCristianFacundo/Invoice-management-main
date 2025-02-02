@@ -23,7 +23,8 @@ export async function GET(
         i.date,
         i.budget_allocation_id,
         i.file,
-
+        i.observations,
+        
         c.name AS customer_name,
         c.email AS customer_email,
         c.image_url AS image_url,

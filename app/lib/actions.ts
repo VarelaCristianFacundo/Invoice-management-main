@@ -43,6 +43,7 @@ const CreateInvoice = FormSchema.extend({
   budgetAllocationId: z.string(),
   file: z.string(),
   company_id: z.number(),
+  observations: z.string().optional(),
 }).omit({ id: true, date: true });
 
 const pool = new Pool({
@@ -75,6 +76,7 @@ export async function createInvoice(formData: {
   budgetAllocationId: string;
   file: string;
   company_id: number;
+  observations?: string;
 }) {
   const validatedFields = CreateInvoice.safeParse(formData);
 
@@ -95,6 +97,7 @@ export async function createInvoice(formData: {
     budgetAllocationId,
     file,
     company_id,
+    observations,
   } = validatedFields.data;
   const amountInCents = amount * 1;
   const date = new Date().toISOString().split('T')[0];
@@ -103,7 +106,7 @@ export async function createInvoice(formData: {
 
   try {
     const queryText = `
-      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id)
+      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id, observations)
       VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
     `;
     const params = [
@@ -116,6 +119,7 @@ export async function createInvoice(formData: {
       budgetAllocationId,
       file,
       company_id,
+      observations,
     ];
     await pool.query(queryText, params);
     console.log('Invoice created:', params);
@@ -246,6 +250,7 @@ export async function updateInvoice(
     customerId: formData.get('customerId') as string,
     amount: parseFloat(formData.get('amount') as string),
     newStatus: formData.get('status') as string,
+    observations: (formData.get('observations') as string) || '',
   };
 
   console.log('Updating invoice id:', id);
@@ -295,8 +300,8 @@ export async function updateInvoice(
     // Actualizar la factura
     const updateQuery = `
       UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5
-      WHERE id = $6
+      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5, observations = $6
+      WHERE id = $7
     `;
     const updateParams = [
       data.customerId,
@@ -304,6 +309,7 @@ export async function updateInvoice(
       data.newStatus,
       file,
       company_id,
+      data.observations,
       id,
     ];
     await pool.query(updateQuery, updateParams);

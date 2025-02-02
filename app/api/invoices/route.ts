@@ -25,6 +25,7 @@ async function fetchFilteredInvoices(
       i.date,
       i.budget_allocation_id,
       i.file,
+      i.observations,
 
       c.name AS customer_name,
       c.email AS customer_email,
@@ -73,6 +74,7 @@ async function fetchFilteredInvoices(
     year: r.allocation_year,
     file: r.file,
     program: r.program,
+    observations: r.observations,
   }));
 }
 
