@@ -544,6 +544,43 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
     throw new Error('Error fetching budget allocations');
   }
 }
+
+export async function fetchBudgetsByCompany(
+  companyId: number,
+  query: string,
+  currentPage: number,
+) {
+  const offset = (currentPage - 1) * 10; // 10 elementos por página
+  const sql = `
+    SELECT 
+      budgets.id,
+      budgets.project_name,
+      budgets.year,
+      budgets.company_id,
+      COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
+      COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
+      STRING_AGG(DISTINCT areas.name, ', ') AS area_names
+    FROM budgets
+    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
+    LEFT JOIN areas ON budget_allocations.area_id = areas.id
+    WHERE 
+      budgets.company_id = $1 AND 
+      (budgets.project_name ILIKE $2 OR budgets.year::text ILIKE $2)
+    GROUP BY budgets.id
+    ORDER BY budgets.year DESC
+    LIMIT 10 OFFSET $3;
+  `;
+  const values = [companyId, `%${query}%`, offset];
+
+  try {
+    const result = await pool.query(sql, values);
+    return result.rows;
+  } catch (error) {
+    console.error('Error fetching budgets by company:', error);
+    throw new Error('Failed to fetch budgets.');
+  }
+}
+
 export async function generateExcelReport(): Promise<NextResponse> {
   const queryText = `
     SELECT 
@@ -600,5 +637,3 @@ export async function generateExcelReport(): Promise<NextResponse> {
     return new NextResponse('Error generating Excel report', { status: 500 });
   }
 }
-
-
