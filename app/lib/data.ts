@@ -12,6 +12,8 @@ import {
   User,
 } from './definitions';
 import { formatCurrency } from './utils';
+import * as XLSX from 'xlsx';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Configurar el pool de conexiones
 const pool = new Pool({
@@ -542,39 +544,61 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
     throw new Error('Error fetching budget allocations');
   }
 }
-
-export async function fetchBudgetsByCompany(
-  companyId: number,
-  query: string,
-  currentPage: number,
-) {
-  const offset = (currentPage - 1) * 10; // 10 elementos por página
-  const sql = `
+export async function generateExcelReport(): Promise<NextResponse> {
+  const queryText = `
     SELECT 
-      budgets.id,
-      budgets.project_name,
-      budgets.year,
-      budgets.company_id,
-      COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
-      COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
-      STRING_AGG(DISTINCT areas.name, ', ') AS area_names
-    FROM budgets
-    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
-    LEFT JOIN areas ON budget_allocations.area_id = areas.id
-    WHERE 
-      budgets.company_id = $1 AND 
-      (budgets.project_name ILIKE $2 OR budgets.year::text ILIKE $2)
-    GROUP BY budgets.id
-    ORDER BY budgets.year DESC
-    LIMIT 10 OFFSET $3;
+      iv.id, 
+      ci.name AS "Proveedor", 
+      iv.amount AS "Monto", 
+      iv.status AS "Estado", 
+      iv.date AS "Fecha", 
+      iv.year AS "Año", 
+      ba.half AS "Semestre", 
+      ar.name AS "Area", 
+      co.name AS "Cliente", 
+      ba.program AS "Programa",
+      bu.project_name AS "Proyecto"
+    FROM 
+      invoices iv
+    JOIN 
+      customers ci ON iv.customer_id = ci.id
+    JOIN 
+      companies co ON iv.company_id = co.id
+    JOIN 
+      budget_allocations ba ON iv.budget_allocation_id = ba.id
+    JOIN 
+      budgets bu ON ba.project_id = bu.id
+    JOIN 
+      areas ar ON iv.area_id = ar.id;
   `;
-  const values = [companyId, `%${query}%`, offset];
 
   try {
-    const result = await pool.query(sql, values);
-    return result.rows;
+    const result = await pool.query(queryText);
+    const rows = result.rows;
+
+    // Create a new workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Append the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+    // Write the workbook to a buffer
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Create a NextResponse with the buffer
+    const response = new NextResponse(buffer, {
+      headers: {
+        'Content-Disposition': 'attachment; filename=report.xlsx',
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
+    return response;
   } catch (error) {
-    console.error('Error fetching budgets by company:', error);
-    throw new Error('Failed to fetch budgets.');
+    console.error('Error generating Excel report:', error);
+    return new NextResponse('Error generating Excel report', { status: 500 });
   }
 }
+
+
