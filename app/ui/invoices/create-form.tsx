@@ -6,8 +6,13 @@ import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
-// Actualizá el tipo para incluir CUIT/CUIL
-type CustomerField = { id: string; name: string; cuit_cuil: string };
+// Actualizá el tipo para incluir company_id
+type CustomerField = {
+  id: string;
+  name: string;
+  cuit_cuil: string;
+  company_id: number;
+};
 
 type BudgetAllocationItem = {
   id: string;
@@ -15,6 +20,7 @@ type BudgetAllocationItem = {
   area_id: string;
   area_name: string;
   year: number;
+  company_id: number;
 };
 
 export default function CreateInvoiceForm({
@@ -23,12 +29,15 @@ export default function CreateInvoiceForm({
   customers: CustomerField[];
 }) {
   const [budgetAllocations, setBudgetAllocations] = useState<BudgetAllocationItem[]>([]);
-  // En vez de usar select, usaremos dos estados:
-  // uno para el valor del input y otro para el id seleccionado
+
+  // Para el autocomplete, mantenemos dos estados:
   const [customerInput, setCustomerInput] = useState("");
   const [customerId, setCustomerId] = useState("");
+  // Nuevo estado para guardar el company_id del proveedor seleccionado
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+
   const [amount, setAmount] = useState(0);
-  // Este formulario siempre crea facturas en estado "presentado"
+  // Siempre se crea en estado "presentado"
   const invoiceStatus: "presentado" | "aprobado" | "pagado" | "rechazado" = "presentado";
   const [selectedAllocationId, setSelectedAllocationId] = useState("");
   const [areaId, setAreaId] = useState("");
@@ -79,7 +88,7 @@ export default function CreateInvoiceForm({
     });
   }
 
-  // Función para filtrar los customers según lo ingresado
+  // Filtrar customers según lo ingresado (mínimo 3 caracteres)
   const filteredCustomers = customerInput.length >= 3
     ? customers.filter(c =>
       c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
@@ -87,15 +96,17 @@ export default function CreateInvoiceForm({
     )
     : [];
 
+  // Cuando se seleccione un customer, guardamos el id y el company_id
   const handleCustomerSelect = (selected: CustomerField) => {
     setCustomerInput(`${selected.name} (${selected.cuit_cuil})`);
     setCustomerId(selected.id);
+    setSelectedCompanyId(selected.company_id); // Guardamos el company_id del proveedor
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!customerId || !selectedAllocationId) {
-      Swal.fire("Incomplete", "Selecciona cliente y proyecto/área", "info");
+      Swal.fire("Incomplete", "Selecciona proveedor y proyecto/área", "info");
       return;
     }
     if (amount <= 0) {
@@ -108,11 +119,15 @@ export default function CreateInvoiceForm({
       base64File = await fileToBase64(pdfFile);
     }
 
+    // Find the allocation based on the selected allocation id
     const allocation = budgetAllocations.find(ba => ba.id === selectedAllocationId);
     if (!allocation) {
       Swal.fire("Error", "No se encontró la budgetAllocation seleccionada", "error");
       return;
     }
+
+    // Extract the company_id from the allocation
+    const companyId = allocation.company_id;
 
     const formDataObj = {
       customerId,
@@ -122,8 +137,8 @@ export default function CreateInvoiceForm({
       year,
       budgetAllocationId: selectedAllocationId,
       file: base64File,
-      company_id: 1,
-      observations: (e.target as any).observations.value || '',
+      company_id: companyId, // Now using company_id from allocation
+      observations: (e.target as any).observations?.value || '',
     };
 
     const confirmation = await Swal.fire({
@@ -152,12 +167,13 @@ export default function CreateInvoiceForm({
     }
   };
 
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 rounded-md bg-gray-50 p-4 md:p-6">
       {/* Autocomplete para Customer */}
       <div>
         <label htmlFor="customerInput" className="mb-2 block text-sm font-medium">
-          Elegir Proveedor (Por nombre o CUIT/CUIL)
+          Elegir Proveedor (por nombre o CUIT/CUIL)
         </label>
         <input
           type="text"
@@ -166,13 +182,13 @@ export default function CreateInvoiceForm({
           value={customerInput}
           onChange={(e) => {
             setCustomerInput(e.target.value);
-            setCustomerId(""); // Limpiamos el id cuando se escribe
+            setCustomerId(""); // Se limpia el id cuando se escribe
+            setSelectedCompanyId(null); // Limpiamos también el company_id
           }}
           placeholder="Empieza a escribir..."
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
           autoComplete="off"
         />
-        {/* Mostrar sugerencias */}
         {customerInput.length >= 3 && filteredCustomers.length > 0 && (
           <ul className="border border-gray-200 rounded-md bg-white mt-1 max-h-60 overflow-y-auto">
             {filteredCustomers.map((customer) => (

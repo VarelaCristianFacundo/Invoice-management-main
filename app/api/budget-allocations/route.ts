@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    // Ejemplo de JOIN con budgets y areas:
+    // Actualizamos la consulta para tomar company_id desde la tabla budgets (alias b)
     const result = await db.query(`
       SELECT
         ba.id,
@@ -40,7 +40,8 @@ export async function GET() {
         ba.program,
         ba.half,
         ba.project_id,
-        b.project_name
+        b.project_name,
+        b.company_id
       FROM budget_allocations ba
       LEFT JOIN areas a ON ba.area_id = a.id
       LEFT JOIN budgets b ON ba.project_id = b.id

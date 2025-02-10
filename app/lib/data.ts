@@ -1,4 +1,6 @@
+import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import * as XLSX from 'xlsx';
 import {
   AreaFund,
   AreaType,
@@ -12,8 +14,6 @@ import {
   User,
 } from './definitions';
 import { formatCurrency } from './utils';
-import * as XLSX from 'xlsx';
-import { NextRequest, NextResponse } from 'next/server';
 
 // Configurar el pool de conexiones
 const pool = new Pool({
@@ -597,15 +597,15 @@ export async function generateExcelReport(): Promise<NextResponse> {
       bu.project_name AS "Proyecto"
     FROM 
       invoices iv
-    JOIN 
+    LEFT JOIN 
       customers ci ON iv.customer_id = ci.id
-    JOIN 
+    LEFT JOIN 
       companies co ON iv.company_id = co.id
-    JOIN 
+    LEFT JOIN 
       budget_allocations ba ON iv.budget_allocation_id = ba.id
-    JOIN 
+    LEFT JOIN 
       budgets bu ON ba.project_id = bu.id
-    JOIN 
+    LEFT JOIN 
       areas ar ON iv.area_id = ar.id;
   `;
 
@@ -613,21 +613,22 @@ export async function generateExcelReport(): Promise<NextResponse> {
     const result = await pool.query(queryText);
     const rows = result.rows;
 
-    // Create a new workbook and worksheet
+    // Crear un nuevo workbook y worksheet
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
 
-    // Append the worksheet to the workbook
+    // Agregar la worksheet al workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Report');
 
-    // Write the workbook to a buffer
+    // Escribir el workbook a un buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    // Create a NextResponse with the buffer
+    // Crear una respuesta con el buffer
     const response = new NextResponse(buffer, {
       headers: {
         'Content-Disposition': 'attachment; filename=report.xlsx',
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
     });
 
