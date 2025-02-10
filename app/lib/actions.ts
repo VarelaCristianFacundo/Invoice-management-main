@@ -107,7 +107,7 @@ export async function createInvoice(formData: {
   try {
     const queryText = `
       INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id, observations)
-      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10)
     `;
     const params = [
       customerId,
@@ -273,7 +273,7 @@ export async function updateInvoice(
     if (!fundsAvailable && data.newStatus === 'aprobado') {
       return {
         success: false,
-        message: 'Insufficent funds available',
+        message: 'Fondos Insuficientes para aprobar la factura.',
       };
     } else {
       console.log('currentStatus:', currentStatus);
@@ -538,7 +538,7 @@ export async function updateBudget(
     data.quarter,
   );
   if (!fundsAvailable || sumOfApproveds < data.amount) {
-    return { success: false, message: 'Insufficent funds available' };
+    return { success: false, message: 'Fondos insuficientes' };
   }
   const queryText = `
     UPDATE budgets

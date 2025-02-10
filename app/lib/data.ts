@@ -1,4 +1,6 @@
+import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
+import * as XLSX from 'xlsx';
 import {
   AreaFund,
   AreaType,
@@ -576,5 +578,63 @@ export async function fetchBudgetsByCompany(
   } catch (error) {
     console.error('Error fetching budgets by company:', error);
     throw new Error('Failed to fetch budgets.');
+  }
+}
+
+export async function generateExcelReport(): Promise<NextResponse> {
+  const queryText = `
+    SELECT 
+      iv.id, 
+      ci.name AS "Proveedor", 
+      iv.amount AS "Monto", 
+      iv.status AS "Estado", 
+      iv.date AS "Fecha", 
+      iv.year AS "Año", 
+      ba.half AS "Semestre", 
+      ar.name AS "Area", 
+      co.name AS "Cliente", 
+      ba.program AS "Programa",
+      bu.project_name AS "Proyecto"
+    FROM 
+      invoices iv
+    LEFT JOIN 
+      customers ci ON iv.customer_id = ci.id
+    LEFT JOIN 
+      companies co ON iv.company_id = co.id
+    LEFT JOIN 
+      budget_allocations ba ON iv.budget_allocation_id = ba.id
+    LEFT JOIN 
+      budgets bu ON ba.project_id = bu.id
+    LEFT JOIN 
+      areas ar ON iv.area_id = ar.id;
+  `;
+
+  try {
+    const result = await pool.query(queryText);
+    const rows = result.rows;
+
+    // Crear un nuevo workbook y worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Agregar la worksheet al workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+    // Escribir el workbook a un buffer
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Crear una respuesta con el buffer
+    const response = new NextResponse(buffer, {
+      headers: {
+        'Content-Disposition': 'attachment; filename=report.xlsx',
+        'Content-Type':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
+    return response;
+  } catch (error) {
+    console.error('Error generating Excel report:', error);
+    return new NextResponse('Error generating Excel report', { status: 500 });
   }
 }

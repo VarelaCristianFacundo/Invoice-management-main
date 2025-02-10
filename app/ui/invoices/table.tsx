@@ -8,6 +8,7 @@ import { DocumentTextIcon, EyeIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
+import ExportExcelButton from "./export-excel-button";
 
 export default function InvoicesTable({
   query,
@@ -19,9 +20,8 @@ export default function InvoicesTable({
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default: CAMARCO
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null); // Estado para el modal
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  // Función para cargar facturas
   const loadInvoices = async () => {
     setLoading(true);
     try {
@@ -39,15 +39,17 @@ export default function InvoicesTable({
     }
   };
 
-  // Cargar facturas al cambiar el query, la página o la empresa seleccionada
   useEffect(() => {
     loadInvoices();
   }, [query, currentPage, selectedCompany]);
 
   return (
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
-      <h2 className="text-lg font-semibold mb-4">Facturas por Compañía</h2>
-
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Facturas por Compañía</h2>
+        {/* Botón de exportación como ícono */}
+        <ExportExcelButton />
+      </div>
       {/* Botonera para seleccionar la empresa */}
       <div className="flex gap-4 mb-4">
         <button
@@ -131,13 +133,14 @@ export default function InvoicesTable({
                     <button
                       onClick={() => setSelectedInvoice(invoice)}
                       className="rounded-md border p-2 hover:bg-gray-100 text-blue-500 hover:text-blue-700"
-
-                    // className="flex items-center gap-1 "
                     >
                       <EyeIcon className="h-5 w-5" />
                     </button>
                     <UpdateInvoice id={invoice.id} />
-                    <DeleteInvoice id={invoice.id} refreshInvoices={loadInvoices} />
+                    <DeleteInvoice
+                      id={invoice.id}
+                      refreshInvoices={loadInvoices}
+                    />
                   </td>
                 </tr>
               ))}

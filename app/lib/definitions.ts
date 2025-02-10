@@ -90,6 +90,7 @@ export type CustomerField = {
   id: string;
   name: string;
   cuit_cuil: string;
+  company_id: number; // Ahora se incluye la compañía (1 o 2)
 };
 
 export type InvoiceForm = {
