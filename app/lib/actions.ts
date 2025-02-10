@@ -107,7 +107,7 @@ export async function createInvoice(formData: {
   try {
     const queryText = `
       INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id, observations)
-      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10)
     `;
     const params = [
       customerId,
