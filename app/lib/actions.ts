@@ -273,7 +273,7 @@ export async function updateInvoice(
     if (!fundsAvailable && data.newStatus === 'aprobado') {
       return {
         success: false,
-        message: 'Insufficent funds available',
+        message: 'Fondos Insuficientes para aprobar la factura.',
       };
     } else {
       console.log('currentStatus:', currentStatus);
@@ -538,7 +538,7 @@ export async function updateBudget(
     data.quarter,
   );
   if (!fundsAvailable || sumOfApproveds < data.amount) {
-    return { success: false, message: 'Insufficent funds available' };
+    return { success: false, message: 'Fondos insuficientes' };
   }
   const queryText = `
     UPDATE budgets
