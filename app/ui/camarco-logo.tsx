@@ -1,11 +1,11 @@
-import { lusitana } from '@/app/ui/fonts';
+import { roboto } from '@/app/ui/fonts';
 import logo from '@/public/logo.png'; // Replace with the actual path to your logo image
 import Image from 'next/image';
 
 export default function CamarcoLogo() {
   return (
     <div
-      className={`${lusitana.className} flex flex-row items-center leading-none text-white justify-center`}
+      className={`${roboto.className} flex flex-row items-center leading-none text-white justify-center`}
     >
       <Image
         src={logo}

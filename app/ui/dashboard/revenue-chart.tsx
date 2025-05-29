@@ -1,6 +1,6 @@
 import { fetchRevenue } from '@/app/lib/data';
 import { generateYAxis } from '@/app/lib/utils';
-import { lusitana } from '@/app/ui/fonts';
+import { roboto } from '@/app/ui/fonts';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 
 // This component is representational only.
@@ -21,7 +21,7 @@ export default async function RevenueChart() {
 
   return (
     <div className="w-full md:col-span-4">
-      <h2 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
+      <h2 className={`${roboto.className} mb-4 text-xl md:text-2xl`}>
         Facturas Recientes
       </h2>
       {/* NOTE: comment in this code when you get to this point in the course */}

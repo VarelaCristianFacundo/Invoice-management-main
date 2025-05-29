@@ -1,5 +1,5 @@
 import { fetchFilteredCustomers } from '@/app/lib/data';
-import { lusitana } from '@/app/ui/fonts';
+import { roboto } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
 import { DocumentTextIcon, PencilIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ export default async function CustomersTable({
   const customers = await fetchFilteredCustomers(query, currentPage);
   return (
     <div className="w-full">
-      <h1 className={`${lusitana.className} mb-8 text-xl md:text-2xl`}>
+      <h1 className={`${roboto.className} mb-8 text-xl md:text-2xl`}>
         Proveedores
       </h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
