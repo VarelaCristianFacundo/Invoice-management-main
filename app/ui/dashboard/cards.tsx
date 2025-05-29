@@ -4,6 +4,7 @@ import { fetchCardData } from '@/app/lib/data'
 import { roboto } from '@/app/ui/fonts'
 import {
   BanknotesIcon,
+  CheckIcon,
   ClockIcon,
   InboxIcon,
   UserGroupIcon,
@@ -12,6 +13,7 @@ import Link from 'next/link'
 
 const iconMap = {
   collected: BanknotesIcon,
+  approved: CheckIcon,
   customers: UserGroupIcon,
   pending: ClockIcon,
   invoices: InboxIcon,
@@ -20,6 +22,7 @@ const iconMap = {
 // 1️⃣ Mapa de rutas + query
 const routeMap: Record<keyof typeof iconMap, string> = {
   collected: '/dashboard/invoices?query=Pagado',
+  approved: '/dashboard/invoices?query=Aprobado',
   pending: '/dashboard/invoices?query=Presentado',
   invoices: '/dashboard/invoices',
   customers: '/dashboard/customers',
@@ -30,19 +33,21 @@ export default async function CardWrapper() {
     numberOfCustomers,
     numberOfInvoices,
     totalPaidInvoices,
+    totalApprovedInvoices,
     totalPendingInvoices,
   } = await fetchCardData()
 
   // 2️⃣ Array con tus datos y tipos
   const cards = [
     ['Abonado', totalPaidInvoices, 'collected'] as const,
+    ['Aprobado', totalApprovedInvoices, 'approved'] as const,
     ['Pendiente', totalPendingInvoices, 'pending'] as const,
     ['Total de facturas', numberOfInvoices, 'invoices'] as const,
     ['Total de clientes', numberOfCustomers, 'customers'] as const,
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {cards.map(([title, value, type]) => (
         // 3️⃣ Envolvés en Link usando routeMap[type]
         <Link

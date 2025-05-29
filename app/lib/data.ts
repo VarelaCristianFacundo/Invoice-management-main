@@ -55,39 +55,31 @@ export async function fetchLatestInvoices() {
 }
 
 export async function fetchCardData() {
-  try {
-    // Ejecutar consultas en paralelo
-    const [invoiceCountResult, customerCountResult, invoiceStatusResult] =
-      await Promise.all([
-        pool.query('SELECT COUNT(*) FROM invoices'),
-        pool.query('SELECT COUNT(*) FROM customers'),
-        pool.query(`
+  // 1) Contar totales
+  const [{ rows: invRows }, { rows: custRows }, { rows: statusRows }] =
+    await Promise.all([
+      pool.query('SELECT COUNT(*)::int AS count FROM invoices'),
+      pool.query('SELECT COUNT(*)::int AS count FROM customers'),
+      pool.query(`
         SELECT
-          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
-          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
+          SUM(CASE WHEN status = 'pagado'    THEN amount ELSE 0 END) AS paid,
+          SUM(CASE WHEN status = 'aprobado'  THEN amount ELSE 0 END) AS approved,
+          SUM(CASE WHEN status = 'presentado' THEN amount ELSE 0 END) AS pending
         FROM invoices
       `),
-      ]);
+    ]);
 
-    const numberOfInvoices = Number(invoiceCountResult.rows[0].count ?? '0');
-    const numberOfCustomers = Number(customerCountResult.rows[0].count ?? '0');
-    const totalPaidInvoices = formatCurrency(
-      invoiceStatusResult.rows[0].paid ?? '0',
-    );
-    const totalPendingInvoices = formatCurrency(
-      invoiceStatusResult.rows[0].pending ?? '0',
-    );
+  const numberOfInvoices = invRows[0].count;
+  const numberOfCustomers = custRows[0].count;
+  const { paid, approved, pending } = statusRows[0];
 
-    return {
-      numberOfCustomers,
-      numberOfInvoices,
-      totalPaidInvoices,
-      totalPendingInvoices,
-    };
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch card data.');
-  }
+  return {
+    numberOfInvoices,
+    numberOfCustomers,
+    totalPaidInvoices: formatCurrency(paid ?? 0),
+    totalApprovedInvoices: formatCurrency(approved ?? 0),
+    totalPendingInvoices: formatCurrency(pending ?? 0),
+  };
 }
 
 const ITEMS_PER_PAGE = 6;
