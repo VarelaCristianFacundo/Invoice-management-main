@@ -86,7 +86,6 @@ export function Card({
 
   // Formatear amount si es solo dígitos
   let displayAmount = amount
-  // Eliminamos puntos y cambiamos coma por punto para parsear
   const numeric = parseFloat(amount.replace(/\./g, '').replace(/,/g, '.'))
   if (!isNaN(numeric)) {
     displayAmount = `$ ${numeric.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
@@ -98,14 +97,14 @@ export function Card({
         {Icon && <Icon className="h-5 w-5 text-gray-700" />}
         <h3 className="ml-2 text-sm font-medium">{title}</h3>
       </div>
-      <div className="bg-white rounded-xl px-4 py-6 text-center">
+      <div className="bg-white rounded-xl px-4 py-6 text-center h-full flex flex-col justify-center">
         {/* 1) Cantidad de facturas, formateada con separador de miles */}
         <p className="text-4xl font-bold">
           {count.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
         </p>
-        {/* 2) Monto debajo, formateado con separadores y signo de peso */}
+        {/* 2) Monto debajo: si corresponde, mostramos displayAmount; si no, reservamos espacio vacío */}
         <p className={`mt-1 ${roboto.className} text-lg text-gray-600`}>
-          {displayAmount}
+          {type !== 'invoices' && type !== 'customers' ? displayAmount : '\u00A0'}
         </p>
       </div>
     </div>
