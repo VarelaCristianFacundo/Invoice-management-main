@@ -1,10 +1,7 @@
-// app/ui/dashboard/cards.tsx
-
 import { fetchCardData } from '@/app/lib/data'
 import { roboto } from '@/app/ui/fonts'
 import {
   BanknotesIcon,
-  CheckIcon,
   ClockIcon,
   InboxIcon,
   UserGroupIcon,
@@ -12,18 +9,18 @@ import {
 import Link from 'next/link'
 
 const iconMap = {
-  collected: BanknotesIcon,
-  approved: CheckIcon,
+  collected: BanknotesIcon,   // Abonado
+  approved: BanknotesIcon,    // Aprobado
   customers: UserGroupIcon,
   pending: ClockIcon,
   invoices: InboxIcon,
 }
 
-// 1️⃣ Mapa de rutas + query
+// Mapea cada tipo de tarjeta a la ruta con el filtro aplicado
 const routeMap: Record<keyof typeof iconMap, string> = {
-  collected: '/dashboard/invoices?query=Pagado',
-  approved: '/dashboard/invoices?query=Aprobado',
-  pending: '/dashboard/invoices?query=Presentado',
+  collected: '/dashboard/invoices?query=pagado',
+  approved: '/dashboard/invoices?query=aprobado',
+  pending: '/dashboard/invoices?query=presentado',
   invoices: '/dashboard/invoices',
   customers: '/dashboard/customers',
 }
@@ -32,47 +29,68 @@ export default async function CardWrapper() {
   const {
     numberOfCustomers,
     numberOfInvoices,
-    totalPaidInvoices,
-    totalApprovedInvoices,
-    totalPendingInvoices,
+    countPaid,
+    sumPaid,
+    countApproved,
+    sumApproved,
+    countPending,
+    sumPending,
   } = await fetchCardData()
 
-  // 2️⃣ Array con tus datos y tipos
   const cards = [
-    ['Abonado', totalPaidInvoices, 'collected'] as const,
-    ['Aprobado', totalApprovedInvoices, 'approved'] as const,
-    ['Pendiente', totalPendingInvoices, 'pending'] as const,
-    ['Total de facturas', numberOfInvoices, 'invoices'] as const,
-    ['Total de clientes', numberOfCustomers, 'customers'] as const,
+    // [ título, count (número), amount (string de dígitos), tipo ]
+    ['Abonado', countPaid, sumPaid.toString(), 'collected'] as const,
+    ['Aprobado', countApproved, sumApproved.toString(), 'approved'] as const,
+    ['Pendiente', countPending, sumPending.toString(), 'pending'] as const,
+    [
+      'Total de facturas',
+      numberOfInvoices,
+      numberOfInvoices.toString(),
+      'invoices',
+    ] as const,
+    [
+      'Total de clientes',
+      numberOfCustomers,
+      numberOfCustomers.toString(),
+      'customers',
+    ] as const,
   ]
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      {cards.map(([title, value, type]) => (
-        // 3️⃣ Envolvés en Link usando routeMap[type]
+      {cards.map(([title, count, amount, type]) => (
         <Link
           key={type}
           href={routeMap[type]}
           className="block hover:shadow-md transition-shadow"
         >
-          <Card title={title} value={value} type={type} />
+          <Card title={title} count={count} amount={amount} type={type} />
         </Link>
       ))}
     </div>
   )
 }
 
-
 export function Card({
   title,
-  value,
+  count,
+  amount,
   type,
 }: {
-  title: string;
-  value: number | string;
-  type: keyof typeof iconMap;
+  title: string
+  count: number
+  amount: string
+  type: keyof typeof iconMap
 }) {
-  const Icon = iconMap[type];
+  const Icon = iconMap[type]
+
+  // Formatear amount si es solo dígitos
+  let displayAmount = amount
+  // Eliminamos puntos y cambiamos coma por punto para parsear
+  const numeric = parseFloat(amount.replace(/\./g, '').replace(/,/g, '.'))
+  if (!isNaN(numeric)) {
+    displayAmount = `$ ${numeric.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+  }
 
   return (
     <div className="rounded-xl bg-gray-50 p-2 shadow-sm">
@@ -80,11 +98,16 @@ export function Card({
         {Icon && <Icon className="h-5 w-5 text-gray-700" />}
         <h3 className="ml-2 text-sm font-medium">{title}</h3>
       </div>
-      <p
-        className={`${roboto.className} truncate rounded-xl bg-white px-4 py-8 text-center text-2xl`}
-      >
-        {value}
-      </p>
+      <div className="bg-white rounded-xl px-4 py-6 text-center">
+        {/* 1) Cantidad de facturas, formateada con separador de miles */}
+        <p className="text-4xl font-bold">
+          {count.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+        </p>
+        {/* 2) Monto debajo, formateado con separadores y signo de peso */}
+        <p className={`mt-1 ${roboto.className} text-lg text-gray-600`}>
+          {displayAmount}
+        </p>
+      </div>
     </div>
-  );
+  )
 }

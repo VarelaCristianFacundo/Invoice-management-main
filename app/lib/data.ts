@@ -55,31 +55,66 @@ export async function fetchLatestInvoices() {
 }
 
 export async function fetchCardData() {
-  // 1) Contar totales
-  const [{ rows: invRows }, { rows: custRows }, { rows: statusRows }] =
-    await Promise.all([
-      pool.query('SELECT COUNT(*)::int AS count FROM invoices'),
-      pool.query('SELECT COUNT(*)::int AS count FROM customers'),
-      pool.query(`
-        SELECT
-          SUM(CASE WHEN status = 'pagado'    THEN amount ELSE 0 END) AS paid,
-          SUM(CASE WHEN status = 'aprobado'  THEN amount ELSE 0 END) AS approved,
-          SUM(CASE WHEN status = 'presentado' THEN amount ELSE 0 END) AS pending
-        FROM invoices
-      `),
-    ]);
+  // 1) Contar cuántas facturas hay de cada estado
+  const countResult = await pool.query(`
+    SELECT
+      COUNT(*) FILTER (WHERE status = 'pagado')     AS countPaid,
+      COUNT(*) FILTER (WHERE status = 'aprobado')   AS countApproved,
+      COUNT(*) FILTER (WHERE status = 'presentado') AS countPending,
+      COUNT(*)                                     AS totalInvoices,
+      COUNT(*) OVER ()                             AS totalCountAll  -- solo para ilustrar
+    FROM invoices
+  `)
 
-  const numberOfInvoices = invRows[0].count;
-  const numberOfCustomers = custRows[0].count;
-  const { paid, approved, pending } = statusRows[0];
+  // 2) Sumar montos de cada estado
+  const sumResult = await pool.query(`
+    SELECT
+      COALESCE(SUM(CASE WHEN status = 'pagado'     THEN amount END), 0)       AS sumPaid,
+      COALESCE(SUM(CASE WHEN status = 'aprobado'   THEN amount END), 0)       AS sumApproved,
+      COALESCE(SUM(CASE WHEN status = 'presentado' THEN amount END), 0)       AS sumPending,
+      COALESCE(SUM(amount), 0)                                               AS sumAll
+    FROM invoices
+  `)
+
+  // 3) Contar clientes y facturas totales
+  const [custRows, invRows] = await Promise.all([
+    pool.query(`SELECT COUNT(*)::int AS count FROM customers`),
+    pool.query(`SELECT COUNT(*)::int AS count FROM invoices`),
+  ])
+
+  const {
+    countpaid:     countPaid,
+    countapproved: countApproved,
+    countpending:  countPending,
+    totalinvoices: totalInvoices,
+  } = countResult.rows[0] as Record<string, number>
+
+  const {
+    sumpaid:     sumPaid,
+    sumapproved: sumApproved,
+    sumpending:  sumPending,
+    sumall:      sumAll,
+  } = sumResult.rows[0] as Record<string, number>
+
+  const numberOfCustomers = custRows.rows[0].count
+  const numberOfInvoices  = invRows.rows[0].count
 
   return {
-    numberOfInvoices,
     numberOfCustomers,
-    totalPaidInvoices: formatCurrency(paid ?? 0),
-    totalApprovedInvoices: formatCurrency(approved ?? 0),
-    totalPendingInvoices: formatCurrency(pending ?? 0),
-  };
+    numberOfInvoices,
+
+    // Para “Abonado”
+    countPaid:     countPaid     ?? 0,
+    sumPaid:       formatCurrency(sumPaid     ?? 0),
+
+    // Para “Aprobado”
+    countApproved: countApproved ?? 0,
+    sumApproved:   formatCurrency(sumApproved ?? 0),
+
+    // Para “Pendiente”
+    countPending:  countPending  ?? 0,
+    sumPending:    formatCurrency(sumPending  ?? 0),
+  }
 }
 
 const ITEMS_PER_PAGE = 6;
