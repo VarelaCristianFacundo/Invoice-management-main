@@ -21,14 +21,32 @@ export default function Form() {
   const [state, setState] = useState<State>({ errors: {}, message: null });
   const router = useRouter();
 
+  // Estado para CBU/CVU y lógica dinámica
+  const [cbuCvu, setCbuCvu] = useState('');
+  const isCvu = cbuCvu.startsWith('000');
+
+  const handleCbuCvuChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // dejamos sólo dígitos
+    const digits = e.target.value.replace(/\D/g, '');
+    setCbuCvu(digits);
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    // Validaciones de CBU/CVU
+    if (!cbuCvu) {
+      return Swal.fire('Incomplete', `Debes completar el ${isCvu ? 'CVU' : 'CBU'}.`, 'info');
+    }
+    if (!isCvu && cbuCvu.startsWith('000')) {
+      return Swal.fire('Error', 'Estás colocando un CVU en el campo CBU.', 'error');
+    }
 
     const formData = {
       name: (event.currentTarget as any).name.value,
       email: (event.currentTarget as any).email.value,
       cuit_cuil: (event.currentTarget as any).cuit_cuil.value,
-      cbu_cvu: (event.currentTarget as any).cbu_cvu.value || null,
+      cbu_cvu: cbuCvu,
     };
 
     try {
@@ -133,14 +151,17 @@ export default function Form() {
         {/* CBU/CVU */}
         <div className="mb-4">
           <label htmlFor="cbu_cvu" className="mb-2 block text-sm font-medium">
-            CBU/CVU
+            {isCvu ? 'CVU' : 'CBU'} <span className="text-red-500">*</span>
           </label>
           <div className="relative mt-2 rounded-md">
             <input
               id="cbu_cvu"
               name="cbu_cvu"
               type="text"
-              placeholder="Ingresar CBU/CVU"
+              placeholder={isCvu ? 'Ingresar CVU' : 'Ingresar CBU'}
+              value={cbuCvu}
+              onChange={handleCbuCvuChange}
+              required
               className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
             />
           </div>
