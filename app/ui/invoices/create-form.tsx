@@ -114,6 +114,11 @@ export default function CreateInvoiceForm({
       return;
     }
 
+    if (!pdfFile) {
+      Swal.fire("Incomplete", "El PDF es obligatorio para crear la factura.", "info");
+      return;
+    }
+
     let base64File = "";
     if (pdfFile) {
       base64File = await fileToBase64(pdfFile);
@@ -260,7 +265,7 @@ export default function CreateInvoiceForm({
       {/* PDF Upload */}
       <div>
         <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-          Cargar PDF (Opcional)
+          Cargar PDF <span className="text-red-500">*</span>
         </label>
         <input
           id="pdfFile"
@@ -268,6 +273,7 @@ export default function CreateInvoiceForm({
           type="file"
           accept="application/pdf"
           onChange={handlePdfChange}
+          required
           className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"
         />
       </div>

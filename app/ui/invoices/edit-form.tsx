@@ -171,7 +171,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
         {/* Input File para el PDF */}
         <div className="mb-4">
           <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-            Cargar PDF (opcional)
+            Cargar PDF <span className="text-red-500">*</span>
           </label>
           <input
             id="pdfFile"
@@ -179,6 +179,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
             type="file"
             accept="application/pdf"
             onChange={handlePdfChange}
+            required
             className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"
           />
           {currentFile && !newFile && (
