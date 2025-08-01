@@ -14,6 +14,7 @@ interface State {
     cuit_cuil?: string[];
     cbu_cvu?: string[];
     phone?: string[];
+    iva_condition?: string[];
   };
   message: string | null;
 }
@@ -50,6 +51,7 @@ export default function Form() {
       cuit_cuil: (event.currentTarget as any).cuit_cuil.value,
       cbu_cvu: cbuCvu,
       phone: (event.currentTarget as any).phone.value,
+      iva_condition: (event.currentTarget as any).iva_condition.value,
     };
 
 
@@ -149,6 +151,31 @@ export default function Form() {
           {/* Si en el futuro agregás errores para este campo */}
           {state.errors?.phone &&
             state.errors.phone.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">{error}</p>
+            ))}
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="iva_condition" className="mb-2 block text-sm font-medium">
+            Condición ante el IVA
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <select
+              id="iva_condition"
+              name="iva_condition"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+              defaultValue="Responsable Inscripto"
+              required
+            >
+              <option value="Responsable Inscripto">Responsable Inscripto</option>
+              <option value="Monotributista">Monotributista</option>
+              <option value="Exento">Exento</option>
+              <option value="Consumidor Final">Consumidor Final</option>
+              <option value="No Responsable">No Responsable</option>
+            </select>
+          </div>
+          {state.errors?.iva_condition &&
+            state.errors.iva_condition.map((error) => (
               <p key={error} className="mt-2 text-sm text-red-500">{error}</p>
             ))}
         </div>

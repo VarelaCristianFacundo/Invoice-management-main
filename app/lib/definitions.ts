@@ -15,6 +15,7 @@ export type Customer = {
   email: string;
   image_url: string;
   phone?: string;
+  iva_condition: string;
 };
 
 export type Invoice = {
@@ -73,6 +74,7 @@ export type CustomersTableType = {
   email: string;
   image_url: string;
   phone?: string;
+  iva_condition: string;
   total_invoices: number;
   total_pending: number;
   total_paid: number;
@@ -112,6 +114,7 @@ export type CustomerForm = {
   cbu_cvu: string;
   image_url: string;
   phone?: string;
+  iva_condition: string;
 };
 
 export interface BudgetForm {

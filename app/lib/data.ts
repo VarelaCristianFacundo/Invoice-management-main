@@ -321,13 +321,14 @@ export async function fetchFilteredCustomers(
           customers.name,
           customers.email,
           customers.image_url,
-          customers.phone, -- <--- AGREGADO
+          customers.phone,
+          customers.iva_condition,
           COUNT(invoices.id) AS total_invoices,
           SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
           SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
       FROM customers
       LEFT JOIN invoices ON customers.id = invoices.customer_id
-      GROUP BY customers.id, customers.name, customers.email, customers.image_url, customers.phone
+      GROUP BY customers.id, customers.name, customers.email, customers.image_url, customers.phone, customers.iva_condition
     ) AS subquery  
     WHERE 
         name ILIKE $1 OR
@@ -363,7 +364,8 @@ export async function fetchCustomerById(id: string) {
       customers.image_url,
       customers.cuit_cuil, 
       customers.cbu_cvu,
-      customers.phone
+      customers.phone,
+      customers.iva_condition
     FROM customers
     WHERE customers.id = $1
   `;

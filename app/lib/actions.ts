@@ -18,6 +18,14 @@ const FormSchema = z.object({
   }),
   date: z.string(),
 });
+const ivaConditionValues = [
+  'Responsable Inscripto',
+  'Monotributista',
+  'Exento',
+  'Consumidor Final',
+  'No Responsable',
+];
+
 const CustomerFormSchema = z.object({
   name: z.string().min(1, { message: 'Por favor ingrese un nombre válido.' }),
   email: z.string().email({ message: 'Por favor ingrese un email válido.' }),
@@ -33,11 +41,18 @@ const CustomerFormSchema = z.object({
     .min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' })
     .max(15, { message: 'El teléfono no debe superar los 15 dígitos.' })
     .regex(/^\d+$/, { message: 'El teléfono debe contener solo números.' }),
+  iva_condition: z
+    .enum(ivaConditionValues as [string, ...string[]])
+    .or(z.string())
+    .refine((val) => ivaConditionValues.includes(val), {
+      message: 'Seleccione una condición válida.',
+    }),
 });
 
 const CustomerUpdateSchema = CustomerFormSchema.extend({
   id: z.string().uuid({ message: 'El ID debe ser un UUID válido.' }),
 });
+
 
 const CreateInvoice = FormSchema.extend({
   customerId: z.string(),
@@ -183,7 +198,8 @@ export async function addCustomer(formData: {
   email: string;
   cuit_cuil: string;
   cbu_cvu?: string;
-  phone?: string; // <-- NUEVO
+  phone?: string;
+  iva_condition: (typeof ivaConditionValues)[number];
 }) {
   const validatedFields = CustomerFormSchema.safeParse(formData);
 
@@ -195,13 +211,14 @@ export async function addCustomer(formData: {
     };
   }
 
-  const { name, email, cuit_cuil, cbu_cvu, phone } = validatedFields.data;
+  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
+    validatedFields.data;
 
   try {
     const queryText = `
-  INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url, phone)
-  VALUES ($1, $2, $3, $4, $5, $6)
-`;
+      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url, phone, iva_condition)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `;
     const params = [
       name,
       email,
@@ -209,6 +226,7 @@ export async function addCustomer(formData: {
       cbu_cvu || null,
       '/customers/default.png',
       phone || null,
+      iva_condition,
     ];
 
     await pool.query(queryText, params);
@@ -610,6 +628,7 @@ export async function updateCustomer(
     cuit_cuil: string;
     cbu_cvu?: string;
     phone?: string;
+    iva_condition: (typeof ivaConditionValues)[number];
   },
 ) {
   const validatedFields = CustomerUpdateSchema.safeParse({ ...formData, id });
@@ -622,14 +641,23 @@ export async function updateCustomer(
     };
   }
 
-  const { name, email, cuit_cuil, cbu_cvu, phone } = validatedFields.data;
+  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
+    validatedFields.data;
 
   const queryText = `
     UPDATE customers
-    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4, phone = $5
-    WHERE id = $6
+    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4, phone = $5, iva_condition = $6
+    WHERE id = $7
   `;
-  const params = [name, email, cuit_cuil, cbu_cvu || null, phone || null, id];
+  const params = [
+    name,
+    email,
+    cuit_cuil,
+    cbu_cvu || null,
+    phone || null,
+    iva_condition,
+    id,
+  ];
 
   try {
     const result = await pool.query(queryText, params);
