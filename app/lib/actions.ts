@@ -28,6 +28,11 @@ const CustomerFormSchema = z.object({
     .string()
     .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
     .optional(),
+  phone: z
+    .string()
+    .min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' })
+    .max(15, { message: 'El teléfono no debe superar los 15 dígitos.' })
+    .regex(/^\d+$/, { message: 'El teléfono debe contener solo números.' }),
 });
 
 const CustomerUpdateSchema = CustomerFormSchema.extend({
@@ -178,6 +183,7 @@ export async function addCustomer(formData: {
   email: string;
   cuit_cuil: string;
   cbu_cvu?: string;
+  phone?: string; // <-- NUEVO
 }) {
   const validatedFields = CustomerFormSchema.safeParse(formData);
 
@@ -189,20 +195,22 @@ export async function addCustomer(formData: {
     };
   }
 
-  const { name, email, cuit_cuil, cbu_cvu } = validatedFields.data;
+  const { name, email, cuit_cuil, cbu_cvu, phone } = validatedFields.data;
 
   try {
     const queryText = `
-      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url)
-      VALUES ($1, $2, $3, $4, $5)
-    `;
+  INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url, phone)
+  VALUES ($1, $2, $3, $4, $5, $6)
+`;
     const params = [
       name,
       email,
       cuit_cuil,
       cbu_cvu || null,
       '/customers/default.png',
+      phone || null,
     ];
+
     await pool.query(queryText, params);
 
     return { success: true, message: 'Proveedor agregado exitosamente.' };
@@ -601,6 +609,7 @@ export async function updateCustomer(
     email: string;
     cuit_cuil: string;
     cbu_cvu?: string;
+    phone?: string;
   },
 ) {
   const validatedFields = CustomerUpdateSchema.safeParse({ ...formData, id });
@@ -613,14 +622,14 @@ export async function updateCustomer(
     };
   }
 
-  const { name, email, cuit_cuil, cbu_cvu } = validatedFields.data;
+  const { name, email, cuit_cuil, cbu_cvu, phone } = validatedFields.data;
 
   const queryText = `
     UPDATE customers
-    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4
-    WHERE id = $5
+    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4, phone = $5
+    WHERE id = $6
   `;
-  const params = [name, email, cuit_cuil, cbu_cvu || null, id];
+  const params = [name, email, cuit_cuil, cbu_cvu || null, phone || null, id];
 
   try {
     const result = await pool.query(queryText, params);

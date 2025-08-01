@@ -13,9 +13,11 @@ interface State {
     email?: string[];
     cuit_cuil?: string[];
     cbu_cvu?: string[];
+    phone?: string[];
   };
   message: string | null;
 }
+
 
 export default function Form() {
   const [state, setState] = useState<State>({ errors: {}, message: null });
@@ -47,7 +49,9 @@ export default function Form() {
       email: (event.currentTarget as any).email.value,
       cuit_cuil: (event.currentTarget as any).cuit_cuil.value,
       cbu_cvu: cbuCvu,
+      phone: (event.currentTarget as any).phone.value,
     };
+
 
     try {
       const result = await Swal.fire({
@@ -125,6 +129,30 @@ export default function Form() {
               </p>
             ))}
         </div>
+
+        {/* Teléfono */}
+        <div className="mb-4">
+          <label htmlFor="phone" className="mb-2 block text-sm font-medium">
+            Teléfono
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="Ej: 1134567890"
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+              pattern="\d{7,15}"
+              maxLength={15}
+            />
+          </div>
+          {/* Si en el futuro agregás errores para este campo */}
+          {state.errors?.phone &&
+            state.errors.phone.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">{error}</p>
+            ))}
+        </div>
+
 
         {/* CUIT/CUIL */}
         <div className="mb-4">

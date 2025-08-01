@@ -64,7 +64,7 @@ export async function fetchCardData() {
       COUNT(*)                                     AS totalInvoices,
       COUNT(*) OVER ()                             AS totalCountAll  -- solo para ilustrar
     FROM invoices
-  `)
+  `);
 
   // 2) Sumar montos de cada estado
   const sumResult = await pool.query(`
@@ -74,47 +74,47 @@ export async function fetchCardData() {
       COALESCE(SUM(CASE WHEN status = 'presentado' THEN amount END), 0)       AS sumPending,
       COALESCE(SUM(amount), 0)                                               AS sumAll
     FROM invoices
-  `)
+  `);
 
   // 3) Contar clientes y facturas totales
   const [custRows, invRows] = await Promise.all([
     pool.query(`SELECT COUNT(*)::int AS count FROM customers`),
     pool.query(`SELECT COUNT(*)::int AS count FROM invoices`),
-  ])
+  ]);
 
   const {
-    countpaid:     countPaid,
+    countpaid: countPaid,
     countapproved: countApproved,
-    countpending:  countPending,
+    countpending: countPending,
     totalinvoices: totalInvoices,
-  } = countResult.rows[0] as Record<string, number>
+  } = countResult.rows[0] as Record<string, number>;
 
   const {
-    sumpaid:     sumPaid,
+    sumpaid: sumPaid,
     sumapproved: sumApproved,
-    sumpending:  sumPending,
-    sumall:      sumAll,
-  } = sumResult.rows[0] as Record<string, number>
+    sumpending: sumPending,
+    sumall: sumAll,
+  } = sumResult.rows[0] as Record<string, number>;
 
-  const numberOfCustomers = custRows.rows[0].count
-  const numberOfInvoices  = invRows.rows[0].count
+  const numberOfCustomers = custRows.rows[0].count;
+  const numberOfInvoices = invRows.rows[0].count;
 
   return {
     numberOfCustomers,
     numberOfInvoices,
 
     // Para “Abonado”
-    countPaid:     countPaid     ?? 0,
-    sumPaid:       formatCurrency(sumPaid     ?? 0),
+    countPaid: countPaid ?? 0,
+    sumPaid: formatCurrency(sumPaid ?? 0),
 
     // Para “Aprobado”
     countApproved: countApproved ?? 0,
-    sumApproved:   formatCurrency(sumApproved ?? 0),
+    sumApproved: formatCurrency(sumApproved ?? 0),
 
     // Para “Pendiente”
-    countPending:  countPending  ?? 0,
-    sumPending:    formatCurrency(sumPending  ?? 0),
-  }
+    countPending: countPending ?? 0,
+    sumPending: formatCurrency(sumPending ?? 0),
+  };
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -314,20 +314,21 @@ export async function fetchFilteredCustomers(
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
   const queryText = `
-    SELECT *
-    FROM (
-        SELECT
-            customers.id,
-            customers.name,
-            customers.email,
-            customers.image_url,
-            COUNT(invoices.id) AS total_invoices,
-            SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-            SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-        FROM customers
-        LEFT JOIN invoices ON customers.id = invoices.customer_id
-        GROUP BY customers.id, customers.name, customers.email, customers.image_url
-    ) AS subquery
+  SELECT *
+  FROM (
+      SELECT
+          customers.id,
+          customers.name,
+          customers.email,
+          customers.image_url,
+          customers.phone, -- <--- AGREGADO
+          COUNT(invoices.id) AS total_invoices,
+          SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
+          SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
+      FROM customers
+      LEFT JOIN invoices ON customers.id = invoices.customer_id
+      GROUP BY customers.id, customers.name, customers.email, customers.image_url, customers.phone
+    ) AS subquery  
     WHERE 
         name ILIKE $1 OR
         email ILIKE $1 OR
@@ -360,8 +361,9 @@ export async function fetchCustomerById(id: string) {
       customers.name,
       customers.email,
       customers.image_url,
-      cuit_cuil, 
-      cbu_cvu
+      customers.cuit_cuil, 
+      customers.cbu_cvu,
+      customers.phone
     FROM customers
     WHERE customers.id = $1
   `;
