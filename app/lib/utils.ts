@@ -38,6 +38,22 @@ export const generateYAxis = (revenue: Revenue[]) => {
   return { yAxisLabels, topLabel };
 };
 
+/**
+ * Valida el dígito verificador de un CUIT/CUIL argentino
+ */
+export function isValidCuitCuil(value: string): boolean {
+  if (!/^\d{11}$/.test(value)) return false;
+  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const digits = value.split('').map(Number);
+  const check = digits
+    .slice(0, 10)
+    .reduce((acc, digit, idx) => acc + digit * multipliers[idx], 0);
+  let verif = 11 - (check % 11);
+  if (verif === 11) verif = 0;
+  if (verif === 10) verif = 9;
+  return digits[10] === verif;
+}
+
 export const generatePagination = (currentPage: number, totalPages: number) => {
   // If the total number of pages is 7 or less,
   // display all pages without any ellipsis.

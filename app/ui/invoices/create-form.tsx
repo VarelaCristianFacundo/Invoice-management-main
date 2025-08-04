@@ -35,7 +35,9 @@ export default function CreateInvoiceForm({
   const [customerId, setCustomerId] = useState("");
   // Nuevo estado para guardar el company_id del proveedor seleccionado
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
-
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceNumberError, setInvoiceNumberError] = useState('');
+  const [issueDate, setIssueDate] = useState('');
   const [amount, setAmount] = useState(0);
   // Siempre se crea en estado "presentado"
   const invoiceStatus: "presentado" | "aprobado" | "pagado" | "rechazado" = "presentado";
@@ -45,6 +47,9 @@ export default function CreateInvoiceForm({
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const router = useRouter();
 
+  function isValidInvoiceNumber(num: string) {
+    return /^\d{5}-\d{8}$/.test(num);
+  }
   // Cargar allocations
   useEffect(() => {
     async function fetchBudgetAllocations() {
@@ -105,6 +110,17 @@ export default function CreateInvoiceForm({
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!invoiceNumber || !isValidInvoiceNumber(invoiceNumber)) {
+      setInvoiceNumberError('El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234');
+      return;
+    }
+    setInvoiceNumberError('');
+    if (!issueDate) {
+      Swal.fire("Incomplete", "Debes ingresar la fecha de emisión.", "info");
+      return;
+    }
+
     if (!customerId || !selectedAllocationId) {
       Swal.fire("Incomplete", "Selecciona proveedor y proyecto/área", "info");
       return;
@@ -142,9 +158,12 @@ export default function CreateInvoiceForm({
       year,
       budgetAllocationId: selectedAllocationId,
       file: base64File,
-      company_id: companyId, // Now using company_id from allocation
+      company_id: companyId,
       observations: (e.target as any).observations?.value || '',
+      invoice_number: invoiceNumber,
+      issue_date: issueDate,
     };
+
 
     const confirmation = await Swal.fire({
       title: "Confirmar Creación",
@@ -247,6 +266,49 @@ export default function CreateInvoiceForm({
           required
         />
       </div>
+
+      {/* Número de Factura (ARCA) */}
+      <div>
+        <label htmlFor="invoiceNumber" className="mb-2 block text-sm font-medium">
+          Número de Factura (ARCA) <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="invoice_number"
+          name="invoice_number"
+          type="text"
+          value={invoiceNumber}
+          onChange={e => {
+            setInvoiceNumber(e.target.value);
+            setInvoiceNumberError('');
+          }}
+          placeholder="00001-00001234"
+          className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+          required
+          maxLength={14}
+          pattern="\d{5}-\d{8}"
+        />
+        {invoiceNumberError && (
+          <p className="mt-2 text-sm text-red-500">{invoiceNumberError}</p>
+        )}
+      </div>
+
+      {/* Fecha de Emisión */}
+      <div>
+        <label htmlFor="issueDate" className="mb-2 block text-sm font-medium">
+          Fecha de Emisión <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="issue_date"
+          name="issue_date"
+          type="date"
+          value={issueDate}
+          onChange={e => setIssueDate(e.target.value)}
+          className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+          required
+          max={new Date().toISOString().split('T')[0]}
+        />
+      </div>
+
 
       {/* Observaciones */}
       <div>

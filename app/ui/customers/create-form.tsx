@@ -18,12 +18,25 @@ interface State {
   };
   message: string | null;
 }
+function isValidCuitCuil(cuit: string): boolean {
+  if (!/^\d{11}$/.test(cuit)) return false;
+  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const digits = cuit.split('').map(Number);
+  const check = digits
+    .slice(0, 10)
+    .reduce((acc, digit, idx) => acc + digit * multipliers[idx], 0);
+  let verif = 11 - (check % 11);
+  if (verif === 11) verif = 0;
+  if (verif === 10) verif = 9;
+  return digits[10] === verif;
+}
 
 
 export default function Form() {
   const [state, setState] = useState<State>({ errors: {}, message: null });
   const router = useRouter();
-
+  const [cuitCuil, setCuitCuil] = useState('');
+  const [cuitError, setCuitError] = useState('');
   // Estado para CBU/CVU y lógica dinámica
   const [cbuCvu, setCbuCvu] = useState('');
   const isCvu = cbuCvu.startsWith('000');
@@ -36,7 +49,10 @@ export default function Form() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
+    if (cuitCuil.length !== 11 || !isValidCuitCuil(cuitCuil)) {
+      setCuitError('CUIT/CUIL inválido.');
+      return;
+    }
     // Validaciones de CBU/CVU
     if (!cbuCvu) {
       return Swal.fire('Incomplete', `Debes completar el ${isCvu ? 'CVU' : 'CBU'}.`, 'info');
@@ -193,8 +209,24 @@ export default function Form() {
               type="text"
               placeholder="Ingresar CUIT/CUIL"
               className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+              value={cuitCuil}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setCuitCuil(val);
+                if (val.length === 11 && !isValidCuitCuil(val)) {
+                  setCuitError('CUIT/CUIL inválido.');
+                } else {
+                  setCuitError('');
+                }
+              }}
+              maxLength={11}
             />
           </div>
+          {/* Error en vivo */}
+          {cuitError && (
+            <p className="mt-2 text-sm text-red-500">{cuitError}</p>
+          )}
+          {/* Error backend */}
           {state.errors.cuit_cuil &&
             state.errors.cuit_cuil.map((error) => (
               <p key={error} className="mt-2 text-sm text-red-500">
@@ -202,6 +234,7 @@ export default function Form() {
               </p>
             ))}
         </div>
+
 
         {/* CBU/CVU */}
         <div className="mb-4">

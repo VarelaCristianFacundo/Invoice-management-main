@@ -4,12 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { Pool } from 'pg';
 import { z } from 'zod';
 import { sendEmail } from './SendMail';
+import { isValidCuitCuil } from './utils';
 
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string({
-    invalid_type_error: 'Please select a customer.',
-  }),
+  customerId: z.string({ invalid_type_error: 'Please select a customer.' }),
   amount: z.coerce
     .number()
     .gt(0, { message: 'Please enter an amount greater than $0.' }),
@@ -17,6 +16,12 @@ const FormSchema = z.object({
     invalid_type_error: 'Please select an invoice status.',
   }),
   date: z.string(),
+  invoice_number: z.string().regex(/^\d{5}-\d{8}$/, {
+    message: 'Formato de número de factura inválido. Ej: 00000-00000000',
+  }),
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Fecha inválida (debe ser YYYY-MM-DD)',
+  }),
 });
 const ivaConditionValues = [
   'Responsable Inscripto',
@@ -53,7 +58,6 @@ const CustomerUpdateSchema = CustomerFormSchema.extend({
   id: z.string().uuid({ message: 'El ID debe ser un UUID válido.' }),
 });
 
-
 const CreateInvoice = FormSchema.extend({
   customerId: z.string(),
   amount: z.number(),
@@ -64,6 +68,12 @@ const CreateInvoice = FormSchema.extend({
   file: z.string(),
   company_id: z.number(),
   observations: z.string().optional(),
+  invoice_number: z.string().regex(/^\d{5}-\d{8}$/, {
+    message: 'Formato de número de factura inválido.',
+  }),
+  issue_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Fecha inválida (YYYY-MM-DD)' }),
 }).omit({ id: true, date: true });
 
 const pool = new Pool({
@@ -97,6 +107,8 @@ export async function createInvoice(formData: {
   file: string;
   company_id: number;
   observations?: string;
+  invoice_number: string;
+  issue_date: string;
 }) {
   const validatedFields = CreateInvoice.safeParse(formData);
 
@@ -118,33 +130,35 @@ export async function createInvoice(formData: {
     file,
     company_id,
     observations,
+    invoice_number,
+    issue_date,
   } = validatedFields.data;
-  const amountInCents = amount * 1;
-  const date = new Date().toISOString().split('T')[0];
 
-  const half = await getHalfByBudgetAllocationId(pool, budgetAllocationId);
+  const amountInCents = amount * 1;
 
   try {
     const queryText = `
-      INSERT INTO invoices (customer_id, amount, status, date, area_id, year, budget_allocation_id,file, company_id, observations)
-      VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9,$10)
+      INSERT INTO invoices (
+        customer_id, amount, status, date, area_id, year, budget_allocation_id, file, company_id, observations, invoice_number, issue_date
+      )
+      VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11)
     `;
     const params = [
       customerId,
       amountInCents,
       status,
-      date,
       areaId,
       year,
       budgetAllocationId,
       file,
       company_id,
       observations,
+      invoice_number,
+      issue_date,
     ];
     await pool.query(queryText, params);
-    console.log('Invoice created:', params);
 
-    await sendInvoiceEmail(pool, customerId, amountInCents, status, date);
+    await sendInvoiceEmail(pool, customerId, amountInCents, status, issue_date);
     return {
       success: true,
       message: 'Factura creada satisfactoriamente.',
@@ -157,7 +171,6 @@ export async function createInvoice(formData: {
     };
   }
 }
-
 export async function updateAreaFunds(
   updates: {
     areaId: string;
@@ -210,7 +223,14 @@ export async function addCustomer(formData: {
         'Falla en agregar proveedor. Algún campo es inválido o está faltante.',
     };
   }
-
+  if (!isValidCuitCuil(validatedFields.data.cuit_cuil)) {
+    return {
+      errors: {
+        cuit_cuil: ['CUIT/CUIL inválido. Revise el número ingresado.'],
+      },
+      message: 'Falla en agregar proveedor. CUIT/CUIL inválido.',
+    };
+  }
   const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
     validatedFields.data;
 
@@ -270,6 +290,10 @@ export async function updateInvoice(
       file = oldPdf;
     }
   }
+  const invoice_number = (formData.get('invoice_number') as string) || null;
+  const rawIssueDate = formData.get('issue_date') as string;
+  const issue_date =
+    rawIssueDate && rawIssueDate.trim().length > 0 ? rawIssueDate : null;
 
   // Extraer datos del formulario y convertir el monto a centavos
   const data = {
@@ -277,6 +301,8 @@ export async function updateInvoice(
     amount: parseFloat(formData.get('amount') as string),
     newStatus: formData.get('status') as string,
     observations: (formData.get('observations') as string) || '',
+    invoice_number,
+    issue_date,
   };
 
   console.log('Updating invoice id:', id);
@@ -326,8 +352,9 @@ export async function updateInvoice(
     // Actualizar la factura
     const updateQuery = `
       UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5, observations = $6
-      WHERE id = $7
+      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5, observations = $6,
+          invoice_number = $7, issue_date = $8
+      WHERE id = $9
     `;
     const updateParams = [
       data.customerId,
@@ -336,9 +363,12 @@ export async function updateInvoice(
       file,
       company_id,
       data.observations,
+      data.invoice_number,
+      data.issue_date,
       id,
     ];
     await pool.query(updateQuery, updateParams);
+
     console.log('Invoice updated with params:', updateParams);
 
     // Revalida la ruta para que se vean los datos actualizados
@@ -640,7 +670,14 @@ export async function updateCustomer(
         'Falla en actualizar proveedor. Algún campo es inválido o está faltante.',
     };
   }
-
+  if (!isValidCuitCuil(validatedFields.data.cuit_cuil)) {
+    return {
+      errors: {
+        cuit_cuil: ['CUIT/CUIL inválido. Revise el número ingresado.'],
+      },
+      message: 'Falla en actualizar proveedor. CUIT/CUIL inválido.',
+    };
+  }
   const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
     validatedFields.data;
 
@@ -947,21 +984,25 @@ export async function getInvoiceData(
   half: number;
   areaId: string;
   budgetAllocationId: string;
+  invoice_number: string;
+  issue_date: string;
 }> {
   const getStatusQuery = `
-    SELECT 
-      i.status,
-      i.amount,
-      i.year,
-      i.area_id,
-      i.budget_allocation_id,
-      ba.half
-    FROM 
-      invoices i
-    JOIN 
-      budget_allocations ba ON i.budget_allocation_id = ba.id
-    WHERE 
-      i.id = $1
+  SELECT 
+    i.status,
+    i.amount,
+    i.year,
+    i.area_id,
+    i.budget_allocation_id,
+    ba.half,
+    i.invoice_number, 
+    i.issue_date      
+  FROM 
+    invoices i
+  JOIN 
+    budget_allocations ba ON i.budget_allocation_id = ba.id
+  WHERE 
+  i.id = $1
   `;
   const getStatusParams = [invoiceId];
 
@@ -978,6 +1019,8 @@ export async function getInvoiceData(
       half: statusResult.rows[0].half,
       areaId: statusResult.rows[0].areaId,
       budgetAllocationId: statusResult.rows[0].budget_allocation_id,
+      invoice_number: statusResult.rows[0].invoice_number,
+      issue_date: statusResult.rows[0].issue_date,        
     };
   } catch (error) {
     console.error('Error getting invoice status:', error);

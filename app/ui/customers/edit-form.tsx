@@ -2,6 +2,7 @@
 
 import { updateCustomer } from '@/app/lib/actions';
 import { CustomerForm } from '@/app/lib/definitions';
+import { isValidCuitCuil } from '@/app/lib/utils';
 import { Button } from '@/app/ui/button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +13,9 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 export default function EditCustomerForm({ customer }: { customer: CustomerForm }) {
   const router = useRouter();
   // Estado y lógica igual que en create
+  const [cuitCuil, setCuitCuil] = useState(customer.cuit_cuil || '');
+  const [cuitError, setCuitError] = useState('');
+
   const [cbuCvu, setCbuCvu] = useState(customer.cbu_cvu || '');
   const isCvu = cbuCvu.startsWith('000');
   const handleCbuCvuChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,6 +25,10 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
 
   const [state, setState] = useState<{
     errors?: {
+      name?: string[];
+      email?: string[];
+      cuit_cuil?: string[];
+      cbu_cvu?: string[];
       phone?: string[];
       iva_condition?: string[];
     };
@@ -28,9 +36,15 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
   }>({ errors: {}, message: null });
 
 
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // Validaciones
+    if (cuitCuil.length !== 11 || !isValidCuitCuil(cuitCuil)) {
+      setCuitError('CUIT/CUIL inválido.');
+      return;
+    }
+
     if (!cbuCvu) {
       return Swal.fire('Incomplete', `Debes completar el ${isCvu ? 'CVU' : 'CBU'}.`, 'info');
     }
@@ -169,11 +183,33 @@ export default function EditCustomerForm({ customer }: { customer: CustomerForm 
               id="cuit_cuil"
               name="cuit_cuil"
               type="text"
-              defaultValue={customer.cuit_cuil}
               className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+              value={cuitCuil}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setCuitCuil(val);
+                if (val.length === 11 && !isValidCuitCuil(val)) {
+                  setCuitError('CUIT/CUIL inválido.');
+                } else {
+                  setCuitError('');
+                }
+              }}
+              maxLength={11}
             />
           </div>
+          {/* Error en vivo */}
+          {cuitError && (
+            <p className="mt-2 text-sm text-red-500">{cuitError}</p>
+          )}
+          {/* Error backend */}
+          {state.errors?.cuit_cuil &&
+            state.errors.cuit_cuil.map((error) => (
+              <p key={error} className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            ))}
         </div>
+
 
         {/* CBU/CVU */}
         <div className="mb-4">

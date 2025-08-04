@@ -104,6 +104,8 @@ export type InvoiceForm = {
   amount: number;
   status: 'pending' | 'paid';
   observations: string;
+  invoice_number: string;
+  issue_date: string;
 };
 
 export type CustomerForm = {

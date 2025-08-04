@@ -251,18 +251,19 @@ export async function fetchInvoiceById(id: string) {
       invoices.id,
       invoices.customer_id,
       invoices.amount,
-      invoices.status
+      invoices.status,
+      invoices.invoice_number,
+      invoices.issue_date,
+      invoices.observations,
+      invoices.file
     FROM invoices
     WHERE invoices.id = $1
   `;
   const params = [id];
   const invoices = await queryDatabase<InvoiceForm>(queryText, params);
-  const invoice = invoices.map((invoice) => ({
-    ...invoice,
-    amount: invoice.amount, // Convertir de centavos a dólares
-  }));
-  return invoice[0];
+  return invoices[0];
 }
+
 export async function fetchCustomers() {
   const queryText = `
     SELECT

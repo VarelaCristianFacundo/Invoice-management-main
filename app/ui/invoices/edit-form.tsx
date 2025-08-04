@@ -27,6 +27,17 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
   // Estado para guardar un nuevo archivo si se selecciona
   const [newFile, setNewFile] = useState<File | null>(null);
 
+  const [invoiceNumber, setInvoiceNumber] = useState(invoice.invoice_number || '');
+  const [invoiceNumberError, setInvoiceNumberError] = useState('');
+  const [issueDate, setIssueDate] = useState(
+    invoice.issue_date
+      ? typeof invoice.issue_date === 'string'
+        ? invoice.issue_date.slice(0, 10)
+        : new Date(invoice.issue_date).toISOString().slice(0, 10)
+      : ''
+  );
+  
+
   const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -48,6 +59,15 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
     // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
     // que ya fue precargado en el formulario.
     // (Si se selecciona un nuevo archivo, la lógica del backend usará ese valor)
+    if (!invoiceNumber || !/^\d{5}-\d{8}$/.test(invoiceNumber)) {
+      setInvoiceNumberError('El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234');
+      return;
+    }
+    setInvoiceNumberError('');
+    if (!issueDate) {
+      Swal.fire("Incomplete", "Debes ingresar la fecha de emisión.", "info");
+      return;
+    }
 
     try {
       const result = await Swal.fire({
@@ -152,6 +172,50 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
             </div>
           </div>
         </fieldset>
+
+        {/* Número de Factura (ARCA) */}
+        <div className="mb-4">
+          <label htmlFor="invoice_number" className="mb-2 block text-sm font-medium">
+            Número de Factura (ARCA) <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="invoice_number"
+            name="invoice_number"
+            type="text"
+            value={invoiceNumber}
+            onChange={e => {
+              setInvoiceNumber(e.target.value);
+              setInvoiceNumberError('');
+            }}
+            placeholder="00001-00001234"
+            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+            required
+            maxLength={14}
+            pattern="\d{5}-\d{8}"
+          />
+          {invoiceNumberError && (
+            <p className="mt-2 text-sm text-red-500">{invoiceNumberError}</p>
+          )}
+        </div>
+
+        {/* Fecha de Emisión */}
+        <div className="mb-4">
+          <label htmlFor="issue_date" className="mb-2 block text-sm font-medium">
+            Fecha de Emisión <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="issue_date"
+            name="issue_date"
+            type="date"
+            value={issueDate}
+            onChange={e => setIssueDate(e.target.value)}
+            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
+            required
+            max={new Date().toISOString().split('T')[0]}
+          />
+        </div>
+
+
 
         {/* Observaciones */}
         <div className="mb-4">
