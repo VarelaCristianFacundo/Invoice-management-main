@@ -1,20 +1,31 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
 
-export async function GET() {
-  const { rows } = await pool.query(
-    'SELECT * FROM contable_items ORDER BY nombre ASC',
-  );
-  return NextResponse.json(rows);
-}
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+});
 
-export async function POST(req: { json: () => PromiseLike<{ nombre: any; codigo: any; descripcion: any; }> | { nombre: any; codigo: any; descripcion: any; }; }) {
-    const { nombre, codigo, descripcion } = await req.json();
-    const { rows } = await pool.query(
-      'INSERT INTO contable_items (nombre, codigo, descripcion) VALUES ($1, $2, $3) RETURNING *',
-      [nombre, codigo, descripcion]
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { nombre, codigo, descripcion } = body;
+
+    const insertQuery = `
+      INSERT INTO contable_items (nombre, codigo, descripcion)
+      VALUES ($1, $2, $3)
+      RETURNING id, nombre, codigo, descripcion
+    `;
+    const params = [nombre, codigo || null, descripcion || null];
+
+    const result = await pool.query(insertQuery, params);
+    const newItem = result.rows[0];
+
+    return NextResponse.json(newItem, { status: 201 });
+  } catch (error) {
+    console.error('Error creando artículo contable:', error);
+    return NextResponse.json(
+      { error: 'Error creando artículo contable' },
+      { status: 500 },
     );
-    return NextResponse.json(rows[0]);
   }
-  
+}
