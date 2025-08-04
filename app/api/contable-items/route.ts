@@ -29,3 +29,18 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET(request: Request) {
+  try {
+    const result = await pool.query(
+      'SELECT id, nombre, codigo, descripcion FROM contable_items ORDER BY nombre ASC',
+    );
+    return NextResponse.json(result.rows);
+  } catch (error) {
+    console.error('Error obteniendo artículos contables:', error);
+    return NextResponse.json(
+      { error: 'Error obteniendo artículos contables' },
+      { status: 500 },
+    );
+  }
+}
