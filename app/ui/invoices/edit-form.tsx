@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import CustomAutocompleteContableItem, { ContableItem } from "./custom-autocomplete-contable-item";
 
 // Función auxiliar para convertir archivo a base64
 async function fileToBase64(file: File): Promise<string> {
@@ -26,6 +27,10 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
   const [currentFile, setCurrentFile] = useState<string>(invoice.file || "");
   // Estado para guardar un nuevo archivo si se selecciona
   const [newFile, setNewFile] = useState<File | null>(null);
+  const [contableItem, setContableItem] = useState<ContableItem | null>(
+    invoice.contable_item || null
+  );
+
 
   const [invoiceNumber, setInvoiceNumber] = useState(invoice.invoice_number || '');
   const [invoiceNumberError, setInvoiceNumberError] = useState('');
@@ -36,7 +41,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
         : new Date(invoice.issue_date).toISOString().slice(0, 10)
       : ''
   );
-  
+
 
   const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -84,12 +89,12 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
 
       const response = await updateInvoice(invoice.id, formData);
       if (!response.success) throw new Error(response.message);
-      await Swal.fire("Updated!", "The invoice was updated successfully.", "success");
+      await Swal.fire("Actualizada!", "La factura fue actualizada con éxito.", "success");
       router.refresh();
       router.push("/dashboard/invoices");
     } catch (error: any) {
       console.error(error);
-      await Swal.fire("Error!", error.message || "Failed to update the invoice.", "error");
+      await Swal.fire("Error!", error.message || "Falló la actualización de la factura.", "error");
     }
   };
 
@@ -215,6 +220,15 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
           />
         </div>
 
+        <CustomAutocompleteContableItem
+          value={contableItem}
+          onContableSelected={(item) => setContableItem(item)}
+        />
+        <input
+          type="hidden"
+          name="contable_item_id"
+          value={contableItem?.id || ""}
+        />
 
 
         {/* Observaciones */}

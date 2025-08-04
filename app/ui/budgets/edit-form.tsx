@@ -31,14 +31,14 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
       const response = await updateBudget(budget.id, formData, '');
       if (!response.success) throw new Error(response.message);
 
-      await Swal.fire('Updated!', 'The budget was updated successfully.', 'success');
+      await Swal.fire('Actualizado!', 'El proyecto fue actualizado con éxito.', 'success');
 
       // Redirigir y actualizar la tabla
       router.push('/dashboard/budgets');
       router.refresh();
     } catch (error) {
       console.error(error);
-      await Swal.fire('Error!', 'Failed to update the budget.', 'error');
+      await Swal.fire('Error!', 'Falló la actualización del proyecto.', 'error');
     }
   };
 

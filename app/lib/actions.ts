@@ -290,6 +290,7 @@ export async function updateInvoice(
       file = oldPdf;
     }
   }
+  const contable_item_id = formData.get('contable_item_id') || null;
   const invoice_number = (formData.get('invoice_number') as string) || null;
   const rawIssueDate = formData.get('issue_date') as string;
   const issue_date =
@@ -353,8 +354,8 @@ export async function updateInvoice(
     const updateQuery = `
       UPDATE invoices
       SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5, observations = $6,
-          invoice_number = $7, issue_date = $8
-      WHERE id = $9
+          invoice_number = $7, issue_date = $8, contable_item_id = $9
+      WHERE id = $10
     `;
     const updateParams = [
       data.customerId,
@@ -365,6 +366,7 @@ export async function updateInvoice(
       data.observations,
       data.invoice_number,
       data.issue_date,
+      contable_item_id ? Number(contable_item_id) : null,
       id,
     ];
     await pool.query(updateQuery, updateParams);
@@ -1020,7 +1022,7 @@ export async function getInvoiceData(
       areaId: statusResult.rows[0].areaId,
       budgetAllocationId: statusResult.rows[0].budget_allocation_id,
       invoice_number: statusResult.rows[0].invoice_number,
-      issue_date: statusResult.rows[0].issue_date,        
+      issue_date: statusResult.rows[0].issue_date,
     };
   } catch (error) {
     console.error('Error getting invoice status:', error);

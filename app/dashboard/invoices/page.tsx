@@ -1,6 +1,7 @@
 import { fetchInvoicesPages } from '@/app/lib/data';
 import { roboto } from '@/app/ui/fonts';
 import { CreateInvoice } from '@/app/ui/invoices/buttons';
+import ExportInvoicesModal from '@/app/ui/invoices/export-invoices-modal';
 import Pagination from '@/app/ui/invoices/pagination';
 import Table from '@/app/ui/invoices/table';
 import Search from '@/app/ui/search';
@@ -45,6 +46,7 @@ export default async function Page({
       <div className="mt-5 flex w-full justify-center">
         <Pagination totalPages={totalPages} />
       </div>
+      <ExportInvoicesModal />
     </div>
   );
 }

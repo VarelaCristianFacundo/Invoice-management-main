@@ -8,7 +8,6 @@ import {
   CustomerForm,
   CustomersTableType,
   Invoice,
-  InvoiceForm,
   LatestInvoiceRaw,
   Revenue,
   User,
@@ -254,14 +253,30 @@ export async function fetchInvoiceById(id: string) {
       invoices.status,
       invoices.invoice_number,
       invoices.issue_date,
+      invoices.contable_item_id,
+      ci.nombre AS contable_item_nombre,
+      ci.codigo AS contable_item_codigo,
       invoices.observations,
       invoices.file
     FROM invoices
+    LEFT JOIN contable_items ci ON invoices.contable_item_id = ci.id
     WHERE invoices.id = $1
   `;
   const params = [id];
-  const invoices = await queryDatabase<InvoiceForm>(queryText, params);
-  return invoices[0];
+  const invoices = await queryDatabase<any>(queryText, params);
+  const row = invoices[0];
+
+  return {
+    ...row,
+    contable_item:
+      row.contable_item_id && row.contable_item_nombre
+        ? {
+            id: row.contable_item_id,
+            nombre: row.contable_item_nombre,
+            codigo: row.contable_item_codigo,
+          }
+        : null,
+  };
 }
 
 export async function fetchCustomers() {

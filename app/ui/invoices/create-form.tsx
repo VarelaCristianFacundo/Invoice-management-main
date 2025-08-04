@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import CustomAutocompleteContableItem, { ContableItem } from "./custom-autocomplete-contable-item";
 
 // Actualizá el tipo para incluir company_id
 type CustomerField = {
@@ -46,6 +47,7 @@ export default function CreateInvoiceForm({
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const router = useRouter();
+  const [contableItem, setContableItem] = useState<ContableItem | null>(null);
 
   function isValidInvoiceNumber(num: string) {
     return /^\d{5}-\d{8}$/.test(num);
@@ -162,6 +164,7 @@ export default function CreateInvoiceForm({
       observations: (e.target as any).observations?.value || '',
       invoice_number: invoiceNumber,
       issue_date: issueDate,
+      contable_item_id: contableItem?.id,
     };
 
 
@@ -309,6 +312,10 @@ export default function CreateInvoiceForm({
         />
       </div>
 
+      <CustomAutocompleteContableItem
+        value={contableItem}
+        onContableSelected={(item) => setContableItem(item)}
+      />
 
       {/* Observaciones */}
       <div>

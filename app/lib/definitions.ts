@@ -98,6 +98,7 @@ export type CustomerField = {
 };
 
 export type InvoiceForm = {
+  contable_item: null;
   file: string;
   id: string;
   customer_id: string;
@@ -106,6 +107,9 @@ export type InvoiceForm = {
   observations: string;
   invoice_number: string;
   issue_date: string;
+  contable_item_id: string;
+  contable_item_nombre: string;
+  contable_item_codigo: string;
 };
 
 export type CustomerForm = {
