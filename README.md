@@ -38,7 +38,7 @@ Páginas y módulos destacados:
 
 ## 🔐 Variables de entorno
 
-Cree un archivo `.env` basado en [`.env.example`](InvoiceSystem-.env.example). Claves utilizadas por el proyecto:
+Cree un archivo `.env` basado en [`.env.example`](.env.example). Claves utilizadas por el proyecto:
 
 - `POSTGRES_URL` — cadena de conexión a PostgreSQL
 - `NEXTAUTH_SECRET` — secreto para firmar JWT/cookies
