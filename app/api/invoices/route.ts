@@ -98,3 +98,42 @@ export async function GET(req: Request) {
     );
   }
 }
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  const {
+    customer_id,
+    amount,
+    status,
+    date,
+    area_id,
+    year,
+    budget_allocation_id,
+    file,
+    company_id,
+    observations,
+  } = body;
+
+  const insert = `
+    INSERT INTO invoices
+      (customer_id, amount, status, date, area_id, year, budget_allocation_id, file, company_id, observations, fecha_ingreso)
+    VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CURRENT_DATE)
+    RETURNING *;
+  `;
+  const params = [
+    customer_id,
+    amount,
+    status,
+    date,
+    area_id,
+    year,
+    budget_allocation_id,
+    file,
+    company_id,
+    observations ?? null,
+  ];
+
+  const { rows } = await pool.query(insert, params);
+  return NextResponse.json(rows[0], { status: 201 });
+}

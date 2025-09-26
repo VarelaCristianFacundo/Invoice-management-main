@@ -295,6 +295,17 @@ export default function CreateInvoiceForm({
         )}
       </div>
 
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">Fecha de ingreso</label>
+        <input
+          type="text"
+          value={new Date().toLocaleDateString('es-AR')}
+          readOnly
+          className="rounded-md border px-3 py-2 bg-gray-50 text-gray-600"
+          aria-readonly
+        />
+      </div>
+
       {/* Fecha de Emisión */}
       <div>
         <label htmlFor="issueDate" className="mb-2 block text-sm font-medium">
