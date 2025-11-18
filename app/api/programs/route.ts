@@ -16,7 +16,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const { name } = await request.json();
   if (!name) {
-    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'El nombre es obligatorio' },
+      { status: 400 },
+    );
   }
   try {
     const result = await pool.query(
@@ -28,7 +31,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating program:', error);
     return NextResponse.json(
-      { error: 'Failed to create program' },
+      { error: 'No se pudo crear el programa' },
       { status: 500 },
     );
   }

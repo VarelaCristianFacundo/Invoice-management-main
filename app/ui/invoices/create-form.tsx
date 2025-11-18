@@ -57,12 +57,12 @@ export default function CreateInvoiceForm({
     async function fetchBudgetAllocations() {
       try {
         const res = await fetch("/api/budget-allocations");
-        if (!res.ok) throw new Error("Error fetching Budget Allocations");
+        if (!res.ok) throw new Error("Error al obtener asignaciones de presupuesto");
         const data: BudgetAllocationItem[] = await res.json();
         setBudgetAllocations(data);
       } catch (error) {
         console.error(error);
-        Swal.fire("Error", "Failed to fetch Budget Allocations.", "error");
+        Swal.fire("Error", "No se pudieron obtener las asignaciones de presupuesto.", "error");
       }
     }
     fetchBudgetAllocations();
@@ -190,7 +190,7 @@ export default function CreateInvoiceForm({
       }
     } catch (error: any) {
       console.error("Error creating invoice:", error);
-      Swal.fire("Error", error.message || "Failed to create Invoice", "error");
+      Swal.fire("Error", error.message || "No se pudo crear la factura", "error");
     }
   };
 

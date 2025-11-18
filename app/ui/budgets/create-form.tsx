@@ -51,12 +51,12 @@ export default function CreateBudgetForm({
     const fetchYears = async () => {
       try {
         const res = await fetch("/api/year");
-        if (!res.ok) throw new Error("Error fetching years data");
+        if (!res.ok) throw new Error("Error al obtener los años");
         const data: number[] = await res.json();
         setYears(data.filter((y) => typeof y === "number"));
       } catch (error) {
         console.error("Error fetching years:", error);
-        Swal.fire("Error", "Error fetching years. Please try again later.", "error");
+        Swal.fire("Error", "Error al obtener los años. Por favor intenta más tarde.", "error");
       } finally {
         setIsLoadingYears(false);
       }
@@ -69,12 +69,12 @@ export default function CreateBudgetForm({
     const fetchPrograms = async () => {
       try {
         const res = await fetch("/api/programs");
-        if (!res.ok) throw new Error("Error fetching programs");
+        if (!res.ok) throw new Error("Error al obtener los programas");
         const data = await res.json();
         setPrograms(data);
       } catch (error) {
         console.error("Error fetching programs:", error);
-        Swal.fire("Error", "Error fetching programs.", "error");
+        Swal.fire("Error", "Error al obtener los programas.", "error");
       } finally {
         setIsLoadingPrograms(false);
       }
@@ -99,7 +99,7 @@ export default function CreateBudgetForm({
     try {
       const yearNumber = parseInt(formData.year, 10);
       if (!formData.project_name || !yearNumber) {
-        Swal.fire("Error", "Please provide project name and valid year.", "error");
+        Swal.fire("Error", "Por favor ingresa un nombre de proyecto y un año válido.", "error");
         return;
       }
 
@@ -113,7 +113,7 @@ export default function CreateBudgetForm({
       setStep(2);
     } catch (error) {
       console.error("Error creating project:", error);
-      Swal.fire("Error", "Unexpected error", "error");
+      Swal.fire("Error", "Error inesperado", "error");
     }
   };
 
@@ -122,7 +122,7 @@ export default function CreateBudgetForm({
     e.preventDefault();
     try {
       if (!projectId || !formData.areaId) {
-        Swal.fire("Error", "Please select a valid project and area.", "error");
+        Swal.fire("Error", "Por favor selecciona un proyecto y área válido.", "error");
         return;
       }
 
@@ -152,7 +152,7 @@ export default function CreateBudgetForm({
       router.push("/dashboard/budgets");
     } catch (error) {
       console.error("Error assigning budget allocation:", error);
-      Swal.fire("Error", "Unexpected error", "error");
+      Swal.fire("Error", "Error inesperado", "error");
     }
   };
 

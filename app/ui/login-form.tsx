@@ -36,12 +36,13 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && <p className="text-red-500">{error}</p>}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Email</label>
+        <label className="block text-sm font-medium text-gray-700">Correo</label>
         <div className="mt-1">
           <input
             name="email"
             type="email"
             autoComplete="email"
+            placeholder="Ingresa tu correo"
             required
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
           />

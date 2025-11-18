@@ -9,7 +9,7 @@ export async function POST(
   const { id } = params;
   if (!id) {
     return NextResponse.json(
-      { message: 'Invoice ID is required' },
+      { message: 'El ID de la factura es obligatorio' },
       { status: 400 },
     );
   }
@@ -31,7 +31,7 @@ export async function POST(
   } catch (error) {
     console.error('Error rejecting invoice:', error);
     return NextResponse.json(
-      { message: 'Failed to reject invoice' },
+      { message: 'No se pudo rechazar la factura' },
       { status: 500 },
     );
   }

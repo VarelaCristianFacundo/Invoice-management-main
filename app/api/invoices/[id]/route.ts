@@ -46,7 +46,10 @@ export async function GET(
 
     const { rows } = await pool.query(sql, [id]);
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Factura no encontrada' },
+        { status: 404 },
+      );
     }
 
     const invoice = rows[0];
@@ -54,7 +57,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching invoice:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch invoice' },
+      { error: 'No se pudo obtener la factura' },
       { status: 500 },
     );
   }

@@ -11,9 +11,9 @@ export async function GET(
     const funds = await sumBudgetAllocationsByAreaYearHalf();
     return NextResponse.json({ allocated_funds: funds });
   } catch (error) {
-    console.error('Error fetching area funds:', error);
+    console.error('Falló en traer fondos de areas:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch area funds' },
+      { error: 'Falló en traer fondos de areas' },
       { status: 500 },
     );
   }

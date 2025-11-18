@@ -93,7 +93,7 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch invoices' },
+      { error: 'No se pudieron obtener las facturas' },
       { status: 500 },
     );
   }

@@ -52,7 +52,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching budget_allocations with joins:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch budget_allocations.' },
+      { error: 'No se pudieron obtener las asignaciones del presupuesto.' },
       { status: 500 },
     );
   }

@@ -16,15 +16,15 @@ export default function Error({
 
   return (
     <main className="flex h-full flex-col items-center justify-center">
-      <h2 className="text-center">Something went wrong!</h2>
+      <h2 className="text-center">¡Algo salió mal!</h2>
       <button
         className="mt-4 rounded-md bg-gray-800 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700"
         onClick={
-          // Attempt to recover by trying to re-render the invoices route
+          // Intenta recuperarse intentando re-renderizar la ruta de presupuestos
           () => reset()
         }
       >
-        Try again
+        Intentar de nuevo
       </button>
     </main>
   );

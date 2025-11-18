@@ -20,7 +20,7 @@ export default async function handler(
 
     form.parse(req, (err: Error | null, fields: Fields, files: Files) => {
       if (err) {
-        return res.status(500).json({ error: 'File upload failed' });
+        return res.status(500).json({ error: 'Falló en cargar el archivo' });
       }
 
       // Guarda los detalles del archivo en la base de datos aquí si es necesario

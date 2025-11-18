@@ -8,7 +8,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching years:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch years' },
+      { error: 'No se pudieron obtener los años' },
       { status: 500 },
     );
   }

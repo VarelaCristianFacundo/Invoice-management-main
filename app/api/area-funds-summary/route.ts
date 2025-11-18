@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json(
-        { error: 'CompanyId is required' },
+        { error: 'El ID de la compañía es obligatorio' },
         { status: 400 },
       );
     }
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching area funds summary:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Error interno del servidor' },
       { status: 500 },
     );
   }

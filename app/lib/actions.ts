@@ -8,12 +8,14 @@ import { isValidCuitCuil } from './utils';
 
 const FormSchema = z.object({
   id: z.string(),
-  customerId: z.string({ invalid_type_error: 'Please select a customer.' }),
+  customerId: z.string({
+    invalid_type_error: 'Por favor selecciona un proveedor.',
+  }),
   amount: z.coerce
     .number()
-    .gt(0, { message: 'Please enter an amount greater than $0.' }),
+    .gt(0, { message: 'Por favor ingresa un monto mayor a $0.' }),
   status: z.enum(['presentado', 'aprobado', 'pagado', 'rechazado'], {
-    invalid_type_error: 'Please select an invoice status.',
+    invalid_type_error: 'Por favor selecciona un estado de factura.',
   }),
   date: z.string(),
   invoice_number: z.string().regex(/^\d{5}-\d{8}$/, {
@@ -116,7 +118,7 @@ export async function createInvoice(formData: {
     return {
       success: false,
       errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing Fields. Failed to Create Invoice.',
+      message: 'Faltan campos. No se pudo crear la factura.',
     };
   }
 
@@ -167,7 +169,7 @@ export async function createInvoice(formData: {
     console.error('Database Error:', error);
     return {
       success: false,
-      message: 'Database Error: Failed to Create Invoice.',
+      message: 'Error de base de datos: No se pudo crear la factura.',
     };
   }
 }
@@ -378,13 +380,13 @@ export async function updateInvoice(
 
     return {
       success: true,
-      message: 'Invoice updated successfully.',
+      message: 'Factura actualizada exitosamente.',
     };
   } catch (error) {
     console.error('Database Error:', error);
     return {
       success: false,
-      message: 'Database Error: Failed to Update Invoice.',
+      message: 'Error de base de datos: No se pudo actualizar la factura.',
     };
   }
 }
@@ -418,7 +420,8 @@ export async function createProject(
     console.error('Error al crear el proyecto:', error);
     return {
       success: false,
-      message: 'Database Error: Failed to create project in budgets.',
+      message:
+        'Error de base de datos: No se pudo crear el proyecto en presupuestos.',
     };
   }
 }
@@ -472,7 +475,8 @@ export async function createBudgetAllocation(
     }
     return {
       success: false,
-      message: 'Database Error: Failed to create budget allocation.',
+      message:
+        'Error de base de datos: No se pudo crear la asignación del presupuesto.',
     };
   }
 }
@@ -525,7 +529,7 @@ export async function createBudget({
 
       return {
         success: true,
-        message: 'Project and area allocated successfully.',
+        message: 'Proyecto y área asignados exitosamente.',
       };
     } else {
       // Si no es un proyecto nuevo, actualizamos
@@ -557,12 +561,15 @@ export async function createBudget({
 
       return {
         success: true,
-        message: 'Project and allocation updated successfully.',
+        message: 'Proyecto y asignación actualizados exitosamente.',
       };
     }
   } catch (error) {
     console.error('Database Error:', error);
-    return { success: false, message: 'Failed to create or update project.' };
+    return {
+      success: false,
+      message: 'No se pudo crear o actualizar el proyecto.',
+    };
   }
 }
 
@@ -631,12 +638,12 @@ export async function updateBudget(
       changedBy,
     );
     if (result.rowCount === 0) {
-      throw new Error('No budget found to update.');
+      throw new Error('No se encontró presupuesto para actualizar.');
     }
-    return { success: true, message: 'Budget updated successfully.' };
+    return { success: true, message: 'Presupuesto actualizado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { success: false, message: 'Failed to update budget.' };
+    return { success: false, message: 'No se pudo actualizar el presupuesto.' };
   }
 }
 
@@ -645,7 +652,7 @@ export async function deleteBudget(id: string) {
     const res = await fetch(`/api/budget/${id}`, {
       method: 'DELETE',
     });
-    if (!res.ok) throw new Error('Failed to delete budget');
+    if (!res.ok) throw new Error('No se pudo eliminar el presupuesto');
     return await res.json();
   } catch (error) {
     console.error(error);

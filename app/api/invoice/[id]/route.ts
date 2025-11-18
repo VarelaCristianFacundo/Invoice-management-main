@@ -9,7 +9,7 @@ export async function DELETE(
 
   if (!id) {
     return NextResponse.json(
-      { message: 'Invoice ID is required' },
+      { message: 'El ID de la factura es obligatorio' },
       { status: 400 },
     );
   }
@@ -32,7 +32,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting invoice:', error);
     return NextResponse.json(
-      { message: 'Failed to delete invoice' },
+      { message: 'No se pudo eliminar la factura' },
       { status: 500 },
     );
   }

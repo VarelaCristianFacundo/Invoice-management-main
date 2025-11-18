@@ -9,7 +9,7 @@ export async function DELETE(
 
   if (!id || id === 'undefined') {
     return NextResponse.json(
-      { message: 'Invalid ID provided' },
+      { message: 'ID inválido proporcionado' },
       { status: 400 },
     );
   }
@@ -36,9 +36,9 @@ export async function DELETE(
       { status: 200 },
     );
   } catch (error) {
-    console.error('Error deleting budget:', error);
+    console.error('Falló en eliminar el presupuesto:', error);
     return NextResponse.json(
-      { message: 'Failed to delete budget', error: error },
+      { message: 'Falló en eliminar el presupuesto', error: error },
       { status: 500 },
     );
   }

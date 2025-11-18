@@ -32,13 +32,13 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
       const res = await fetch(
         `/api/budgets?query=${search}&currentPage=1&companyId=${selectedCompany || ""}`
       );
-      if (!res.ok) throw new Error("Failed to fetch budgets");
+      if (!res.ok) throw new Error("Error al obtener los presupuestos");
 
       const data = await res.json();
       setBudgets(data);
     } catch (error) {
       console.error("Error fetching budgets:", error);
-      Swal.fire("Error", "Failed to fetch budgets. Please try again later.", "error");
+      Swal.fire("Error", "No se pudieron obtener los presupuestos. Por favor intenta más tarde.", "error");
     } finally {
       setLoading(false);
     }

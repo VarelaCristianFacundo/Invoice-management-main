@@ -12,7 +12,7 @@ export default function ExportExcelButton() {
             // Llamamos a la API que genera el Excel
             const res = await fetch("/api/report/invoices");
             if (!res.ok) {
-                throw new Error("Error exporting report");
+                throw new Error("Error al exportar el reporte");
             }
             // Obtenemos el blob del archivo
             const blob = await res.blob();
@@ -29,7 +29,7 @@ export default function ExportExcelButton() {
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error("Error exporting Excel:", error);
-            alert("Error exporting Excel report");
+            alert("Error al exportar el reporte de Excel");
         } finally {
             setLoading(false);
         }

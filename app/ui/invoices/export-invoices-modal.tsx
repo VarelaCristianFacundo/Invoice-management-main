@@ -14,7 +14,7 @@ export default function ExportInvoicesModal() {
                 : '/api/invoices/export-txt';
 
             const res = await fetch(endpoint, { method: 'GET' });
-            if (!res.ok) throw new Error('Error exportando archivo');
+            if (!res.ok) throw new Error('Error al exportar archivo');
             const blob = await res.blob();
 
             const fileName = format === 'excel'

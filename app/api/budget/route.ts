@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     if (!company_id) {
       return NextResponse.json(
-        { error: 'Company ID is required' },
+        { error: 'El ID de la compañía es obligatorio' },
         { status: 400 },
       );
     }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating budget:', error);
     return NextResponse.json(
-      { error: 'Error creating budget' },
+      { error: 'Error al crear el presupuesto' },
       { status: 500 },
     );
   }

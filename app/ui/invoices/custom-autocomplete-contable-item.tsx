@@ -24,7 +24,7 @@ export default function CustomAutocompleteContableItem({
         const fetchItems = async () => {
             try {
                 const res = await fetch("/api/contable-items");
-                if (!res.ok) throw new Error("Error fetching items");
+                if (!res.ok) throw new Error("Error al obtener artículos contables");
                 const data = await res.json();
                 setItems(data);
             } catch (error) {

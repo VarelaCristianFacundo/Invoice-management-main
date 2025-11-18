@@ -9,7 +9,7 @@ export async function POST(
 
   if (!id || id === 'undefined') {
     return NextResponse.json(
-      { message: 'Invalid ID provided' },
+      { message: 'ID inválido proporcionado' },
       { status: 400 },
     );
   }
@@ -34,9 +34,9 @@ export async function POST(
       { status: 200 },
     );
   } catch (error) {
-    console.error('Error rejecting budget:', error);
+    console.error('Falló en rechazar el presupuesto:', error);
     return NextResponse.json(
-      { message: 'Failed to reject budget', error: error },
+      { message: 'Falló en rechazar el presupuesto', error: error },
       { status: 500 },
     );
   }
