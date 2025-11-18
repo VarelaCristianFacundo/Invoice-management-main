@@ -184,7 +184,7 @@ export default function CreateBudgetForm({
               Año
             </label>
             {isLoadingYears ? (
-              <p>Loading years...</p>
+              <p>Cargando años...</p>
             ) : (
               <select
                 id="year"

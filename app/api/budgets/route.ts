@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     if (result.rowCount === 0) {
       return NextResponse.json(
-        { message: 'No budgets found.' },
+        { message: 'No hay presupuestos encontrados.' },
         { status: 404 },
       );
     }

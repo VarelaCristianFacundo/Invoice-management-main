@@ -29,7 +29,7 @@ async function queryDatabase<T>(
     return rows;
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to execute database query.');
+    throw new Error('No se pudo ejecutar la consulta a la base de datos.');
   }
 }
 
@@ -222,7 +222,7 @@ export async function getFileBase64ByInvoiceId(
     return result.rows[0].file;
   } catch (error) {
     console.error('Error fetching file:', error);
-    throw new Error('Error fetching file');
+    throw new Error('Error al obtener el archivo');
   }
 }
 
@@ -537,7 +537,7 @@ export async function getAllYears(): Promise<number[]> {
     return years;
   } catch (error) {
     console.error('Error fetching years:', error);
-    throw new Error('Error fetching years');
+    throw new Error('Error al obtener los años');
   }
 }
 
@@ -576,7 +576,7 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
   try {
     const result = await pool.query(queryText);
     if (result.rows.length === 0) {
-      throw new Error('No budget allocations found');
+      throw new Error('No se encontraron asignaciones de presupuesto');
     }
     return result.rows.map((row) => ({
       area_id: row.area_id,
@@ -588,7 +588,7 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
     }));
   } catch (error) {
     console.error('Error fetching budget allocations:', error);
-    throw new Error('Error fetching budget allocations');
+    throw new Error('Error al obtener las asignaciones de presupuesto');
   }
 }
 
@@ -624,7 +624,7 @@ export async function fetchBudgetsByCompany(
     return result.rows;
   } catch (error) {
     console.error('Error fetching budgets by company:', error);
-    throw new Error('Failed to fetch budgets.');
+    throw new Error('No se pudieron obtener los presupuestos.');
   }
 }
 
@@ -682,6 +682,8 @@ export async function generateExcelReport(): Promise<NextResponse> {
     return response;
   } catch (error) {
     console.error('Error generating Excel report:', error);
-    return new NextResponse('Error generating Excel report', { status: 500 });
+    return new NextResponse('Error al generar el reporte de Excel', {
+      status: 500,
+    });
   }
 }

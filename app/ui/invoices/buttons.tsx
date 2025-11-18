@@ -49,13 +49,13 @@ export function DeleteInvoice({
 
     try {
       const res = await fetch(`/api/invoice/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error deleting invoice");
+      if (!res.ok) throw new Error("Error al eliminar la factura");
 
-      await Swal.fire("Eliminada!", "La factura fue eliminada con éxito.", "success");
+      await Swal.fire("¡Eliminada!", "La factura fue eliminada con éxito.", "success");
       await refreshInvoices(); // Actualiza la lista de facturas
     } catch (error) {
-      console.error("Error deleting invoice:", error);
-      Swal.fire("Error!", "There was an error deleting the invoice.", "error");
+      console.error("Error al eliminar factura:", error);
+      Swal.fire("Error!", "Hubo un error al eliminar la factura.", "error");
     }
   };
 

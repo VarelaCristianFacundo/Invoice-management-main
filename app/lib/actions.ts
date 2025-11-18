@@ -727,7 +727,9 @@ export async function deleteInvoice(id: string) {
     return { message: 'Eliminar Factura.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { message: 'Database Error: Failed to Delete Invoice.' };
+    return {
+      message: 'Error en la base de datos: No se pudo eliminar la factura.',
+    };
   }
 }
 
@@ -772,7 +774,7 @@ export async function checkProjectFunds(
     const result = await pool.query(queryText, queryParams);
 
     if (result.rows.length === 0) {
-      throw new Error('No matching records found');
+      throw new Error('No se encontraron registros coincidentes');
     }
 
     const budgetExecutedAmount = result.rows[0].budget_executed_amount || 0;
@@ -804,7 +806,7 @@ export async function checkProjectFundsByInoviceId(
     const result = await pool.query(queryText, queryParams);
 
     if (result.rows.length === 0) {
-      throw new Error('No matching records found');
+      throw new Error('No se encontraron registros coincidentes');
     }
     const budgetExecutedAmount = result.rows[0].budget_executed_amount;
     const budgetAllocatedAmount = result.rows[0].budget_allocated_amount;
@@ -1129,7 +1131,7 @@ export async function getHalfByBudgetAllocationId(
     return result.rows[0].half;
   } catch (error) {
     console.error('Error fetching half:', error);
-    throw new Error('Error fetching half');
+    throw new Error('Error al obtener el semestre');
   }
 }
 
@@ -1147,6 +1149,6 @@ export async function createProgram(name: string) {
     return programId;
   } catch (error) {
     console.error('Error creating program:', error);
-    throw new Error('Failed to create or fetch program');
+    throw new Error('No se pudo crear u obtener el programa');
   }
 }

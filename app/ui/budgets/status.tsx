@@ -15,19 +15,19 @@ export default function BudgetStatus({ status }: { status: string }) {
     >
       {status === 'pending' && (
         <>
-          Pending
+          Pendiente
           <ClockIcon className="ml-1 w-4 text-gray-500" />
         </>
       )}
       {status === 'approved' && (
         <>
-          Approved
+          Aprobado
           <CheckIcon className="ml-1 w-4 text-white" />
         </>
       )}
       {status === 'rejected' && (
         <>
-          Rejected
+          Rechazado
           <XCircleIcon className="ml-1 w-4 text-white" />
         </>
       )}

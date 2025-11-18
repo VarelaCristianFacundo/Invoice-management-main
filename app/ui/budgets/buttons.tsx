@@ -35,13 +35,13 @@ export function RejectBudget({ id }: { id: string }) {
       const res = await fetch(`/api/budget/${id}/reject`, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('Failed to reject budget');
+      if (!res.ok) throw new Error('No se pudo rechazar el presupuesto');
 
-      Swal.fire('Rejected!', 'The budget was rejected successfully.', 'success');
+      Swal.fire('¡Rechazado!', 'El presupuesto fue rechazado exitosamente.', 'success');
       router.refresh();
     } catch (error) {
-      console.error('Error rejecting budget:', error);
-      Swal.fire('Error!', 'There was an error rejecting the budget.', 'error');
+      console.error('Error rechazando presupuesto:', error);
+      Swal.fire('Error!', 'Hubo un error al rechazar el presupuesto.', 'error');
     }
   };
 
@@ -87,13 +87,13 @@ export function DeleteBudget({
 
     try {
       const res = await fetch(`/api/budget/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error deleting budget");
+      if (!res.ok) throw new Error("Error al eliminar el presupuesto");
 
-      await Swal.fire("Eliminado!", "El proyecto fue eliminado con éxito.", "success");
+      await Swal.fire("¡Eliminado!", "El proyecto fue eliminado con éxito.", "success");
       await refreshBudgets(); // Actualizar la lista de presupuestos
     } catch (error) {
-      console.error("Error deleting budget:", error);
-      Swal.fire("Error!", "There was an error deleting the budget.", "error");
+      console.error("Error al eliminar presupuesto:", error);
+      Swal.fire("Error!", "Hubo un error al eliminar el presupuesto.", "error");
     }
   };
 
