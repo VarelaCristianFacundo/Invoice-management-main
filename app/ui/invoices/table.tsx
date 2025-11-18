@@ -5,6 +5,7 @@ import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
 import { DocumentTextIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
@@ -21,6 +22,9 @@ export default function InvoicesTable({
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default: CAMARCO
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -47,10 +51,9 @@ export default function InvoicesTable({
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">Facturas por Compañía</h2>
-        {/* Botón de exportación como ícono */}
         <ExportExcelButton />
       </div>
-      {/* Botonera para seleccionar la empresa */}
+
       <div className="flex gap-4 mb-4">
         <button
           className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-gray-800 text-white" : "bg-gray-300"
@@ -68,7 +71,6 @@ export default function InvoicesTable({
         </button>
       </div>
 
-      {/* Tabla de facturas */}
       <div className="overflow-x-auto bg-white rounded-md shadow">
         {loading ? (
           <p className="p-4">Cargando facturas...</p>
@@ -103,12 +105,18 @@ export default function InvoicesTable({
                     </div>
                   </td>
                   <td className="px-4 py-2">
-                    {invoice.area_name && invoice.program && invoice.project_name
+                    {invoice.area_name &&
+                      invoice.program &&
+                      invoice.project_name
                       ? `${invoice.area_name} - ${invoice.program} - ${invoice.project_name}`
                       : "N/A"}
                   </td>
-                  <td className="px-4 py-2">{formatCurrency(invoice.amount)}</td>
-                  <td className="px-4 py-2">{formatDateToLocal(invoice.date)}</td>
+                  <td className="px-4 py-2">
+                    {formatCurrency(invoice.amount)}
+                  </td>
+                  <td className="px-4 py-2">
+                    {formatDateToLocal(invoice.date)}
+                  </td>
                   <td className="px-4 py-2">
                     <InvoiceStatus status={invoice.status} />
                   </td>
@@ -136,11 +144,16 @@ export default function InvoicesTable({
                     >
                       <EyeIcon className="h-5 w-5" />
                     </button>
-                    <UpdateInvoice id={invoice.id} />
-                    <DeleteInvoice
-                      id={invoice.id}
-                      refreshInvoices={loadInvoices}
-                    />
+
+                    {isAdmin && (
+                      <>
+                        <UpdateInvoice id={invoice.id} />
+                        <DeleteInvoice
+                          id={invoice.id}
+                          refreshInvoices={loadInvoices}
+                        />
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -148,6 +161,7 @@ export default function InvoicesTable({
           </table>
         )}
       </div>
+
       {selectedInvoice && (
         <InvoiceDetailsModal
           invoice={selectedInvoice}
