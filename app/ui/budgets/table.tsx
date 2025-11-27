@@ -1,7 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@/app/lib/utils";
-import { DeleteBudget } from "@/app/ui/budgets/buttons";
+import { DeleteBudget, UpdateBudget } from "@/app/ui/budgets/buttons";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
@@ -29,20 +29,34 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
   const fetchBudgets = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `/api/budgets?query=${search}&currentPage=1&companyId=${selectedCompany || ""}`
-      );
-      if (!res.ok) throw new Error("Error al obtener los presupuestos");
 
-      const data = await res.json();
+      const res = await fetch(
+        `/api/budgets?query=${encodeURIComponent(search)}&currentPage=1&companyId=${selectedCompany || ""}`
+      );
+
+      if (res.status === 404) {
+        setBudgets([]);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch budgets. Status: ${res.status}`);
+      }
+
+      const data: Budget[] = await res.json();
       setBudgets(data);
     } catch (error) {
       console.error("Error fetching budgets:", error);
-      Swal.fire("Error", "No se pudieron obtener los presupuestos. Por favor intenta más tarde.", "error");
+      Swal.fire(
+        "Error",
+        "Failed to fetch budgets. Please try again later.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchBudgets();
@@ -112,8 +126,10 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
                   <td className="px-4 py-2">{formatCurrency(budget.total_executed_amount)}</td>
                   <td className="px-4 py-2">{budget.area_names}</td>
                   <td className="px-4 py-2 flex gap-2">
-                    {/* Aquí pasamos fetchBudgets como prop */}
-                    <DeleteBudget id={budget.budget_id} refreshBudgets={fetchBudgets} />
+                    <>
+                      <UpdateBudget id={budget.budget_id} />
+                      <DeleteBudget id={budget.budget_id} refreshBudgets={fetchBudgets} />
+                    </>
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { updateBudget } from '@/app/lib/actions';
+import { updateBudgetProject } from "@/app/lib/actions";
 import { BudgetForm, CustomerField } from '@/app/lib/definitions';
 import { Button } from '@/app/ui/button';
 import { CheckIcon, ClockIcon, CurrencyDollarIcon, UserCircleIcon } from '@heroicons/react/24/outline';
@@ -28,7 +28,7 @@ export default function EditBudgetForm({ budget, customers }: { budget: BudgetFo
 
       if (!result.isConfirmed) return;
 
-      const response = await updateBudget(budget.id, formData, '');
+      const response = await updateBudgetProject(budget.id, formData, '');
       if (!response.success) throw new Error(response.message);
 
       await Swal.fire('Actualizado!', 'El proyecto fue actualizado con éxito.', 'success');

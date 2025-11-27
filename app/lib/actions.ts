@@ -578,72 +578,67 @@ export async function updateBudget(
   formData: FormData,
   changedBy: string,
 ) {
-  const data = {
-    year: Number(formData.get('year')),
-    program: formData.get('program') as string,
-    project: formData.get('project') as string,
-    concept: formData.get('concept') as string,
-    customerId: formData.get('customerId') as string,
-    amount: parseFloat(formData.get('amount') as string),
-    areaId: formData.get('areaId') as string,
-    status: formData.get('status') as string,
-    quarter: Number(formData.get('quarter')),
-  };
-  const fundsAvailable = await validateFunds(
-    pool,
-    data.areaId,
-    data.amount,
-    String(data.year),
-    data.quarter,
-  );
-  const sumOfApproveds = await sumApprovedBudgetsByAreaAndQuarter(
-    pool,
-    data.areaId,
-    String(data.year),
-    data.quarter,
-  );
-  if (!fundsAvailable || sumOfApproveds < data.amount) {
-    return { success: false, message: 'Fondos insuficientes' };
+  // Datos que realmente vienen del formulario de edición
+  const year = Number(formData.get('year'));
+  const projectName = (formData.get('project_name') ?? '').toString().trim();
+  const allocatedAmount = Number(formData.get('allocated_amount') ?? 0);
+  const amount = Number(formData.get('amount') ?? 0);
+  const status = (formData.get('status') ?? 'pending').toString();
+
+  if (!year || !projectName) {
+    return {
+      success: false,
+      message: 'Datos inválidos: año y nombre de proyecto son obligatorios.',
+    };
   }
-  const queryText = `
-    UPDATE budgets
-    SET year = $1, program = $2, project = $3, concept = $4, customer_id = $5, amount = $6, status = $7
-    WHERE id = $8
-  `;
-  const params = [
-    data.year,
-    data.program,
-    data.project,
-    data.concept,
-    data.customerId,
-    data.amount,
-    data.status,
-    id,
-  ];
+
+  const client = await pool.connect();
 
   try {
-    const result = await pool.query(queryText, params);
-    await logBudgetAudit(
-      pool,
-      id,
-      data.year,
-      data.areaId,
-      data.program,
-      data.project,
-      data.customerId,
-      data.concept,
-      data.amount,
-      data.status,
-      'UPDATE',
-      changedBy,
+    await client.query('BEGIN');
+
+    // 1) Actualizar datos básicos del proyecto
+    await client.query(
+      `
+        UPDATE budgets
+        SET year = $1,
+            project_name = $2,
+            status = $3
+        WHERE id = $4
+      `,
+      [year, projectName, status, id],
     );
-    if (result.rowCount === 0) {
-      throw new Error('No se encontró presupuesto para actualizar.');
-    }
-    return { success: true, message: 'Presupuesto actualizado exitosamente.' };
+
+    // 2) Actualizar la asignación principal del proyecto
+    //    (si tenés más de una allocation por proyecto, esto las actualiza a todas)
+    await client.query(
+      `
+        UPDATE budget_allocations
+        SET allocated_amount = $1,
+            executed_amount = $2
+        WHERE project_id = $3
+      `,
+      [allocatedAmount, amount, id],
+    );
+
+    // TODO opcional: si querés loguear auditoría, acá podrías llamar a logBudgetAudit
+    // await logBudgetAudit(pool, id, "update", amount, changedBy);
+
+    await client.query('COMMIT');
+
+    return {
+      success: true,
+      message: 'Proyecto actualizado exitosamente.',
+    };
   } catch (error) {
-    console.error('Database Error:', error);
-    return { success: false, message: 'No se pudo actualizar el presupuesto.' };
+    await client.query('ROLLBACK');
+    console.error('Database Error updating budget:', error);
+    return {
+      success: false,
+      message: 'No se pudo actualizar el proyecto.',
+    };
+  } finally {
+    client.release();
   }
 }
 
@@ -1150,5 +1145,67 @@ export async function createProgram(name: string) {
   } catch (error) {
     console.error('Error creating program:', error);
     throw new Error('No se pudo crear u obtener el programa');
+  }
+}
+
+export async function updateBudgetProject(
+  id: string,
+  formData: FormData,
+  changedBy: string,
+) {
+  const year = Number(formData.get('year'));
+  const projectName = String(formData.get('project_name') ?? '').trim();
+  const allocatedAmount = Number(formData.get('allocated_amount') ?? 0);
+  const amount = Number(formData.get('amount') ?? 0);
+  const status = String(formData.get('status') ?? 'pending'); // lo podés dejar por si después lo usamos
+
+  if (!year || !projectName) {
+    return {
+      success: false,
+      message: 'Datos inválidos: año y nombre de proyecto son obligatorios.',
+    };
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 👇🏼 ACA QUITAMOS status DEL UPDATE
+    await client.query(
+      `
+        UPDATE budgets
+        SET year = $1,
+            project_name = $2
+        WHERE id = $3
+      `,
+      [year, projectName, id],
+    );
+
+    await client.query(
+      `
+        UPDATE budget_allocations
+        SET allocated_amount = $1,
+            executed_amount = $2
+        WHERE project_id = $3
+      `,
+      [allocatedAmount, amount, id],
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      success: true,
+      message: 'Proyecto actualizado exitosamente.',
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Database Error updating budget:', error);
+    return {
+      success: false,
+      message: 'No se pudo actualizar el proyecto.',
+    };
+  } finally {
+    client.release();
   }
 }

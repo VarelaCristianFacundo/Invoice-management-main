@@ -460,24 +460,43 @@ export async function getAreaFunds(areaId: string) {
   const result = await pool.query(queryText, [areaId]);
   return result.rows[0]?.allocated_funds || 0;
 }
+// app/lib/data.ts
 export async function fetchBudgetById(id: string) {
   const queryText = `
     SELECT 
-      budgets.id AS budget_id,
-      budgets.year,
-      budgets.project_name,
-      budget_allocations.program,
-      budget_allocations.allocated_amount,
-      budget_allocations.executed_amount,
-      budget_allocations.area_id,
-      areas.name AS area_name
-    FROM budgets
-    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
-    LEFT JOIN areas ON budget_allocations.area_id = areas.id
-    WHERE budgets.id = $1;
+      b.id AS id,
+      b.id AS budget_id,
+      b.year,
+      b.project_name,
+      ba.program,
+      ba.allocated_amount,
+      ba.executed_amount,
+      ba.area_id,
+      a.name AS area_name
+    FROM budgets b
+    LEFT JOIN budget_allocations ba ON b.id = ba.project_id
+    LEFT JOIN areas a ON ba.area_id = a.id
+    WHERE b.id = $1
+    LIMIT 1;
   `;
+
   const result = await pool.query(queryText, [id]);
-  return result.rows[0];
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const row: any = result.rows[0];
+
+  // Normalizamos para el formulario
+  return {
+    ...row,
+    // Para que el input de "Cantidad" tenga algo: usamos executed_amount si existe
+    amount: row.executed_amount ?? row.amount ?? 0,
+    // Si tu tabla budgets no tiene columna status, row.status será undefined
+    // y acá seteamos un default
+    status: row.status ?? 'pending',
+  };
 }
 
 export async function fetchRejectedBudgets() {
