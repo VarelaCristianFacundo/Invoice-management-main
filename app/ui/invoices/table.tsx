@@ -64,8 +64,8 @@ export default function InvoicesTable({
       <div className="flex gap-4 mb-4">
         <button
           className={`px-4 py-2 rounded ${selectedCompany === 1
-              ? "bg-gray-800 text-white"
-              : "bg-gray-300"
+            ? "bg-gray-800 text-white"
+            : "bg-gray-300"
             }`}
           onClick={() => setSelectedCompany(1)}
         >
@@ -73,8 +73,8 @@ export default function InvoicesTable({
         </button>
         <button
           className={`px-4 py-2 rounded ${selectedCompany === 2
-              ? "bg-gray-800 text-white"
-              : "bg-gray-300"
+            ? "bg-gray-800 text-white"
+            : "bg-gray-300"
             }`}
           onClick={() => setSelectedCompany(2)}
         >
@@ -105,16 +105,23 @@ export default function InvoicesTable({
                 <tr key={invoice.id}>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <Image
-                        src={invoice.image_url}
-                        alt={invoice.name}
-                        width={28}
-                        height={28}
-                        className="rounded-full"
-                      />
+                      {invoice.image_url ? (
+                        <Image
+                          src={invoice.image_url}
+                          alt={invoice.name}
+                          width={28}
+                          height={28}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">
+                          {invoice.name?.[0]?.toUpperCase() ?? "?"}
+                        </div>
+                      )}
                       {invoice.name}
                     </div>
                   </td>
+
                   <td className="px-4 py-2">
                     {invoice.area_name &&
                       invoice.program &&
