@@ -47,6 +47,13 @@ export default function InvoicesTable({
     loadInvoices();
   }, [query, currentPage, selectedCompany]);
 
+  // Helper para saber si el PDF es realmente válido (no solo el prefijo)
+  const hasValidPdf = (file?: string | null) => {
+    if (!file) return false;
+    const prefix = "data:application/pdf;base64,";
+    return file.startsWith(prefix) && file.length > prefix.length;
+  };
+
   return (
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
       <div className="flex justify-between items-center mb-4">
@@ -56,14 +63,18 @@ export default function InvoicesTable({
 
       <div className="flex gap-4 mb-4">
         <button
-          className={`px-4 py-2 rounded ${selectedCompany === 1 ? "bg-gray-800 text-white" : "bg-gray-300"
+          className={`px-4 py-2 rounded ${selectedCompany === 1
+              ? "bg-gray-800 text-white"
+              : "bg-gray-300"
             }`}
           onClick={() => setSelectedCompany(1)}
         >
           CAMARCO
         </button>
         <button
-          className={`px-4 py-2 rounded ${selectedCompany === 2 ? "bg-gray-800 text-white" : "bg-gray-300"
+          className={`px-4 py-2 rounded ${selectedCompany === 2
+              ? "bg-gray-800 text-white"
+              : "bg-gray-300"
             }`}
           onClick={() => setSelectedCompany(2)}
         >
@@ -121,9 +132,9 @@ export default function InvoicesTable({
                     <InvoiceStatus status={invoice.status} />
                   </td>
                   <td className="px-4 py-2">
-                    {invoice.file ? (
+                    {hasValidPdf(invoice.file) ? (
                       <a
-                        href={invoice.file}
+                        href={`/api/invoices/${invoice.id}/file`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center text-blue-600 hover:underline"

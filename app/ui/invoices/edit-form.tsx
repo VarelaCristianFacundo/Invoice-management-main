@@ -133,7 +133,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
     }
 
     // Creamos el FormData del formulario
-      // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
+    // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
     // que ya fue precargado en el formulario.
     // (Si se selecciona un nuevo archivo, la lógica del backend usará ese valor)
     if (!invoiceNumber || !/^\d{5}-\d{8}$/.test(invoiceNumber)) {
@@ -345,7 +345,6 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
             type="file"
             accept="application/pdf"
             onChange={handlePdfChange}
-            required
             className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"
           />
           {currentFile && !newFile && (
