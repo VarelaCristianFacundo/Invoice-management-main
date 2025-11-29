@@ -17,6 +17,7 @@ export default function CustomAutocompleteContableItem({
     const [filtered, setFiltered] = useState<ContableItem[]>([]);
     const [userInput, setUserInput] = useState(value?.nombre ?? "");
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [showAll, setShowAll] = useState(false); // <- NEW
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,9 +38,11 @@ export default function CustomAutocompleteContableItem({
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setUserInput(val);
+        setShowAll(false); // si escribe, salimos del modo "Ver lista"
+
         if (val.length >= 3) {
             const matches = items.filter((i) =>
-                i.nombre.toLowerCase().includes(val.toLowerCase())
+                i.nombre.toLowerCase().includes(val.toLowerCase()),
             );
             setFiltered(matches);
             setShowSuggestions(true);
@@ -52,21 +55,23 @@ export default function CustomAutocompleteContableItem({
     const handleSelect = (item: ContableItem) => {
         setUserInput(item.nombre);
         setShowSuggestions(false);
+        setShowAll(false);
         onContableSelected(item, false);
     };
 
-    // Cerrar sugerencias al hacer click fuera
+    // cerrar sugerencias al hacer click fuera
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 setShowSuggestions(false);
+                setShowAll(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Crear nuevo
+    // crear nuevo
     const handleCreateNew = async () => {
         try {
             const { value: codigo } = await Swal.fire({
@@ -94,67 +99,72 @@ export default function CustomAutocompleteContableItem({
             setItems((prev) => [...prev, nuevo]);
             setUserInput(nuevo.nombre);
             setShowSuggestions(false);
+            setShowAll(false);
             onContableSelected(nuevo, true);
         } catch {
             Swal.fire("Error", "No se pudo crear el artículo contable.", "error");
         }
     };
 
+    // lista que realmente se muestra (filtrada o completa)
+    const suggestions = showAll ? items : filtered;
+
     return (
-        <div ref={containerRef} style={{ position: "relative", width: 300 }}>
+        <div ref={containerRef} className="relative w-full max-w-md">
             <label className="block text-sm font-medium mb-2">Artículo Contable</label>
-            <input
-                type="text"
-                value={userInput}
-                onChange={handleInputChange}
-                className="border rounded w-full p-2"
-                placeholder="Escriba las primeras 3 letras..."
-            />
+
+            <div className="flex gap-2 items-center">
+                <input
+                    type="text"
+                    value={userInput}
+                    onChange={handleInputChange}
+                    className="border rounded w-full p-2 text-sm"
+                    placeholder="Escriba las primeras 3 letras o use 'Ver lista'..."
+                />
+                <button
+                    type="button"
+                    onClick={() => {
+                        setShowAll((prev) => !prev);
+                        setShowSuggestions((prev) => !prev || !showAll); // abrir lista al activar
+                        if (!showAll) {
+                            setFiltered([]);
+                        }
+                    }}
+                    className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white whitespace-nowrap hover:bg-gray-700"
+                >
+                    {showAll ? "Ocultar lista" : "Ver Lista"}
+                </button>
+
+            </div>
+
             {showSuggestions && (
                 <ul
-                    style={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        width: "100%",
-                        backgroundColor: "white",
-                        border: "1px solid #ccc",
-                        zIndex: 999,
-                        margin: 0,
-                        padding: 0,
-                        listStyleType: "none",
-                    }}
+                    className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded shadow-sm text-sm"
                 >
-                    {filtered.length > 0 ? (
-                        filtered.map((item) => (
+                    {suggestions.length > 0 ? (
+                        suggestions.map((item) => (
                             <li
                                 key={item.id}
-                                style={{ padding: "8px", cursor: "pointer" }}
+                                className="px-2 py-1 cursor-pointer hover:bg-gray-100"
                                 onClick={() => handleSelect(item)}
                             >
                                 {item.nombre} {item.codigo ? `- (${item.codigo})` : ""}
                             </li>
                         ))
                     ) : (
-                        <li style={{ padding: "8px", color: "#999" }}>No hay resultados...</li>
+                        <li className="px-2 py-1 text-gray-400">No hay resultados...</li>
                     )}
+
+                    {/* opción de crear nuevo cuando hay texto y no existe exactamente ese nombre */}
                     {userInput.length >= 3 &&
-                        !filtered.some(
-                            (i) => i.nombre.toLowerCase() === userInput.toLowerCase()
+                        !items.some(
+                            (i) => i.nombre.toLowerCase() === userInput.toLowerCase(),
                         ) && (
-                            <li style={{ padding: "8px", cursor: "pointer" }}>
+                            <li className="px-2 py-1">
                                 <button
                                     onClick={handleCreateNew}
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "4px",
-                                        backgroundColor: "transparent",
-                                        border: "none",
-                                        color: "blue",
-                                        cursor: "pointer",
-                                    }}
                                     type="button"
+                                    className="text-blue-600 text-xs hover:underline"
                                 >
                                     + Crear Nuevo Artículo &quot;{userInput}&quot;
                                 </button>

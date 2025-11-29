@@ -48,6 +48,7 @@ export default function CreateInvoiceForm({
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const router = useRouter();
   const [contableItem, setContableItem] = useState<ContableItem | null>(null);
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
 
   function isValidInvoiceNumber(num: string) {
     return /^\d{5}-\d{8}$/.test(num);
@@ -137,19 +138,23 @@ export default function CreateInvoiceForm({
     });
   }
 
-  // Filtrar customers según lo ingresado (mínimo 3 caracteres)
-  const filteredCustomers = customerInput.length >= 3
-    ? customers.filter(c =>
-      c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
-      c.cuit_cuil.includes(customerInput)
-    )
-    : [];
+  const filteredCustomers =
+    showAllCustomers
+      ? customers
+      : customerInput.length >= 3
+        ? customers.filter((c) =>
+          c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
+          c.cuit_cuil.includes(customerInput),
+        )
+        : [];
+
 
   // Cuando se seleccione un customer, guardamos el id y el company_id
   const handleCustomerSelect = (selected: CustomerField) => {
     setCustomerInput(`${selected.name} (${selected.cuit_cuil})`);
     setCustomerId(selected.id);
-    setSelectedCompanyId(selected.company_id); // Guardamos el company_id del proveedor
+    setSelectedCompanyId(selected.company_id);
+    setShowAllCustomers(false);
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -270,26 +275,47 @@ export default function CreateInvoiceForm({
         <label htmlFor="customerInput" className="mb-2 block text-sm font-medium">
           Elegir Proveedor (por nombre o CUIT/CUIL)
         </label>
-        <input
-          type="text"
-          id="customerInput"
-          name="customerInput"
-          value={customerInput}
-          onChange={(e) => {
-            setCustomerInput(e.target.value);
-            setCustomerId(""); // Se limpia el id cuando se escribe
-            setSelectedCompanyId(null); // Limpiamos también el company_id
-          }}
-          placeholder="Empieza a escribir..."
-          className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-          autoComplete="off"
-        />
-        {customerInput.length >= 3 && filteredCustomers.length > 0 && (
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            id="customerInput"
+            name="customerInput"
+            value={customerInput}
+            onChange={(e) => {
+              setCustomerInput(e.target.value);
+              setCustomerId("");            // limpiamos selección
+              setSelectedCompanyId(null);   // limpiamos company_id
+              setShowAllCustomers(false);   // salimos del modo "Ver lista"
+            }}
+            placeholder="Empieza a escribir..."
+            className="flex-1 rounded-md border border-gray-200 py-2 px-3 text-sm"
+            autoComplete="off"
+          />
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowAllCustomers((prev) => !prev);
+              if (!showAllCustomers) {
+                // al abrir la lista completa no filtramos por el input
+                setCustomerInput("");
+                setCustomerId("");
+                setSelectedCompanyId(null);
+              }
+            }}
+            className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700"
+          >
+            {showAllCustomers ? "Ocultar lista" : "Ver lista"}
+          </button>
+        </div>
+
+        {(showAllCustomers || customerInput.length >= 3) && filteredCustomers.length > 0 && (
           <ul className="border border-gray-200 rounded-md bg-white mt-1 max-h-60 overflow-y-auto">
             {filteredCustomers.map((customer) => (
               <li
                 key={customer.id}
-                className="p-2 cursor-pointer hover:bg-gray-100"
+                className="p-2 cursor-pointer hover:bg-gray-100 text-sm"
                 onClick={() => handleCustomerSelect(customer)}
               >
                 {customer.name} — {customer.cuit_cuil}
@@ -298,6 +324,7 @@ export default function CreateInvoiceForm({
           </ul>
         )}
       </div>
+
 
       {/* Project + Area */}
       <div>
