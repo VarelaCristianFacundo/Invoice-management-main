@@ -86,6 +86,48 @@ export default function CreateInvoiceForm({
     }
   };
 
+  function formatInvoiceNumber(raw: string) {
+    // Remove spaces
+    const cleaned = raw.replace(/\s/g, '');
+    if (!cleaned.includes('-')) return cleaned;
+
+    const [rawPrefix, rawNumber] = cleaned.split('-');
+    if (!rawPrefix || !rawNumber) return cleaned;
+
+    const prefix = rawPrefix.padStart(5, '0').slice(-5);
+    const number = rawNumber.padStart(8, '0').slice(-8);
+
+    return `${prefix}-${number}`;
+  }
+
+  async function checkInvoiceNumberDuplicate(
+    formattedNumber: string,
+  ): Promise<boolean> {
+    if (!formattedNumber) return false;
+
+    try {
+      const res = await fetch(
+        `/api/invoices/check-number?invoice_number=${encodeURIComponent(
+          formattedNumber,
+        )}`,
+      );
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      if (data.exists) {
+        setInvoiceNumberError('Factura cargada previamente.');
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking invoice number:', error);
+      // En error de red no bloqueamos, solo no marcamos duplicado
+      return false;
+    }
+  }
+
+
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -112,6 +154,31 @@ export default function CreateInvoiceForm({
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const formattedInvoiceNumber = formatInvoiceNumber(invoiceNumber);
+    setInvoiceNumber(formattedInvoiceNumber);
+
+    if (!isValidInvoiceNumber(formattedInvoiceNumber)) {
+      setInvoiceNumberError(
+        'El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234',
+      );
+      return;
+    }
+    setInvoiceNumberError('');
+
+    const isDuplicate = await checkInvoiceNumberDuplicate(
+      formattedInvoiceNumber,
+    );
+    if (isDuplicate) {
+      Swal.fire('Error', 'Factura cargada previamente.', 'error');
+      return;
+    }
+
+    if (!issueDate) {
+      Swal.fire('Incomplete', 'Debes ingresar la fecha de emisión.', 'info');
+      return;
+    }
+
 
     if (!invoiceNumber || !isValidInvoiceNumber(invoiceNumber)) {
       setInvoiceNumberError('El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234');
@@ -162,10 +229,11 @@ export default function CreateInvoiceForm({
       file: base64File,
       company_id: companyId,
       observations: (e.target as any).observations?.value || '',
-      invoice_number: invoiceNumber,
+      invoice_number: formattedInvoiceNumber,
       issue_date: issueDate,
       contable_item_id: contableItem?.id,
     };
+
 
 
     const confirmation = await Swal.fire({
@@ -284,12 +352,28 @@ export default function CreateInvoiceForm({
             setInvoiceNumber(e.target.value);
             setInvoiceNumberError('');
           }}
+          onBlur={async () => {
+            if (!invoiceNumber) return;
+
+            const formatted = formatInvoiceNumber(invoiceNumber);
+            setInvoiceNumber(formatted);
+
+            if (!isValidInvoiceNumber(formatted)) {
+              setInvoiceNumberError(
+                'El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234',
+              );
+              return;
+            }
+
+            await checkInvoiceNumberDuplicate(formatted);
+          }}
           placeholder="00001-00001234"
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
           required
           maxLength={14}
           pattern="\d{5}-\d{8}"
         />
+
         {invoiceNumberError && (
           <p className="mt-2 text-sm text-red-500">{invoiceNumberError}</p>
         )}

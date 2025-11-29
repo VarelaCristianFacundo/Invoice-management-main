@@ -136,6 +136,18 @@ export async function createInvoice(formData: {
     issue_date,
   } = validatedFields.data;
 
+  // Check for duplicated invoice number
+  const duplicate = await pool.query(
+    'SELECT 1 FROM invoices WHERE invoice_number = $1',
+    [invoice_number],
+  );
+  if (duplicate.rows.length > 0) {
+    return {
+      success: false,
+      message: 'Factura cargada previamente. El número de factura ya existe.',
+    };
+  }
+
   const amountInCents = amount * 1;
 
   try {
@@ -310,6 +322,20 @@ export async function updateInvoice(
 
   console.log('Updating invoice id:', id);
   console.log('FormData:', formData);
+
+  // Avoid duplicated invoice numbers when updating
+  if (invoice_number) {
+    const duplicate = await pool.query(
+      'SELECT id FROM invoices WHERE invoice_number = $1 AND id <> $2',
+      [invoice_number, id],
+    );
+    if (duplicate.rows.length > 0) {
+      return {
+        success: false,
+        message: 'Factura cargada previamente. El número de factura ya existe.',
+      };
+    }
+  }
 
   try {
     // Obtener la factura actual para otros procesos

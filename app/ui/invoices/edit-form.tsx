@@ -57,11 +57,83 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
     }
   };
 
+  function formatInvoiceNumber(raw: string) {
+    const cleaned = raw.replace(/\s/g, '');
+    if (!cleaned.includes('-')) return cleaned;
+
+    const [rawPrefix, rawNumber] = cleaned.split('-');
+    if (!rawPrefix || !rawNumber) return cleaned;
+
+    const prefix = rawPrefix.padStart(5, '0').slice(-5);
+    const number = rawNumber.padStart(8, '0').slice(-8);
+
+    return `${prefix}-${number}`;
+  }
+
+  function isValidInvoiceNumber(num: string) {
+    return /^\d{5}-\d{8}$/.test(num);
+  }
+
+  async function checkInvoiceNumberDuplicate(
+    formattedNumber: string,
+  ): Promise<boolean> {
+    if (!formattedNumber) return false;
+
+    try {
+      const res = await fetch(
+        `/api/invoices/check-number?invoice_number=${encodeURIComponent(
+          formattedNumber,
+        )}&excludeId=${encodeURIComponent(invoice.id)}`,
+      );
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      if (data.exists) {
+        setInvoiceNumberError('Factura cargada previamente.');
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking invoice number:', error);
+      return false;
+    }
+  }
+
+
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    const formElement = event.currentTarget;
+    const formData = new FormData(formElement);
+
+    const formattedInvoiceNumber = formatInvoiceNumber(invoiceNumber);
+    setInvoiceNumber(formattedInvoiceNumber);
+
+    if (!isValidInvoiceNumber(formattedInvoiceNumber)) {
+      setInvoiceNumberError(
+        'El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234',
+      );
+      return;
+    }
+    setInvoiceNumberError('');
+
+    const isDuplicate = await checkInvoiceNumberDuplicate(
+      formattedInvoiceNumber,
+    );
+    if (isDuplicate) {
+      await Swal.fire('Error!', 'Factura cargada previamente.', 'error');
+      return;
+    }
+
+    if (!issueDate) {
+      Swal.fire('Incomplete', 'Debes ingresar la fecha de emisión.', 'info');
+      return;
+    }
+
     // Creamos el FormData del formulario
-    const formData = new FormData(event.currentTarget);
-    // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
+      // Si no se seleccionó un nuevo archivo, se enviará el valor en el campo oculto 'oldPdfFile'
     // que ya fue precargado en el formulario.
     // (Si se selecciona un nuevo archivo, la lógica del backend usará ese valor)
     if (!invoiceNumber || !/^\d{5}-\d{8}$/.test(invoiceNumber)) {
@@ -192,12 +264,28 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
               setInvoiceNumber(e.target.value);
               setInvoiceNumberError('');
             }}
+            onBlur={async () => {
+              if (!invoiceNumber) return;
+
+              const formatted = formatInvoiceNumber(invoiceNumber);
+              setInvoiceNumber(formatted);
+
+              if (!isValidInvoiceNumber(formatted)) {
+                setInvoiceNumberError(
+                  'El número debe ser 5 dígitos, guion, 8 dígitos. Ej: 00001-00001234',
+                );
+                return;
+              }
+
+              await checkInvoiceNumberDuplicate(formatted);
+            }}
             placeholder="00001-00001234"
             className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
             required
             maxLength={14}
             pattern="\d{5}-\d{8}"
           />
+
           {invoiceNumberError && (
             <p className="mt-2 text-sm text-red-500">{invoiceNumberError}</p>
           )}
