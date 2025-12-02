@@ -1,9 +1,11 @@
 // authOptions.ts
 
 import bcrypt from 'bcrypt';
-import { NextAuthOptions } from 'next-auth/index';
+import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { getUserByEmail } from './app/lib/user';
+
+const isHttps = process.env.NEXTAUTH_URL?.startsWith('https://') ?? false;
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,6 +25,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials) return null;
+
         const user = await getUserByEmail(credentials.email);
         if (!user) return null;
 
@@ -41,30 +44,32 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+
   pages: {
     signIn: '/login',
   },
+
+  // Cookies configuradas según si usamos HTTPS o no
+  useSecureCookies: isHttps,
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`, // Cambia a un nombre genérico para evitar problemas en local
+      name: isHttps
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production', // Solo usa secure en producción
-        domain:
-          process.env.NODE_ENV === 'production'
-            ? '.invoice-management-main.vercel.app'
-            : undefined, // No configura dominio en local
+        secure: isHttps, // solo Secure si realmente estamos en HTTPS
+        // sin "domain": que se use el host actual (funciona en local y en facturas.camarco.org.ar)
       },
     },
   },
 
   secret: process.env.NEXTAUTH_SECRET,
+
   callbacks: {
     async jwt({ token, user }: any) {
-      console.log('authOptions', user);
-      console.log('authOptions', token);
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -72,8 +77,6 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }: any) {
-      console.log('authOptions', session);
-      console.log('authOptions', token);
       if (token) {
         session.user = {
           ...session.user,
