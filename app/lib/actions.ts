@@ -38,7 +38,8 @@ const CustomerFormSchema = z.object({
   email: z.string().email({ message: 'Por favor ingrese un email válido.' }),
   cuit_cuil: z
     .string()
-    .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' }),
+    .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' })
+    .optional(),
   cbu_cvu: z
     .string()
     .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
@@ -55,9 +56,48 @@ const CustomerFormSchema = z.object({
       message: 'Seleccione una condición válida.',
     }),
 });
+const emptyToUndefined = (val: unknown) => {
+  if (typeof val !== 'string') return val;
+  const trimmed = val.trim();
+  return trimmed === '' ? undefined : trimmed;
+};
 
-const CustomerUpdateSchema = CustomerFormSchema.extend({
-  id: z.string().uuid({ message: 'El ID debe ser un UUID válido.' }),
+const CustomerUpdateSchemaLoose = z.object({
+  id: z.string().uuid({ message: 'The ID must be a valid UUID.' }),
+  name: z.string().min(1, { message: 'Please enter a valid name.' }),
+
+  email: z.preprocess(
+    emptyToUndefined,
+    z.string().email({ message: 'Please enter a valid email.' }).optional(),
+  ),
+
+  cuit_cuil: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{11}$/, { message: 'CUIT/CUIL must have 11 digits.' })
+      .optional(),
+  ),
+
+  cbu_cvu: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{22}$/, { message: 'CBU/CVU must have 22 digits.' })
+      .optional(),
+  ),
+
+  phone: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .min(7, { message: 'Phone must have at least 7 digits.' })
+      .max(15, { message: 'Phone must not exceed 15 digits.' })
+      .regex(/^\d+$/, { message: 'Phone must contain only numbers.' })
+      .optional(),
+  ),
+
+  iva_condition: z.preprocess(emptyToUndefined, z.string().optional()),
 });
 
 const CreateInvoice = FormSchema.extend({
@@ -222,13 +262,18 @@ export async function updateAreaFunds(
 
 export async function addCustomer(formData: {
   name: string;
-  email: string;
-  cuit_cuil: string;
-  cbu_cvu?: string;
-  phone?: string;
-  iva_condition: (typeof ivaConditionValues)[number];
+  email?: string | null;
+  cuit_cuil?: string | null;
+  cbu_cvu?: string | null;
+  phone?: string | null;
+  iva_condition?: string | null;
+  mode?: 'strict' | 'loose';
 }) {
-  const validatedFields = CustomerFormSchema.safeParse(formData);
+  const schema =
+    formData.mode === 'loose'
+      ? CustomerFormSchemaLoose
+      : CustomerFormSchemaStrict;
+  const validatedFields = schema.safeParse(formData);
 
   if (!validatedFields.success) {
     return {
@@ -237,7 +282,10 @@ export async function addCustomer(formData: {
         'Falla en agregar proveedor. Algún campo es inválido o está faltante.',
     };
   }
-  if (!isValidCuitCuil(validatedFields.data.cuit_cuil)) {
+  if (
+    validatedFields.data.cuit_cuil &&
+    !isValidCuitCuil(validatedFields.data.cuit_cuil)
+  ) {
     return {
       errors: {
         cuit_cuil: ['CUIT/CUIL inválido. Revise el número ingresado.'],
@@ -253,14 +301,15 @@ export async function addCustomer(formData: {
       INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url, phone, iva_condition)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
+
     const params = [
       name,
-      email,
-      cuit_cuil,
-      cbu_cvu || null,
+      email ?? null,
+      cuit_cuil ?? null,
+      cbu_cvu ?? null,
       '/customers/default.png',
-      phone || null,
-      iva_condition,
+      phone ?? null,
+      iva_condition ?? 'Pendiente',
     ];
 
     await pool.query(queryText, params);
@@ -684,45 +733,62 @@ export async function updateCustomer(
   id: string,
   formData: {
     name: string;
-    email: string;
-    cuit_cuil: string;
-    cbu_cvu?: string;
-    phone?: string;
-    iva_condition: (typeof ivaConditionValues)[number];
+    email?: string | null;
+    cuit_cuil?: string | null;
+    cbu_cvu?: string | null;
+    phone?: string | null;
+    iva_condition?: string | null;
   },
 ) {
-  const validatedFields = CustomerUpdateSchema.safeParse({ ...formData, id });
+  const validatedFields = CustomerUpdateSchemaLoose.safeParse({
+    ...formData,
+    id,
+  });
 
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: validatedFields.error.flatten().fieldErrors,
       message:
         'Falla en actualizar proveedor. Algún campo es inválido o está faltante.',
     };
   }
-  if (!isValidCuitCuil(validatedFields.data.cuit_cuil)) {
+
+  if (
+    validatedFields.data.cuit_cuil &&
+    !isValidCuitCuil(validatedFields.data.cuit_cuil)
+  ) {
     return {
+      success: false,
       errors: {
         cuit_cuil: ['CUIT/CUIL inválido. Revise el número ingresado.'],
       },
       message: 'Falla en actualizar proveedor. CUIT/CUIL inválido.',
     };
   }
+
   const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
     validatedFields.data;
 
   const queryText = `
     UPDATE customers
-    SET name = $1, email = $2, cuit_cuil = $3, cbu_cvu = $4, phone = $5, iva_condition = $6
+    SET
+      name = $1,
+      email = $2,
+      cuit_cuil = $3,
+      cbu_cvu = $4,
+      phone = $5,
+      iva_condition = $6
     WHERE id = $7
   `;
+
   const params = [
     name,
-    email,
-    cuit_cuil,
-    cbu_cvu || null,
-    phone || null,
-    iva_condition,
+    email ?? null,
+    cuit_cuil ?? null,
+    cbu_cvu ?? null,
+    phone ?? null,
+    iva_condition ?? 'Pendiente',
     id,
   ];
 
@@ -730,12 +796,19 @@ export async function updateCustomer(
     const result = await pool.query(queryText, params);
 
     if (result.rowCount === 0) {
-      throw new Error('No se encontró el cliente para actualizar.');
+      return {
+        success: false,
+        message: 'No se encontró el proveedor para actualizar.',
+      };
     }
-    return { success: true, message: 'Cliente actualizado exitosamente.' };
+
+    return { success: true, message: 'Proveedor actualizado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);
-    return { success: false, message: 'Error al actualizar el cliente.' };
+    return {
+      success: false,
+      message: 'Error de base de datos: No se pudo actualizar el proveedor.',
+    };
   }
 }
 
@@ -1173,6 +1246,68 @@ export async function createProgram(name: string) {
     throw new Error('No se pudo crear u obtener el programa');
   }
 }
+const CustomerFormSchemaStrict = z.object({
+  name: z.string().min(1, { message: 'Por favor ingrese un nombre válido.' }),
+  email: z.string().email({ message: 'Por favor ingrese un email válido.' }),
+  cuit_cuil: z
+    .string()
+    .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' }),
+  cbu_cvu: z
+    .string()
+    .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
+    .optional(),
+  phone: z
+    .string()
+    .min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' })
+    .max(15, { message: 'El teléfono no debe superar los 15 dígitos.' })
+    .regex(/^\d+$/, { message: 'El teléfono debe contener solo números.' }),
+  iva_condition: z
+    .enum(ivaConditionValues as [string, ...string[]])
+    .or(z.string())
+    .refine((val) => ivaConditionValues.includes(val), {
+      message: 'Seleccione una condición válida.',
+    }),
+});
+
+const CustomerFormSchemaLoose = z.object({
+  name: z.string().min(1, { message: 'Por favor ingrese un nombre válido.' }),
+
+  email: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .email({ message: 'Por favor ingrese un email válido.' })
+      .optional(),
+  ),
+
+  cuit_cuil: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' })
+      .optional(),
+  ),
+
+  cbu_cvu: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
+      .optional(),
+  ),
+
+  phone: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' })
+      .max(15, { message: 'El teléfono no debe superar los 15 dígitos.' })
+      .regex(/^\d+$/, { message: 'El teléfono debe contener solo números.' })
+      .optional(),
+  ),
+
+  iva_condition: z.preprocess(emptyToUndefined, z.string().optional()),
+});
 
 export async function updateBudgetProject(
   id: string,

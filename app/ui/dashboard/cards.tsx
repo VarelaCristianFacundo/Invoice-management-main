@@ -42,22 +42,22 @@ export default async function CardWrapper() {
     ['Abonado', countPaid, sumPaid.toString(), 'collected'] as const,
     ['Aprobado', countApproved, sumApproved.toString(), 'approved'] as const,
     ['Pendiente', countPending, sumPending.toString(), 'pending'] as const,
-    [
-      'Total de facturas',
-      numberOfInvoices,
-      numberOfInvoices.toString(),
-      'invoices',
-    ] as const,
-    [
-      'Total de clientes',
-      numberOfCustomers,
-      numberOfCustomers.toString(),
-      'customers',
-    ] as const,
+    // [
+    //   'Total de facturas',
+    //   numberOfInvoices,
+    //   numberOfInvoices.toString(),
+    //   'invoices',
+    // ] as const,
+    // [
+    //   'Total de clientes',
+    //   numberOfCustomers,
+    //   numberOfCustomers.toString(),
+    //   'customers',
+    // ] as const,
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map(([title, count, amount, type]) => (
         <Link
           key={type}

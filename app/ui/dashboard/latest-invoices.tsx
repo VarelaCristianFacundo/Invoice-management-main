@@ -26,13 +26,14 @@ export default async function LatestInvoices() {
                 )}
               >
                 <div className="flex items-center">
-                  {invoice.image_url ? (
+                  {invoice.image_url && invoice.image_url.trim() ? (
                     <Image
                       src={invoice.image_url}
-                      alt={invoice.name}
+                      alt={invoice.name || "invoice"}
                       className="h-8 w-8 rounded-full"
                       width={32}
                       height={32}
+                      onError={() => {}} // Handle broken images gracefully
                     />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">

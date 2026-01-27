@@ -36,7 +36,7 @@ const links = [
     name: 'Proveedores',
     href: '/dashboard/customers',
     icon: UserGroupIcon,
-    roles: ['admin', 'tesorero'],
+    roles: ['admin', 'tesorero', 'usuario'],
   },
   // {
   //   name: 'Presupuestos Rechazados',
