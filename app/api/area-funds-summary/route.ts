@@ -5,6 +5,8 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;

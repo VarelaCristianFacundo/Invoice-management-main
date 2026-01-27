@@ -2,7 +2,7 @@
 
 import { formatCurrency } from "@/app/lib/utils";
 import { DeleteBudget, UpdateBudget } from "@/app/ui/budgets/buttons";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 type Budget = {
@@ -26,7 +26,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
   const [selectedCompany, setSelectedCompany] = useState<number | null>(1); // Default CAMARCO
   const [search, setSearch] = useState<string>("");
 
-  const fetchBudgets = async () => {
+  const fetchBudgets = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -55,12 +55,12 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, selectedCompany]);
 
 
   useEffect(() => {
     fetchBudgets();
-  }, [selectedCompany, search]);
+  }, [fetchBudgets]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);

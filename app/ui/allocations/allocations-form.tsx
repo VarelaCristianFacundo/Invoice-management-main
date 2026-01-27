@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
@@ -24,7 +24,7 @@ export default function AreaFundsView() {
     const [search, setSearch] = useState<string>("");
     const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default CAMARCO
 
-    const fetchAreaFunds = async () => {
+    const fetchAreaFunds = useCallback(async () => {
         try {
             setLoading(true);
 
@@ -46,11 +46,11 @@ export default function AreaFundsView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [selectedCompany]);
 
     useEffect(() => {
         fetchAreaFunds();
-    }, [selectedCompany]);
+    }, [fetchAreaFunds]);
 
     const filteredAreas = areas.filter((area) =>
         area.name.toLowerCase().includes(search.toLowerCase())

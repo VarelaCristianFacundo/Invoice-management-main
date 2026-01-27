@@ -18,11 +18,15 @@ export default function InvoiceCustomerImage({
     width,
     height,
 }: InvoiceCustomerImageProps) {
-    const fallbackSrc = '/customers/default.png';
+    const fallbackSrc = '/default-user.png';
 
     const [currentSrc, setCurrentSrc] = useState(
         src && src.trim().length > 0 ? src : fallbackSrc,
     );
+
+    const handleImageError = () => {
+        setCurrentSrc(fallbackSrc);
+    };
 
     return (
         <Image
@@ -31,7 +35,7 @@ export default function InvoiceCustomerImage({
             className={className}
             width={width}
             height={height}
-            onError={() => setCurrentSrc(fallbackSrc)}
+            onError={handleImageError}
         />
     );
 }

@@ -2,7 +2,7 @@
 
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Invoice = {
   id: string;
@@ -28,7 +28,7 @@ export default function CustomerInvoices({
 
   const router = useRouter();
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams();
@@ -46,11 +46,11 @@ export default function CustomerInvoices({
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.customer_id, selectedYear, selectedStatus]);
 
   useEffect(() => {
     fetchInvoices();
-  }, [params.customer_id, selectedYear, selectedStatus]);
+  }, [fetchInvoices]);
 
   // Extraer los años disponibles de las facturas para el filtro dinámico
   const uniqueYears = Array.from(
