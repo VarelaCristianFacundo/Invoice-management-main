@@ -33,7 +33,7 @@ export default async function LatestInvoices() {
                       className="h-8 w-8 rounded-full"
                       width={32}
                       height={32}
-                      onError={() => {}} // Handle broken images gracefully
+                      onError={() => { }} // Handle broken images gracefully
                     />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">
