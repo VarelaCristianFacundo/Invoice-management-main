@@ -93,13 +93,27 @@ export function StatusSummaryChart({
         );
     }
 
-    // Transformar datos para el gráfico - garantizar que son números normales
-    const chartData = data.map((item) => ({
-        name: STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] || item.status,
-        status: item.status,
-        count: Number(item.count) || 0,
-        amount: Number(item.amount) || 0,
-    }));
+    // Transformar datos para el gráfico - garantizar que son números normales sin bigint
+    const chartData: Array<{
+        name: string;
+        status: string;
+        count: number;
+        amount: number;
+    }> = data.map((item) => {
+        const count = typeof item.count === 'bigint'
+            ? Number(item.count)
+            : (item.count as number);
+        const amount = typeof item.amount === 'bigint'
+            ? Number(item.amount)
+            : (item.amount as number);
+
+        return {
+            name: STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] || item.status,
+            status: item.status,
+            count: isNaN(count) ? 0 : count,
+            amount: isNaN(amount) ? 0 : amount,
+        };
+    });
 
     return (
         <div className="rounded-xl bg-gray-50 p-4 shadow-sm">
