@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+import CreateProviderModal from "./create-provider-modal";
 import CustomAutocompleteContableItem, { ContableItem } from "./custom-autocomplete-contable-item";
 
 /**
@@ -115,6 +116,7 @@ export default function CreateInvoiceForm({
   customers: CustomerField[];
 }) {
   const [budgetAllocations, setBudgetAllocations] = useState<BudgetAllocationItem[]>([]);
+  const [customerList, setCustomerList] = useState(customers);
 
   // Para el autocomplete, mantenemos dos estados:
   const [customerInput, setCustomerInput] = useState("");
@@ -225,21 +227,33 @@ export default function CreateInvoiceForm({
 
   const filteredCustomers =
     showAllCustomers
-      ? customers
+      ? customerList
       : customerInput.length >= 3
-        ? customers.filter((c) =>
+        ? customerList.filter((c) =>
           c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
-          c.cuit_cuil.includes(customerInput),
+          (c.cuit_cuil && c.cuit_cuil.includes(customerInput)),
         )
         : [];
 
 
-  // Cuando se seleccione un customer, guardamos el id y el company_id
   const handleCustomerSelect = (selected: CustomerField) => {
     setCustomerInput(`${selected.name} (${selected.cuit_cuil})`);
     setCustomerId(selected.id);
     setSelectedCompanyId(selected.company_id);
     setShowAllCustomers(false);
+  };
+
+  const handleProviderCreated = async () => {
+    // Refrescar la lista de clientes desde la API
+    try {
+      const response = await fetch('/api/customers');
+      if (response.ok) {
+        const newCustomers = await response.json();
+        setCustomerList(newCustomers);
+      }
+    } catch (error) {
+      console.error('Error refreshing customer list:', error);
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -393,6 +407,11 @@ export default function CreateInvoiceForm({
           >
             {showAllCustomers ? "Ocultar lista" : "Ver lista"}
           </button>
+
+          <CreateProviderModal
+            companyId={selectedCompanyId || 1}
+            onProviderCreated={handleProviderCreated}
+          />
         </div>
 
         {(showAllCustomers || customerInput.length >= 3) && filteredCustomers.length > 0 && (

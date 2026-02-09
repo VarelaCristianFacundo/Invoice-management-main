@@ -41,7 +41,7 @@ export default async function CardWrapper() {
     // [ título, count (número), amount (string de dígitos), tipo ]
     ['Abonado', countPaid, sumPaid.toString(), 'collected'] as const,
     ['Aprobado', countApproved, sumApproved.toString(), 'approved'] as const,
-    ['Pendiente', countPending, sumPending.toString(), 'pending'] as const,
+    ['Pendiente de aprobación', countPending, sumPending.toString(), 'pending'] as const,
     // [
     //   'Total de facturas',
     //   numberOfInvoices,

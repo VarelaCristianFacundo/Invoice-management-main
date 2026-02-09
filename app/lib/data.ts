@@ -54,18 +54,18 @@ export async function fetchLatestInvoices() {
 }
 
 export async function fetchCardData() {
-  // 1) Contar cuántas facturas hay de cada estado
+  // 1) Contar cuántas facturas hay de cada estado (SIN FILTRO - todas las empresas)
   const countResult = await pool.query(`
     SELECT
       COUNT(*) FILTER (WHERE status = 'pagado')     AS countPaid,
       COUNT(*) FILTER (WHERE status = 'aprobado')   AS countApproved,
       COUNT(*) FILTER (WHERE status = 'presentado') AS countPending,
       COUNT(*)                                     AS totalInvoices,
-      COUNT(*) OVER ()                             AS totalCountAll  -- solo para ilustrar
+      COUNT(*) OVER ()                             AS totalCountAll
     FROM invoices
   `);
 
-  // 2) Sumar montos de cada estado
+  // 2) Sumar montos de cada estado (SIN FILTRO - todas las empresas)
   const sumResult = await pool.query(`
     SELECT
       COALESCE(SUM(CASE WHEN status = 'pagado'     THEN amount END), 0)       AS sumPaid,

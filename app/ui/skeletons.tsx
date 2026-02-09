@@ -82,6 +82,41 @@ export function LatestInvoicesSkeleton() {
   );
 }
 
+export function StatusSummaryChartSkeleton() {
+  return (
+    <div className={`${shimmer} relative w-full overflow-hidden`}>
+      <div className="rounded-xl bg-gray-100 p-4 shadow-sm">
+        <div className="mb-4 h-8 w-48 rounded-md bg-gray-200" />
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Skeleton para gráfico de barras */}
+          <div className="rounded-lg bg-white p-4">
+            <div className="mb-4 h-6 w-40 rounded-md bg-gray-200" />
+            <div className="h-80 w-full rounded-md bg-gray-100" />
+          </div>
+
+          {/* Skeleton para gráfico de pastel */}
+          <div className="rounded-lg bg-white p-4">
+            <div className="mb-4 h-6 w-40 rounded-md bg-gray-200" />
+            <div className="h-80 w-full rounded-md bg-gray-100" />
+          </div>
+        </div>
+
+        {/* Skeleton para tabla */}
+        <div className="mt-6 rounded-lg bg-white p-4">
+          <div className="mb-4 h-6 w-20 rounded-md bg-gray-200" />
+          <div className="space-y-3">
+            <div className="h-10 rounded-md bg-gray-100" />
+            <div className="h-10 rounded-md bg-gray-100" />
+            <div className="h-10 rounded-md bg-gray-100" />
+            <div className="h-10 rounded-md bg-gray-100" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardSkeleton() {
   return (
     <>

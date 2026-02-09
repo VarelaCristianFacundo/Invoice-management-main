@@ -131,7 +131,17 @@ export default function Form() {
 
       await Swal.fire('Proveedor creado', response.message, 'success');
 
-      router.push('/dashboard/customers');
+      // Verificar si viene de crear facturas
+      const fromInvoiceCreate = typeof window !== 'undefined'
+        ? sessionStorage.getItem('returnToInvoiceCreate')
+        : false;
+
+      if (fromInvoiceCreate) {
+        sessionStorage.removeItem('returnToInvoiceCreate');
+        router.back();
+      } else {
+        router.push('/dashboard/customers');
+      }
       router.refresh();
     } catch (error: any) {
       console.error(error);
