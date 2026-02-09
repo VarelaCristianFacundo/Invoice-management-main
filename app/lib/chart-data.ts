@@ -40,21 +40,29 @@ export async function fetchStatusSummaryData(
 
     const row = result.rows[0] || {};
 
+    // Asegurar que los valores son números normales (no bigint ni string)
+    const countPending = Number(row.count_pending || 0);
+    const countApproved = Number(row.count_approved || 0);
+    const countPaid = Number(row.count_paid || 0);
+    const sumPending = Number(row.sum_pending || 0);
+    const sumApproved = Number(row.sum_approved || 0);
+    const sumPaid = Number(row.sum_paid || 0);
+
     return [
       {
         status: 'presentado',
-        count: parseInt(row.count_pending) || 0,
-        amount: parseFloat(row.sum_pending) || 0,
+        count: countPending,
+        amount: sumPending,
       },
       {
         status: 'aprobado',
-        count: parseInt(row.count_approved) || 0,
-        amount: parseFloat(row.sum_approved) || 0,
+        count: countApproved,
+        amount: sumApproved,
       },
       {
         status: 'pagado',
-        count: parseInt(row.count_paid) || 0,
-        amount: parseFloat(row.sum_paid) || 0,
+        count: countPaid,
+        amount: sumPaid,
       },
     ];
   } catch (error) {
