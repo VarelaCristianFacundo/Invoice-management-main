@@ -63,6 +63,43 @@ function formatMoneyForDisplay(value: unknown): string {
   return n.toFixed(2).replace('.', ',');
 }
 
+/**
+ * Sanitizes money input to only allow digits, comma, and dot.
+ * Prevents multiple separators and ensures valid format.
+ */
+function sanitizeMoneyInput(raw: string): string {
+  // Only allow digits, comma, and dot
+  let sanitized = raw.replace(/[^\d,.]/g, '');
+
+  // Limit commas to 1
+  const commaCount = (sanitized.match(/,/g) || []).length;
+  if (commaCount > 1) {
+    sanitized = sanitized.replace(/,/g, '');
+    // Keep the last comma position if needed
+    const lastCommaIndex = raw.lastIndexOf(',');
+    if (lastCommaIndex !== -1) {
+      const beforeComma = sanitized.substring(0, Math.max(0, sanitized.length - 2));
+      const afterComma = sanitized.substring(Math.max(0, sanitized.length - 2));
+      sanitized = beforeComma + ',' + afterComma;
+    }
+  }
+
+  // Limit dots to 1
+  const dotCount = (sanitized.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    sanitized = sanitized.replace(/\./g, '');
+    // Keep the last dot position if needed
+    const lastDotIndex = raw.lastIndexOf('.');
+    if (lastDotIndex !== -1) {
+      const beforeDot = sanitized.substring(0, Math.max(0, sanitized.length - 2));
+      const afterDot = sanitized.substring(Math.max(0, sanitized.length - 2));
+      sanitized = beforeDot + '.' + afterDot;
+    }
+  }
+
+  return sanitized;
+}
+
 export default function EditBudgetForm({
   budget,
   customers, // Not used currently, but kept for compatibility with the page props.
@@ -169,6 +206,10 @@ export default function EditBudgetForm({
               defaultValue={formatMoneyForDisplay(budget.allocated_amount)}
               placeholder="Ej: 100000000000,00"
               className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-400"
+              onChange={(e) => {
+                const sanitized = sanitizeMoneyInput(e.currentTarget.value);
+                e.currentTarget.value = sanitized;
+              }}
             />
             <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
           </div>

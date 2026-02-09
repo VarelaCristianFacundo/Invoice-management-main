@@ -329,6 +329,27 @@ export async function updateInvoice(
   formData: FormData,
   company_id: number = 0,
 ) {
+  // Normalizar el monto para aceptar "," como separador decimal
+  const normalizeMoneyInput = (raw: string): string => {
+    const value = raw.trim().replace(/\s+/g, '');
+    if (!value) return '';
+
+    const hasComma = value.includes(',');
+    const hasDot = value.includes('.');
+
+    if (hasComma && hasDot) {
+      const lastComma = value.lastIndexOf(',');
+      const lastDot = value.lastIndexOf('.');
+      const decimalSep = lastComma > lastDot ? ',' : '.';
+      const thousandsSep = decimalSep === ',' ? '.' : ',';
+      const noThousands = value.split(thousandsSep).join('');
+      return decimalSep === ',' ? noThousands.replace(',', '.') : noThousands;
+    }
+
+    if (hasComma) return value.replace(',', '.');
+    return value;
+  };
+
   // Obtener el valor del campo "pdfFile"
   let file = '';
   const pdfVal = formData.get('pdfFile');
@@ -359,10 +380,12 @@ export async function updateInvoice(
   const issue_date =
     rawIssueDate && rawIssueDate.trim().length > 0 ? rawIssueDate : null;
 
-  // Extraer datos del formulario y convertir el monto a centavos
+  // Extraer datos del formulario y normalizar el monto
+  const amountRaw = (formData.get('amount') as string) || '0';
+  const normalizedAmount = normalizeMoneyInput(amountRaw);
   const data = {
     customerId: formData.get('customerId') as string,
-    amount: parseFloat(formData.get('amount') as string),
+    amount: parseFloat(normalizedAmount),
     newStatus: formData.get('status') as string,
     observations: (formData.get('observations') as string) || '',
     invoice_number,
@@ -371,6 +394,7 @@ export async function updateInvoice(
 
   console.log('Updating invoice id:', id);
   console.log('FormData:', formData);
+  console.log('Normalized amount:', normalizedAmount, 'Parsed:', data.amount);
 
   // Avoid duplicated invoice numbers when updating
   if (invoice_number) {
@@ -1314,11 +1338,37 @@ export async function updateBudgetProject(
   formData: FormData,
   changedBy: string,
 ) {
+  // Normalizar montos para aceptar "," como separador decimal
+  const normalizeMoneyInput = (raw: unknown): number => {
+    const value = String(raw).trim().replace(/\s+/g, '');
+    if (!value) return 0;
+
+    const hasComma = value.includes(',');
+    const hasDot = value.includes('.');
+
+    let normalized = value;
+    if (hasComma && hasDot) {
+      const lastComma = value.lastIndexOf(',');
+      const lastDot = value.lastIndexOf('.');
+      const decimalSep = lastComma > lastDot ? ',' : '.';
+      const thousandsSep = decimalSep === ',' ? '.' : ',';
+      const noThousands = value.split(thousandsSep).join('');
+      normalized =
+        decimalSep === ',' ? noThousands.replace(',', '.') : noThousands;
+    } else if (hasComma) {
+      normalized = value.replace(',', '.');
+    }
+
+    return parseFloat(normalized) || 0;
+  };
+
   const year = Number(formData.get('year'));
   const projectName = String(formData.get('project_name') ?? '').trim();
-  const allocatedAmount = Number(formData.get('allocated_amount') ?? 0);
-  const amount = Number(formData.get('amount') ?? 0);
-  const status = String(formData.get('status') ?? 'pending'); // lo podés dejar por si después lo usamos
+  const allocatedAmount = normalizeMoneyInput(
+    formData.get('allocated_amount') ?? '0',
+  );
+  const amount = normalizeMoneyInput(formData.get('amount') ?? '0');
+  const status = String(formData.get('status') ?? 'pending');
 
   if (!year || !projectName) {
     return {
