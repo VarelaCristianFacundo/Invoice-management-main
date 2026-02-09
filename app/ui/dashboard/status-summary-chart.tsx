@@ -93,12 +93,12 @@ export function StatusSummaryChart({
         );
     }
 
-    // Transformar datos para el gráfico
+    // Transformar datos para el gráfico - garantizar que son números normales
     const chartData = data.map((item) => ({
         name: STATUS_LABELS[item.status as keyof typeof STATUS_LABELS] || item.status,
         status: item.status,
-        count: item.count,
-        amount: item.amount,
+        count: Number(item.count) || 0,
+        amount: Number(item.amount) || 0,
     }));
 
     return (
