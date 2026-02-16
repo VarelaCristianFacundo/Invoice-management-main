@@ -13,7 +13,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  { name: 'Inicio', href: '/dashboard', icon: HomeIcon, roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos'] },
+  { 
+    name: 'Inicio', 
+    href: '/dashboard', 
+    icon: HomeIcon, 
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'] 
+  },
   {
     name: 'Proyectos',
     href: '/dashboard/budgets',
@@ -24,7 +29,7 @@ const links = [
     name: 'Facturas',
     href: '/dashboard/invoices',
     icon: DocumentDuplicateIcon,
-    roles: ['admin', 'usuario', 'tesorero'],
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
   },
   {
     name: 'Fondos',
@@ -36,7 +41,7 @@ const links = [
     name: 'Proveedores',
     href: '/dashboard/customers',
     icon: UserGroupIcon,
-    roles: ['admin', 'tesorero', 'usuario'],
+    roles: ['admin', 'tesorero', 'usuario', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
   },
   // {
   //   name: 'Presupuestos Rechazados',
@@ -48,7 +53,7 @@ const links = [
     name: 'Perfil',
     href: '/dashboard/profile',
     icon: UserIcon,
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos'],
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
   },
 ];
 

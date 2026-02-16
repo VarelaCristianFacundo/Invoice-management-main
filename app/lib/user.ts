@@ -6,7 +6,7 @@ const pool = new Pool({
 
 export async function getUserByEmail(email: string) {
   const queryText = `
-    SELECT id, name, email, password, role
+    SELECT id, name, email, password, role, area_id
     FROM users
     WHERE email = $1
   `;

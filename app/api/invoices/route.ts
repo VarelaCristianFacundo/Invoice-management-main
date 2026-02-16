@@ -13,6 +13,7 @@ async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
   companyId: number,
+  areaId?: string | null,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
@@ -52,11 +53,16 @@ async function fetchFilteredInvoices(
         b.project_name ILIKE $2 OR 
         a.name ILIKE $2
       )
+      ${areaId ? 'AND ba.area_id = $5' : ''}
     ORDER BY i.date DESC
     LIMIT $3 OFFSET $4;
   `;
 
-  const params = [companyId, `%${query}%`, ITEMS_PER_PAGE, offset];
+  const params: any[] = [companyId, `%${query}%`, ITEMS_PER_PAGE, offset];
+  if (areaId) {
+    params.push(areaId);
+  }
+  
   const { rows } = await pool.query(sql, params);
 
   return rows.map((r) => ({
@@ -86,8 +92,9 @@ export async function GET(req: Request) {
     const query = searchParams.get('query') || '';
     const currentPage = Number(searchParams.get('currentPage')) || 1;
     const companyId = Number(searchParams.get('companyId')) || 1; // Default: CAMARCO
+    const areaId = searchParams.get('areaId') || null;
 
-    const invoices = await fetchFilteredInvoices(query, currentPage, companyId);
+    const invoices = await fetchFilteredInvoices(query, currentPage, companyId, areaId);
 
     return NextResponse.json(invoices);
   } catch (error) {

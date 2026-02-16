@@ -17,9 +17,11 @@ type SortKey = "supplier" | "project" | "amount" | "date" | "status";
 export default function InvoicesTable({
   query,
   currentPage,
+  userAreaId,
 }: {
   query: string;
   currentPage: number;
+  userAreaId?: string | null;
 }) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -35,10 +37,11 @@ export default function InvoicesTable({
   const loadInvoices = async () => {
     setLoading(true);
     try {
+      const areaParam = userAreaId ? `&areaId=${encodeURIComponent(userAreaId)}` : '';
       const res = await fetch(
         `/api/invoices?query=${encodeURIComponent(
           query,
-        )}&currentPage=${currentPage}&companyId=${selectedCompany}`,
+        )}&currentPage=${currentPage}&companyId=${selectedCompany}${areaParam}`,
       );
       const data = await res.json();
       setInvoices(data);
@@ -52,7 +55,7 @@ export default function InvoicesTable({
   useEffect(() => {
     loadInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, currentPage, selectedCompany]);
+  }, [query, currentPage, selectedCompany, userAreaId]);
 
   const hasValidPdf = (file?: string | null) => {
     if (!file) return false;

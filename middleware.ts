@@ -19,12 +19,38 @@ export default withAuth({
 
       const { pathname } = req.nextUrl;
 
+      // Roles con acceso a todas las áreas
+      const adminRoles = ['admin', 'usuario'];
+      
+      // Roles de usuarios por área
+      const areaRoles = [
+        'usuario_administracion',
+        'usuario_contable',
+        'usuario_logistica',
+        'usuario_marketing',
+        'usuario_produccion',
+        'usuario_rrhh',
+        'usuario_sistemas',
+        'usuario_ventas'
+      ];
+
       // Define las rutas protegidas y los roles permitidos
       const roleBasedRoutes: { [key: string]: string[] } = {
         '/dashboard/budgets': ['admin', 'usuario_presupuestos'],
-        '/dashboard/invoices': ['admin', 'usuario', 'tesorero'],
+        '/dashboard/invoices': [
+          'admin', 
+          'usuario', 
+          'tesorero',
+          'usuario_contable',
+          ...areaRoles
+        ],
         '/dashboard/allocations': ['admin', 'tesorero'],
-        '/dashboard/customers': ['admin', 'tesorero', 'usuario'],
+        '/dashboard/customers': [
+          'admin', 
+          'tesorero', 
+          'usuario',
+          ...areaRoles
+        ],
         '/dashboard/budgets/rejected': ['admin', 'usuario_presupuestos'],
       };
 

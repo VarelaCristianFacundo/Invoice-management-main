@@ -120,6 +120,7 @@ const ITEMS_PER_PAGE = 6;
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
+  areaId?: string | null,
 ): Promise<Invoice[]> {
   // Aseguramos el tipo de retorno
   const ITEMS_PER_PAGE = 10;
@@ -167,17 +168,22 @@ export async function fetchFilteredInvoices(
 
     -- Filtrado simple (ajusta a tus campos)
     WHERE 
-      c.name ILIKE $1
+      (c.name ILIKE $1
       OR i.amount::text ILIKE $1
       OR i.status ILIKE $1
       OR b.project_name ILIKE $1
-      OR a.name ILIKE $1
+      OR a.name ILIKE $1)
+      ${areaId ? 'AND ba.area_id = $4' : ''}
 
     ORDER BY i.date DESC
     LIMIT $2 OFFSET $3
   `;
 
-  const params = [`%${query}%`, ITEMS_PER_PAGE, offset];
+  const params: any[] = [`%${query}%`, ITEMS_PER_PAGE, offset];
+  if (areaId) {
+    params.push(areaId);
+  }
+  
   const { rows } = await pool.query(sql, params);
 
   // Devuelve el array de facturas con la data "unida"
@@ -226,19 +232,28 @@ export async function getFileBase64ByInvoiceId(
   }
 }
 
-export async function fetchInvoicesPages(query: string) {
+export async function fetchInvoicesPages(query: string, areaId?: string | null) {
   const queryText = `
     SELECT COUNT(*)
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
+    FROM invoices i
+    JOIN customers c ON i.customer_id = c.id
+    LEFT JOIN budget_allocations ba ON i.budget_allocation_id = ba.id
+    LEFT JOIN areas a ON ba.area_id = a.id
+    LEFT JOIN budgets b ON ba.project_id = b.id
     WHERE
-      customers.name ILIKE $1 OR
-      customers.email ILIKE $1 OR
-      invoices.amount::text ILIKE $1 OR
-      invoices.date::text ILIKE $1 OR
-      invoices.status ILIKE $1
+      (c.name ILIKE $1 OR
+      c.email ILIKE $1 OR
+      i.amount::text ILIKE $1 OR
+      i.date::text ILIKE $1 OR
+      i.status ILIKE $1 OR
+      b.project_name ILIKE $1 OR
+      a.name ILIKE $1)
+      ${areaId ? 'AND ba.area_id = $2' : ''}
   `;
-  const params = [`%${query}%`];
+  const params: any[] = [`%${query}%`];
+  if (areaId) {
+    params.push(areaId);
+  }
   const countResult = await queryDatabase<{ count: string }>(queryText, params);
   const totalPages = Math.ceil(Number(countResult[0].count) / ITEMS_PER_PAGE);
   return totalPages;

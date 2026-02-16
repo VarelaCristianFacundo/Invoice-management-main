@@ -112,8 +112,12 @@ type BudgetAllocationItem = {
 
 export default function CreateInvoiceForm({
   customers,
+  userRole,
+  userAreaId,
 }: {
   customers: CustomerField[];
+  userRole: string;
+  userAreaId: string | null;
 }) {
   const [budgetAllocations, setBudgetAllocations] = useState<BudgetAllocationItem[]>([]);
   const [customerList, setCustomerList] = useState(customers);
@@ -140,6 +144,12 @@ export default function CreateInvoiceForm({
   function isValidInvoiceNumber(num: string) {
     return /^\d{5}-\d{8}$/.test(num);
   }
+  
+  // Determinar si el usuario está limitado a su área
+  const isAreaUser = userRole?.startsWith('usuario_') && 
+                      userRole !== 'usuario' && 
+                      userRole !== 'usuario_presupuestos';
+  
   // Cargar allocations
   useEffect(() => {
     async function fetchBudgetAllocations() {
@@ -147,14 +157,20 @@ export default function CreateInvoiceForm({
         const res = await fetch("/api/budget-allocations");
         if (!res.ok) throw new Error("Error al obtener asignaciones de presupuesto");
         const data: BudgetAllocationItem[] = await res.json();
-        setBudgetAllocations(data);
+        
+        // Filtrar por área si el usuario está limitado
+        const filteredData = isAreaUser && userAreaId 
+          ? data.filter(item => item.area_id === userAreaId)
+          : data;
+        
+        setBudgetAllocations(filteredData);
       } catch (error) {
         console.error(error);
         Swal.fire("Error", "No se pudieron obtener las asignaciones de presupuesto.", "error");
       }
     }
     fetchBudgetAllocations();
-  }, []);
+  }, [isAreaUser, userAreaId]);
 
   // Actualiza areaId y year cuando se selecciona una allocation
   useEffect(() => {

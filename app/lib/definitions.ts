@@ -2,11 +2,29 @@
 // It describes the shape of the data, and what data type each property should accept.
 // For simplicity of teaching, we're manually defining these types.
 // However, these types are generated automatically if you're using an ORM such as Prisma.
+
+// Roles disponibles en el sistema
+export type UserRole = 
+  | 'admin'                    // Director Ejecutivo - acceso total
+  | 'usuario'                  // Superuser Común - facturas de cualquier área
+  | 'usuario_administracion'   // Usuario área Administración
+  | 'usuario_contable'         // Usuario área Contable
+  | 'usuario_logistica'        // Usuario área Logística
+  | 'usuario_marketing'        // Usuario área Marketing
+  | 'usuario_produccion'       // Usuario área Producción
+  | 'usuario_rrhh'             // Usuario área Recursos Humanos
+  | 'usuario_sistemas'         // Usuario área Sistemas
+  | 'usuario_ventas'           // Usuario área Ventas
+  | 'tesorero'                 // Tesorero (legacy)
+  | 'usuario_presupuestos';    // Usuario Presupuestos (legacy)
+
 export type User = {
   id: string;
   name: string;
   email: string;
   password: string;
+  role: UserRole;
+  area_id?: string | null; // ID del área asignada (solo para usuarios de área)
 };
 
 export type Customer = {
