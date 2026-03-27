@@ -116,6 +116,11 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
     invoice.contable_item || null
   );
 
+  const [displayAmount, setDisplayAmount] = useState<string>(
+    formatMoneyForDisplay(invoice.amount)
+  );
+  const [amount, setAmount] = useState<number>(invoice.amount);
+
 
   const [invoiceNumber, setInvoiceNumber] = useState(invoice.invoice_number || '');
   const [invoiceNumberError, setInvoiceNumberError] = useState('');
@@ -218,8 +223,7 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
     }
 
     // Normalize amount to support both comma and dot as decimal separator
-    const amountRaw = String(formData.get('amount') ?? '');
-    formData.set('amount', normalizeMoneyInput(amountRaw));
+    formData.set('amount', normalizeMoneyInput(displayAmount));
 
     try {
       const result = await Swal.fire({
@@ -286,12 +290,21 @@ export default function EditInvoiceForm({ invoice, customers }: { invoice: Invoi
                 name="amount"
                 type="text"
                 inputMode="decimal"
-                defaultValue={formatMoneyForDisplay(invoice.amount)}
+                value={displayAmount}
                 placeholder="Ej: 1000,00 o 1000.00"
                 className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm"
                 onChange={(e) => {
-                  const sanitized = sanitizeMoneyInput(e.currentTarget.value);
-                  e.currentTarget.value = sanitized;
+                  const val = e.target.value;
+                  const sanitized = val.replace(/[^0-9,.]/g, "");
+                  setDisplayAmount(sanitized);
+                  
+                  const normalized = normalizeMoneyInput(sanitized);
+                  setAmount(normalized ? parseFloat(normalized) : 0);
+                }}
+                onBlur={() => {
+                  if (amount > 0) {
+                    setDisplayAmount(formatMoneyForDisplay(amount));
+                  }
                 }}
                 required
               />

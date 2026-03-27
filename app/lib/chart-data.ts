@@ -13,13 +13,20 @@ export async function fetchStatusSummaryData(
     const company =
       companyId && companyId !== 'all' ? parseInt(companyId) : null;
 
-    // Construir query con o sin filtro de company_id
-    let whereClause = '';
+    let whereClause = 'WHERE 1=1';
     const params: any[] = [];
 
     if (company) {
-      whereClause = 'WHERE company_id = $1';
       params.push(company);
+      whereClause += ` AND company_id = $${params.length}`;
+    }
+    if (status && status !== 'all') {
+      params.push(status);
+      whereClause += ` AND status = $${params.length}`;
+    }
+    if (year && year !== 'all') {
+      params.push(parseInt(year));
+      whereClause += ` AND year = $${params.length}`;
     }
 
     // Una sola query que devuelve todo lo necesario

@@ -128,6 +128,7 @@ export type InvoiceForm = {
   contable_item_id: string;
   contable_item_nombre: string;
   contable_item_codigo: string;
+  company_id: number;
 };
 
 export type CustomerForm = {
@@ -139,6 +140,7 @@ export type CustomerForm = {
   image_url: string;
   phone?: string;
   iva_condition: string;
+  company_id: number;
 };
 
 export interface BudgetForm {

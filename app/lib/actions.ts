@@ -55,6 +55,7 @@ const CustomerFormSchema = z.object({
     .refine((val) => ivaConditionValues.includes(val), {
       message: 'Seleccione una condición válida.',
     }),
+  company_id: z.coerce.number().min(1, { message: 'Por favor selecciona la empresa.' }),
 });
 const emptyToUndefined = (val: unknown) => {
   if (typeof val !== 'string') return val;
@@ -98,6 +99,7 @@ const CustomerUpdateSchemaLoose = z.object({
   ),
 
   iva_condition: z.preprocess(emptyToUndefined, z.string().optional()),
+  company_id: z.coerce.number().optional(),
 });
 
 const CreateInvoice = FormSchema.extend({
@@ -109,6 +111,7 @@ const CreateInvoice = FormSchema.extend({
   budgetAllocationId: z.string(),
   file: z.string(),
   company_id: z.number(),
+  contable_item_id: z.coerce.number().optional(),
   observations: z.string().optional(),
   invoice_number: z.string().regex(/^\d{5}-\d{8}$/, {
     message: 'Formato de número de factura inválido.',
@@ -151,6 +154,7 @@ export async function createInvoice(formData: {
   observations?: string;
   invoice_number: string;
   issue_date: string;
+  contable_item_id?: number;
 }) {
   const validatedFields = CreateInvoice.safeParse(formData);
 
@@ -174,6 +178,7 @@ export async function createInvoice(formData: {
     observations,
     invoice_number,
     issue_date,
+    contable_item_id,
   } = validatedFields.data;
 
   // Check for duplicated invoice number
@@ -193,9 +198,9 @@ export async function createInvoice(formData: {
   try {
     const queryText = `
       INSERT INTO invoices (
-        customer_id, amount, status, date, area_id, year, budget_allocation_id, file, company_id, observations, invoice_number, issue_date
+        customer_id, amount, status, date, area_id, year, budget_allocation_id, file, company_id, observations, invoice_number, issue_date, contable_item_id
       )
-      VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     `;
     const params = [
       customerId,
@@ -209,6 +214,7 @@ export async function createInvoice(formData: {
       observations,
       invoice_number,
       issue_date,
+      contable_item_id ?? null,
     ];
     await pool.query(queryText, params);
 
@@ -267,6 +273,7 @@ export async function addCustomer(formData: {
   cbu_cvu?: string | null;
   phone?: string | null;
   iva_condition?: string | null;
+  company_id: number;
   mode?: 'strict' | 'loose';
 }) {
   const schema =
@@ -293,13 +300,13 @@ export async function addCustomer(formData: {
       message: 'Falla en agregar proveedor. CUIT/CUIL inválido.',
     };
   }
-  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
+  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition, company_id } =
     validatedFields.data;
 
   try {
     const queryText = `
-      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, image_url, phone, iva_condition)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, phone, iva_condition, image_url, company_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
 
     const params = [
@@ -307,9 +314,10 @@ export async function addCustomer(formData: {
       email ?? null,
       cuit_cuil ?? null,
       cbu_cvu ?? null,
-      '/customers/default.png',
       phone ?? null,
       iva_condition ?? 'Pendiente',
+      '/customers/placeholder.png',
+      company_id || 1,
     ];
 
     await pool.query(queryText, params);
@@ -463,7 +471,7 @@ export async function updateInvoice(
       data.amount,
       data.newStatus,
       file,
-      company_id,
+      company_id || invoice.company_id,
       data.observations,
       data.invoice_number,
       data.issue_date,
@@ -762,6 +770,7 @@ export async function updateCustomer(
     cbu_cvu?: string | null;
     phone?: string | null;
     iva_condition?: string | null;
+    company_id?: number;
   },
 ) {
   const validatedFields = CustomerUpdateSchemaLoose.safeParse({
@@ -791,7 +800,7 @@ export async function updateCustomer(
     };
   }
 
-  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition } =
+  const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition, company_id } =
     validatedFields.data;
 
   const queryText = `
@@ -802,8 +811,9 @@ export async function updateCustomer(
       cuit_cuil = $3,
       cbu_cvu = $4,
       phone = $5,
-      iva_condition = $6
-    WHERE id = $7
+      iva_condition = $6,
+      company_id = COALESCE($7, company_id)
+    WHERE id = $8
   `;
 
   const params = [
@@ -813,6 +823,7 @@ export async function updateCustomer(
     cbu_cvu ?? null,
     phone ?? null,
     iva_condition ?? 'Pendiente',
+    company_id ?? null,
     id,
   ];
 
@@ -1115,6 +1126,7 @@ export async function getInvoiceData(
   budgetAllocationId: string;
   invoice_number: string;
   issue_date: string;
+  company_id: number;
 }> {
   const getStatusQuery = `
   SELECT 
@@ -1125,7 +1137,8 @@ export async function getInvoiceData(
     i.budget_allocation_id,
     ba.half,
     i.invoice_number, 
-    i.issue_date      
+    i.issue_date,
+    i.company_id
   FROM 
     invoices i
   JOIN 
@@ -1150,6 +1163,7 @@ export async function getInvoiceData(
       budgetAllocationId: statusResult.rows[0].budget_allocation_id,
       invoice_number: statusResult.rows[0].invoice_number,
       issue_date: statusResult.rows[0].issue_date,
+      company_id: statusResult.rows[0].company_id,
     };
   } catch (error) {
     console.error('Error getting invoice status:', error);
@@ -1291,6 +1305,7 @@ const CustomerFormSchemaStrict = z.object({
     .refine((val) => ivaConditionValues.includes(val), {
       message: 'Seleccione una condición válida.',
     }),
+  company_id: z.coerce.number().min(1, { message: 'Por favor selecciona la empresa.' }),
 });
 
 const CustomerFormSchemaLoose = z.object({
@@ -1331,6 +1346,7 @@ const CustomerFormSchemaLoose = z.object({
   ),
 
   iva_condition: z.preprocess(emptyToUndefined, z.string().optional()),
+  company_id: z.coerce.number().optional(),
 });
 
 export async function updateBudgetProject(
@@ -1418,5 +1434,21 @@ export async function updateBudgetProject(
     };
   } finally {
     client.release();
+  }
+}
+
+export async function deleteCustomer(id: string) {
+  try {
+    const queryText = 'DELETE FROM customers WHERE id = $1';
+    const params = [id];
+    await pool.query(queryText, params);
+    revalidatePath('/dashboard/customers');
+    return { success: true, message: 'Proveedor eliminado exitosamente.' };
+  } catch (error) {
+    console.error('Database Error:', error);
+    return {
+      success: false,
+      message: 'Error de base de datos: No se pudo eliminar el proveedor.',
+    };
   }
 }

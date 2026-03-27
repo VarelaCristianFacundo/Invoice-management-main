@@ -130,7 +130,8 @@ export default function CreateInvoiceForm({
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceNumberError, setInvoiceNumberError] = useState('');
   const [issueDate, setIssueDate] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState<number>(0);
+  const [displayAmount, setDisplayAmount] = useState<string>("");
   // Siempre se crea en estado "presentado"
   const invoiceStatus: "presentado" | "aprobado" | "pagado" | "rechazado" = "presentado";
   const [selectedAllocationId, setSelectedAllocationId] = useState("");
@@ -257,6 +258,15 @@ export default function CreateInvoiceForm({
     setCustomerId(selected.id);
     setSelectedCompanyId(selected.company_id);
     setShowAllCustomers(false);
+    
+    // Al seleccionar un proveedor, si ya hay una allocation seleccionada 
+    // pero es de otra empresa, la limpiamos.
+    if (selectedAllocationId) {
+      const currentAlloc = budgetAllocations.find(a => a.id === selectedAllocationId);
+      if (currentAlloc && currentAlloc.company_id !== selected.company_id) {
+        setSelectedAllocationId("");
+      }
+    }
   };
 
   const handleProviderCreated = async () => {
@@ -438,7 +448,7 @@ export default function CreateInvoiceForm({
                 className="p-2 cursor-pointer hover:bg-gray-100 text-sm"
                 onClick={() => handleCustomerSelect(customer)}
               >
-                {customer.name} — {customer.cuit_cuil}
+                {customer.name} — {customer.cuit_cuil} {customer.company_id === 2 ? '(FODECO)' : '(CAMARA)'}
               </li>
             ))}
           </ul>
@@ -460,12 +470,19 @@ export default function CreateInvoiceForm({
           required
         >
           <option value="">Seleccionar Proyecto/Área</option>
-          {budgetAllocations.map((alloc) => (
-            <option key={alloc.id} value={alloc.id}>
-              {`${alloc.project_name} - ${alloc.area_name} (Año ${alloc.year})`}
-            </option>
-          ))}
+          {budgetAllocations
+            .filter(alloc => !selectedCompanyId || alloc.company_id === selectedCompanyId)
+            .map((alloc) => (
+              <option key={alloc.id} value={alloc.id}>
+                {`${alloc.project_name} - ${alloc.area_name} (Año ${alloc.year})`}
+              </option>
+            ))}
         </select>
+        {!selectedCompanyId && (
+          <p className="mt-1 text-xs text-orange-600">
+            * Selecciona primero un proveedor para ver sus proyectos correspondientes.
+          </p>
+        )}
       </div>
 
       {/* Monto */}
@@ -479,11 +496,21 @@ export default function CreateInvoiceForm({
           type="text"
           inputMode="decimal"
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
-          value={formatMoneyForDisplay(amount)}
+          value={displayAmount}
           onChange={(e) => {
-            const sanitized = sanitizeMoneyInput(e.target.value);
+            const val = e.target.value;
+            // Solo permitir números, una coma o punto
+            const sanitized = val.replace(/[^0-9,.]/g, "");
+            setDisplayAmount(sanitized);
+            
             const normalized = normalizeMoneyInput(sanitized);
             setAmount(normalized ? parseFloat(normalized) : 0);
+          }}
+          onBlur={() => {
+            // Al perder foco, damos formato amigable
+            if (amount > 0) {
+              setDisplayAmount(formatMoneyForDisplay(amount));
+            }
           }}
           required
           placeholder="Ej: 1000,00 o 1000.00"

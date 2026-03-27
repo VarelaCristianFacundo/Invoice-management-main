@@ -106,6 +106,7 @@ export default function Form() {
       cbu_cvu: cbuCvu || undefined,
       phone: phone || undefined,
       iva_condition: ivaCondition || undefined,
+      company_id: Number(formEl.company_id.value),
       mode: 'loose' as const,
     };
 
@@ -172,6 +173,25 @@ export default function Form() {
               {error}
             </p>
           ))}
+        </div>
+
+        {/* Empresa */}
+        <div className="mb-4">
+          <label htmlFor="company_id" className="mb-2 block text-sm font-medium">
+            Empresa <span className="text-red-500">*</span>
+          </label>
+          <div className="relative mt-2 rounded-md">
+            <select
+              id="company_id"
+              name="company_id"
+              required
+              className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
+              defaultValue="1"
+            >
+              <option value="1">CAMARCO</option>
+              <option value="2">FODECO</option>
+            </select>
+          </div>
         </div>
 
         {/* Correo */}

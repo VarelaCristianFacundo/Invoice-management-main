@@ -1,19 +1,22 @@
 import { fetchFilteredCustomers } from '@/app/lib/data';
 import { roboto } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
-import { DocumentTextIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import Link from 'next/link';
-import { CreateCustomer } from './buttons';
+import { CreateCustomer, DeleteCustomer, UpdateCustomer } from './buttons';
 
 export default async function CustomersTable({
   query,
-  currentPage
+  currentPage,
+  userRole,
 }: {
   query: string;
   currentPage: number;
+  userRole: string;
 }) {
   const customers = await fetchFilteredCustomers(query, currentPage);
+  const isSuperUser = userRole === 'admin' || userRole === 'usuario';
   return (
     <div className="w-full">
       <h1 className={`${roboto.className} mb-8 text-xl md:text-2xl`}>
@@ -69,8 +72,20 @@ export default async function CustomersTable({
                         <p className="font-medium">{customer.total_paid}</p>
                       </div>
                     </div>
-                    <div className="pt-4 text-sm">
+                    <div className="pt-4 text-sm flex justify-between items-center">
                       <p>{customer.total_invoices} facturas</p>
+                      <div className="flex gap-2">
+                        <UpdateCustomer customer_id={customer.id} />
+                        {isSuperUser && (
+                          <DeleteCustomer customer_id={customer.id} />
+                        )}
+                        <Link
+                          href={`/dashboard/customers/${customer.id}/invoices`}
+                          className="rounded-md border p-2 hover:bg-gray-100"
+                        >
+                          <DocumentTextIcon className="w-5" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -131,13 +146,10 @@ export default async function CustomersTable({
                       </td>
                       <td className="whitespace-nowrap bg-white  py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md flex justify-evenly">
                         <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/dashboard/customers/${customer.id}/edit`}
-                            className="rounded-md border p-2 hover:bg-gray-100"
-                          >
-                            <PencilIcon className="w-5" />
-
-                          </Link>
+                          <UpdateCustomer customer_id={customer.id} />
+                          {isSuperUser && (
+                            <DeleteCustomer customer_id={customer.id} />
+                          )}
                         </div>
                         <Link
                           href={`/dashboard/customers/${customer.id}/invoices`}

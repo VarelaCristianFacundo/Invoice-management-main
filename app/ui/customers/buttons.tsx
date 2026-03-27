@@ -1,9 +1,11 @@
-// import { deleteCustomer } from '@/app/lib/actions';
-import { PencilIcon, PlusIcon } from '@heroicons/react/24/outline';
+'use client';
+
+import { deleteCustomer } from '@/app/lib/actions';
+import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export function CreateCustomer() {
-
   return (
     <Link
       href="/dashboard/customers/create"
@@ -27,14 +29,39 @@ export function UpdateCustomer({ customer_id }: { customer_id: string }) {
 }
 
 export function DeleteCustomer({ customer_id }: { customer_id: string }) {
-  // const deleteCustomerWithId = deleteCustomer.bind(null, id);
+  const handleDelete = async () => {
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: 'Esta acción eliminará al proveedor permanentemente.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await deleteCustomer(customer_id);
+        if (response.success) {
+          Swal.fire('Eliminado', response.message, 'success');
+        } else {
+          Swal.fire('Error', response.message, 'error');
+        }
+      } catch (error) {
+        Swal.fire('Error', 'No se pudo eliminar el proveedor.', 'error');
+      }
+    }
+  };
+
   return (
-    true
-    // <form action={deleteCustomerWithId}>
-    //   <button className="rounded-md border p-2 hover:bg-gray-100">
-    //     <span className="sr-only">Delete</span>
-    //     <TrashIcon className="w-5" />
-    //   </button>
-    // </form>
+    <button
+      onClick={handleDelete}
+      className="rounded-md border p-2 hover:bg-red-100 hover:text-red-500 transition-colors"
+    >
+      <span className="sr-only">Delete</span>
+      <TrashIcon className="w-5" />
+    </button>
   );
 }

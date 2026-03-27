@@ -31,7 +31,7 @@ export default async function Page({
       {/* Tarjetas de resumen */}
       <div className="gap-6">
         <Suspense fallback={<CardsSkeleton />}>
-          <CardWrapper />
+          <CardWrapper searchParams={searchParams} />
         </Suspense>
       </div>
 

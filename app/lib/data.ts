@@ -53,19 +53,39 @@ export async function fetchLatestInvoices() {
   }));
 }
 
-export async function fetchCardData() {
-  // 1) Contar cuántas facturas hay de cada estado (SIN FILTRO - todas las empresas)
+export async function fetchCardData(filters?: {
+  status?: string;
+  year?: string;
+  company?: string;
+}) {
+  let whereClause = 'WHERE 1=1';
+  const params: any[] = [];
+
+  if (filters?.status && filters.status !== 'all') {
+    params.push(filters.status);
+    whereClause += ` AND status = $${params.length}`;
+  }
+  if (filters?.year && filters.year !== 'all') {
+    params.push(filters.year);
+    whereClause += ` AND year = $${params.length}`;
+  }
+  if (filters?.company && filters.company !== 'all') {
+    params.push(filters.company);
+    whereClause += ` AND company_id = $${params.length}`;
+  }
+
+  // 1) Contar cuántas facturas hay de cada estado
   const countResult = await pool.query(`
     SELECT
       COUNT(*) FILTER (WHERE status = 'pagado')     AS countPaid,
       COUNT(*) FILTER (WHERE status = 'aprobado')   AS countApproved,
       COUNT(*) FILTER (WHERE status = 'presentado') AS countPending,
-      COUNT(*)                                     AS totalInvoices,
-      COUNT(*) OVER ()                             AS totalCountAll
+      COUNT(*)                                     AS totalInvoices
     FROM invoices
-  `);
+    ${whereClause}
+  `, params);
 
-  // 2) Sumar montos de cada estado (SIN FILTRO - todas las empresas)
+  // 2) Sumar montos de cada estado
   const sumResult = await pool.query(`
     SELECT
       COALESCE(SUM(CASE WHEN status = 'pagado'     THEN amount END), 0)       AS sumPaid,
@@ -73,30 +93,26 @@ export async function fetchCardData() {
       COALESCE(SUM(CASE WHEN status = 'presentado' THEN amount END), 0)       AS sumPending,
       COALESCE(SUM(amount), 0)                                               AS sumAll
     FROM invoices
-  `);
+    ${whereClause}
+  `, params);
 
-  // 3) Contar clientes y facturas totales
-  const [custRows, invRows] = await Promise.all([
-    pool.query(`SELECT COUNT(*)::int AS count FROM customers`),
-    pool.query(`SELECT COUNT(*)::int AS count FROM invoices`),
-  ]);
+  // 3) Contar clientes (estos no suelen filtrarse por los mismos criterios de facturas en cards)
+  const custRows = await pool.query(`SELECT COUNT(*)::int AS count FROM customers`);
 
   const {
     countpaid: countPaid,
     countapproved: countApproved,
     countpending: countPending,
-    totalinvoices: totalInvoices,
+    totalinvoices: numberOfInvoices,
   } = countResult.rows[0] as Record<string, number>;
 
   const {
     sumpaid: sumPaid,
     sumapproved: sumApproved,
     sumpending: sumPending,
-    sumall: sumAll,
   } = sumResult.rows[0] as Record<string, number>;
 
   const numberOfCustomers = custRows.rows[0].count;
-  const numberOfInvoices = invRows.rows[0].count;
 
   return {
     numberOfCustomers,
@@ -299,7 +315,8 @@ export async function fetchCustomers() {
     SELECT
       id,
       name,
-      cuit_cuil
+      cuit_cuil,
+      company_id
     FROM customers
     ORDER BY name ASC
   `;
@@ -396,7 +413,8 @@ export async function fetchCustomerById(id: string) {
       customers.cuit_cuil, 
       customers.cbu_cvu,
       customers.phone,
-      customers.iva_condition
+      customers.iva_condition,
+      customers.company_id
     FROM customers
     WHERE customers.id = $1
   `;

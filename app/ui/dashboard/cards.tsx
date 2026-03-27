@@ -16,16 +16,11 @@ const iconMap = {
   invoices: InboxIcon,
 }
 
-// Mapea cada tipo de tarjeta a la ruta con el filtro aplicado
-const routeMap: Record<keyof typeof iconMap, string> = {
-  collected: '/dashboard/invoices?query=pagado',
-  approved: '/dashboard/invoices?query=aprobado',
-  pending: '/dashboard/invoices?query=presentado',
-  invoices: '/dashboard/invoices',
-  customers: '/dashboard/customers',
-}
-
-export default async function CardWrapper() {
+export default async function CardWrapper({
+  searchParams,
+}: {
+  searchParams?: { status?: string; year?: string; company?: string };
+}) {
   const {
     numberOfCustomers,
     numberOfInvoices,
@@ -35,7 +30,25 @@ export default async function CardWrapper() {
     sumApproved,
     countPending,
     sumPending,
-  } = await fetchCardData()
+  } = await fetchCardData(searchParams)
+
+  // Actualizar los links para que mantengan los otros filtros si es necesario
+  const getFilterParams = (status?: string) => {
+    const params = new URLSearchParams()
+    if (status) params.set('status', status)
+    if (searchParams?.year && searchParams.year !== 'all') params.set('year', searchParams.year)
+    if (searchParams?.company && searchParams.company !== 'all') params.set('company', searchParams.company)
+    const str = params.toString()
+    return str ? `?${str}` : ''
+  }
+
+  const routeMap: Record<keyof typeof iconMap, string> = {
+    collected: `/dashboard/invoices${getFilterParams('pagado')}`,
+    approved: `/dashboard/invoices${getFilterParams('aprobado')}`,
+    pending: `/dashboard/invoices${getFilterParams('presentado')}`,
+    invoices: `/dashboard/invoices${getFilterParams()}`,
+    customers: '/dashboard/customers',
+  }
 
   const cards = [
     // [ título, count (número), amount (string de dígitos), tipo ]
