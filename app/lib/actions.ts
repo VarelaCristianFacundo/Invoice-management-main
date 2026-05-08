@@ -181,15 +181,15 @@ export async function createInvoice(formData: {
     contable_item_id,
   } = validatedFields.data;
 
-  // Check for duplicated invoice number
+  // Check for duplicated invoice number per customer (proveedor)
   const duplicate = await pool.query(
-    'SELECT 1 FROM invoices WHERE invoice_number = $1',
-    [invoice_number],
+    'SELECT 1 FROM invoices WHERE invoice_number = $1 AND customer_id = $2',
+    [invoice_number, customerId],
   );
   if (duplicate.rows.length > 0) {
     return {
       success: false,
-      message: 'Factura cargada previamente. El número de factura ya existe.',
+      message: 'Factura cargada previamente. El número de factura ya existe para este proveedor.',
     };
   }
 
@@ -407,13 +407,13 @@ export async function updateInvoice(
   // Avoid duplicated invoice numbers when updating
   if (invoice_number) {
     const duplicate = await pool.query(
-      'SELECT id FROM invoices WHERE invoice_number = $1 AND id <> $2',
-      [invoice_number, id],
+      'SELECT id FROM invoices WHERE invoice_number = $1 AND customer_id = $2 AND id <> $3',
+      [invoice_number, data.customerId, id],
     );
     if (duplicate.rows.length > 0) {
       return {
         success: false,
-        message: 'Factura cargada previamente. El número de factura ya existe.',
+        message: 'Factura cargada previamente. El número de factura ya existe para este proveedor.',
       };
     }
   }
@@ -849,14 +849,24 @@ export async function updateCustomer(
 
 export async function deleteInvoice(id: string) {
   try {
+    // Verificar que la factura no esté pagada
+    const check = await pool.query('SELECT status FROM invoices WHERE id = $1', [id]);
+    if (check.rows[0]?.status === 'pagado') {
+      return {
+        success: false,
+        message: 'No se puede eliminar una factura que ya fue abonada.',
+      };
+    }
+
     const queryText = 'DELETE FROM invoices WHERE id = $1';
     const params = [id];
     await pool.query(queryText, params);
     revalidatePath('/dashboard/invoices');
-    return { message: 'Eliminar Factura.' };
+    return { success: true, message: 'Factura eliminada.' };
   } catch (error) {
     console.error('Database Error:', error);
     return {
+      success: false,
       message: 'Error en la base de datos: No se pudo eliminar la factura.',
     };
   }
@@ -1383,7 +1393,6 @@ export async function updateBudgetProject(
   const allocatedAmount = normalizeMoneyInput(
     formData.get('allocated_amount') ?? '0',
   );
-  const amount = normalizeMoneyInput(formData.get('amount') ?? '0');
   const status = String(formData.get('status') ?? 'pending');
 
   if (!year || !projectName) {
@@ -1398,25 +1407,27 @@ export async function updateBudgetProject(
   try {
     await client.query('BEGIN');
 
-    // 👇🏼 ACA QUITAMOS status DEL UPDATE
+    // Actualizar datos básicos del proyecto, incluyendo status
     await client.query(
       `
         UPDATE budgets
         SET year = $1,
-            project_name = $2
-        WHERE id = $3
+            project_name = $2,
+            status = $3
+        WHERE id = $4
       `,
-      [year, projectName, id],
+      [year, projectName, status, id],
     );
 
+    // Solo actualizar allocated_amount; executed_amount es calculado y no debe
+    // modificarse desde este formulario (el input está deshabilitado en el front).
     await client.query(
       `
         UPDATE budget_allocations
-        SET allocated_amount = $1,
-            executed_amount = $2
-        WHERE project_id = $3
+        SET allocated_amount = $1
+        WHERE project_id = $2
       `,
-      [allocatedAmount, amount, id],
+      [allocatedAmount, id],
     );
 
     await client.query('COMMIT');

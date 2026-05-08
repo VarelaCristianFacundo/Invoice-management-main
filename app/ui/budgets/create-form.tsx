@@ -125,9 +125,11 @@ export default function CreateBudgetForm({
     year: "",
     allocated_amount: 0,
     program: "",
-    areaId: "",
+    areaId: areas.length === 1 ? areas[0].id : "",
     half: 1,
   });
+
+  const [displayAmount, setDisplayAmount] = useState<string>("");
 
   const router = useRouter();
 
@@ -174,7 +176,7 @@ export default function CreateBudgetForm({
     const { name, value } = e.target;
     if (name === "allocated_amount") {
       const sanitized = sanitizeMoneyInput(value);
-      (e.target as HTMLInputElement).value = sanitized;
+      setDisplayAmount(sanitized);
       setFormData((prev) => ({
         ...prev,
         [name]: sanitized ? parseFloat(normalizeMoneyInput(sanitized)) : 0,
@@ -358,8 +360,16 @@ export default function CreateBudgetForm({
               name="allocated_amount"
               type="text"
               inputMode="decimal"
-              value={formatMoneyForDisplay(formData.allocated_amount)}
+              value={displayAmount}
               onChange={handleChange}
+              onFocus={() => {
+                setDisplayAmount(sanitizeMoneyInput(displayAmount));
+              }}
+              onBlur={() => {
+                if (formData.allocated_amount > 0) {
+                  setDisplayAmount(formatMoneyForDisplay(formData.allocated_amount));
+                }
+              }}
               className="block w-full rounded-md border py-2 px-3 text-sm"
               placeholder="Ej: 1000,00 o 1000.00"
               required

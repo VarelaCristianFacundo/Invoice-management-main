@@ -5,14 +5,16 @@ import { StatusSummaryChart } from './status-summary-chart';
 
 export default async function StatusSummaryChartWrapper({
     searchParams,
+    areaId,
 }: {
     searchParams?: { status?: string; year?: string; company?: string };
+    areaId?: string | null;
 }) {
     const status = searchParams?.status || 'all';
     const year = searchParams?.year || 'all';
     const company = searchParams?.company || 'all'; // Default: todas las empresas
 
-    const data = await fetchStatusSummaryData(status, year, company);
+    const data = await fetchStatusSummaryData(status, year, company, areaId);
 
     return (
         <Suspense fallback={<StatusSummaryChartSkeleton />}>

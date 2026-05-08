@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
 
     const companyId = parseInt(searchParams.get('companyId') || '0', 10);
     const query = searchParams.get('query') || '';
+    const areaId = searchParams.get('areaId') || '';
     const currentPage = parseInt(searchParams.get('currentPage') || '1', 10);
     const limit = 10;
     const offset = (currentPage - 1) * limit;
@@ -23,12 +24,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Filter out literal 'null' string
+    const validAreaId = (areaId === 'null' || areaId === 'undefined') ? '' : areaId;
+
+    const areaFilter = validAreaId ? `AND budget_allocations.area_id = $5` : '';
+
     const sql = `
       SELECT 
         budgets.id AS budget_id,
         budgets.project_name,
         budgets.year,
         budgets.company_id,
+        COALESCE(budgets.status, 'pending') AS status,
         COALESCE(budget_allocations.program, 'No Program') AS program,
         COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
         COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
@@ -39,12 +46,17 @@ export async function GET(req: NextRequest) {
       WHERE 
         budgets.company_id = $1
         AND ($2 = '' OR budgets.project_name ILIKE $2 OR budgets.year::text ILIKE $2)
-      GROUP BY budgets.id, budget_allocations.program
+        ${areaFilter}
+      GROUP BY budgets.id, budget_allocations.program, budgets.status
       ORDER BY budgets.year DESC
       LIMIT $3 OFFSET $4;
     `;
 
-    const values = [companyId, `%${query}%`, limit, offset];
+    const values: (string | number)[] = [companyId, `%${query}%`, limit, offset];
+    if (validAreaId) {
+      values.push(validAreaId);
+    }
+
     const result = await pool.query(sql, values);
 
     if (result.rowCount === 0) {

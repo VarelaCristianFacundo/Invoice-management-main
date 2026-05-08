@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { updateBudgetProject } from '@/app/lib/actions';
 import { BudgetForm, CustomerField } from '@/app/lib/definitions';
+import { normalizeMoneyInput, formatMoneyForDisplay, sanitizeMoneyInput } from '@/app/lib/money-utils';
 import { Button } from '@/app/ui/button';
 import {
   CalendarIcon,
@@ -15,91 +17,6 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 
-/**
- * Normalizes money input so users can type:
- * - "13213,21" or "13213.21"
- * - "1.234,56" or "1,234.56"
- * And we always submit a backend-friendly number string with "." as decimal separator.
- */
-function normalizeMoneyInput(raw: string): string {
-  const value = raw.trim().replace(/\s+/g, '');
-  if (!value) return '';
-
-  const hasComma = value.includes(',');
-  const hasDot = value.includes('.');
-
-  // If both separators exist, assume the last one is the decimal separator.
-  if (hasComma && hasDot) {
-    const lastComma = value.lastIndexOf(',');
-    const lastDot = value.lastIndexOf('.');
-
-    const decimalSep = lastComma > lastDot ? ',' : '.';
-    const thousandsSep = decimalSep === ',' ? '.' : ',';
-
-    const noThousands = value.split(thousandsSep).join('');
-    return decimalSep === ',' ? noThousands.replace(',', '.') : noThousands;
-  }
-
-  // Only comma: treat it as decimal separator.
-  if (hasComma) return value.replace(',', '.');
-
-  // Only dot or none: already OK.
-  return value;
-}
-
-/**
- * Formats a number/string to a nice money display (2 decimals, comma decimal for ES UI).
- * This is only for display; submission uses normalizeMoneyInput().
- */
-function formatMoneyForDisplay(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  const str = String(value).trim();
-  if (!str) return '';
-
-  const normalized = normalizeMoneyInput(str);
-  const n = Number(normalized);
-  if (!Number.isFinite(n)) return str;
-
-  return n.toFixed(2).replace('.', ',');
-}
-
-/**
- * Sanitizes money input to only allow digits, comma, and dot.
- * Prevents multiple separators and ensures valid format.
- */
-function sanitizeMoneyInput(raw: string): string {
-  // Only allow digits, comma, and dot
-  let sanitized = raw.replace(/[^\d,.]/g, '');
-
-  // Limit commas to 1
-  const commaCount = (sanitized.match(/,/g) || []).length;
-  if (commaCount > 1) {
-    sanitized = sanitized.replace(/,/g, '');
-    // Keep the last comma position if needed
-    const lastCommaIndex = raw.lastIndexOf(',');
-    if (lastCommaIndex !== -1) {
-      const beforeComma = sanitized.substring(0, Math.max(0, sanitized.length - 2));
-      const afterComma = sanitized.substring(Math.max(0, sanitized.length - 2));
-      sanitized = beforeComma + ',' + afterComma;
-    }
-  }
-
-  // Limit dots to 1
-  const dotCount = (sanitized.match(/\./g) || []).length;
-  if (dotCount > 1) {
-    sanitized = sanitized.replace(/\./g, '');
-    // Keep the last dot position if needed
-    const lastDotIndex = raw.lastIndexOf('.');
-    if (lastDotIndex !== -1) {
-      const beforeDot = sanitized.substring(0, Math.max(0, sanitized.length - 2));
-      const afterDot = sanitized.substring(Math.max(0, sanitized.length - 2));
-      sanitized = beforeDot + '.' + afterDot;
-    }
-  }
-
-  return sanitized;
-}
-
 export default function EditBudgetForm({
   budget,
   customers, // Not used currently, but kept for compatibility with the page props.
@@ -109,15 +26,19 @@ export default function EditBudgetForm({
 }) {
   const router = useRouter();
 
+  const [displayAmount, setDisplayAmount] = useState<string>(
+    formatMoneyForDisplay(budget.allocated_amount)
+  );
+  const [allocatedAmount, setAllocatedAmount] = useState<number>(
+    budget.allocated_amount ?? 0
+  );
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     // Build FormData but normalize monetary fields before sending.
     const formData = new FormData(event.currentTarget);
-
-    // Normalize allocated_amount to avoid issues with commas/thousands separators.
-    const allocatedRaw = String(formData.get('allocated_amount') ?? '');
-    formData.set('allocated_amount', normalizeMoneyInput(allocatedRaw));
+    formData.set('allocated_amount', normalizeMoneyInput(displayAmount));
 
     // IMPORTANT: "paid/executed amount" must not be modified by the form.
     // We intentionally do NOT send "amount" updates (input is disabled anyway).
@@ -203,12 +124,23 @@ export default function EditBudgetForm({
               name="allocated_amount"
               type="text"
               inputMode="decimal"
-              defaultValue={formatMoneyForDisplay(budget.allocated_amount)}
+              value={displayAmount}
               placeholder="Ej: 100000000000,00"
               className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-400"
               onChange={(e) => {
-                const sanitized = sanitizeMoneyInput(e.currentTarget.value);
-                e.currentTarget.value = sanitized;
+                const sanitized = sanitizeMoneyInput(e.target.value);
+                setDisplayAmount(sanitized);
+                
+                const normalized = normalizeMoneyInput(sanitized);
+                setAllocatedAmount(normalized ? parseFloat(normalized) : 0);
+              }}
+              onFocus={() => {
+                setDisplayAmount(sanitizeMoneyInput(displayAmount));
+              }}
+              onBlur={() => {
+                if (allocatedAmount > 0) {
+                  setDisplayAmount(formatMoneyForDisplay(allocatedAmount));
+                }
               }}
             />
             <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />

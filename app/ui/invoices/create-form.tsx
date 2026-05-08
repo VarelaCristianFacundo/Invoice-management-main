@@ -1,97 +1,13 @@
 "use client";
 
 import { createInvoice } from "@/app/lib/actions";
+import { normalizeMoneyInput, formatMoneyForDisplay, sanitizeMoneyInput } from "@/app/lib/money-utils";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import CreateProviderModal from "./create-provider-modal";
 import CustomAutocompleteContableItem, { ContableItem } from "./custom-autocomplete-contable-item";
-
-/**
- * Normalizes money input so users can type:
- * - "13213,21" or "13213.21"
- * - "1.234,56" or "1,234.56"
- * And we always submit a backend-friendly number string with "." as decimal separator.
- */
-function normalizeMoneyInput(raw: string): string {
-  const value = raw.trim().replace(/\s+/g, '');
-  if (!value) return '';
-
-  const hasComma = value.includes(',');
-  const hasDot = value.includes('.');
-
-  // If both separators exist, assume the last one is the decimal separator.
-  if (hasComma && hasDot) {
-    const lastComma = value.lastIndexOf(',');
-    const lastDot = value.lastIndexOf('.');
-
-    const decimalSep = lastComma > lastDot ? ',' : '.';
-    const thousandsSep = decimalSep === ',' ? '.' : ',';
-
-    const noThousands = value.split(thousandsSep).join('');
-    return decimalSep === ',' ? noThousands.replace(',', '.') : noThousands;
-  }
-
-  // Only comma: treat it as decimal separator.
-  if (hasComma) return value.replace(',', '.');
-
-  // Only dot or none: already OK.
-  return value;
-}
-
-/**
- * Formats a number/string to a nice money display (2 decimals, comma decimal for ES UI).
- * This is only for display; submission uses normalizeMoneyInput().
- */
-function formatMoneyForDisplay(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  const str = String(value).trim();
-  if (!str) return '';
-
-  const normalized = normalizeMoneyInput(str);
-  const n = Number(normalized);
-  if (!Number.isFinite(n)) return str;
-
-  return n.toFixed(2).replace('.', ',');
-}
-
-/**
- * Sanitizes money input to only allow digits, comma, and dot.
- * Prevents multiple separators and ensures valid format.
- */
-function sanitizeMoneyInput(raw: string): string {
-  // Only allow digits, comma, and dot
-  let sanitized = raw.replace(/[^\d,.]/g, '');
-
-  // Limit commas to 1
-  const commaCount = (sanitized.match(/,/g) || []).length;
-  if (commaCount > 1) {
-    sanitized = sanitized.replace(/,/g, '');
-    // Keep the last comma position if needed
-    const lastCommaIndex = raw.lastIndexOf(',');
-    if (lastCommaIndex !== -1) {
-      const beforeComma = sanitized.substring(0, Math.max(0, sanitized.length - 2));
-      const afterComma = sanitized.substring(Math.max(0, sanitized.length - 2));
-      sanitized = beforeComma + ',' + afterComma;
-    }
-  }
-
-  // Limit dots to 1
-  const dotCount = (sanitized.match(/\./g) || []).length;
-  if (dotCount > 1) {
-    sanitized = sanitized.replace(/\./g, '');
-    // Keep the last dot position if needed
-    const lastDotIndex = raw.lastIndexOf('.');
-    if (lastDotIndex !== -1) {
-      const beforeDot = sanitized.substring(0, Math.max(0, sanitized.length - 2));
-      const afterDot = sanitized.substring(Math.max(0, sanitized.length - 2));
-      sanitized = beforeDot + '.' + afterDot;
-    }
-  }
-
-  return sanitized;
-}
 
 // Actualizá el tipo para incluir company_id
 type CustomerField = {
@@ -208,19 +124,19 @@ export default function CreateInvoiceForm({
   async function checkInvoiceNumberDuplicate(
     formattedNumber: string,
   ): Promise<boolean> {
-    if (!formattedNumber) return false;
+    if (!formattedNumber || !customerId) return false;
 
     try {
       const res = await fetch(
         `/api/invoices/check-number?invoice_number=${encodeURIComponent(
           formattedNumber,
-        )}`,
+        )}&customerId=${encodeURIComponent(customerId)}`,
       );
       if (!res.ok) return false;
 
       const data = await res.json();
       if (data.exists) {
-        setInvoiceNumberError('Factura cargada previamente.');
+        setInvoiceNumberError('Factura cargada previamente para este proveedor.');
         return true;
       }
 
@@ -498,9 +414,7 @@ export default function CreateInvoiceForm({
           className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm"
           value={displayAmount}
           onChange={(e) => {
-            const val = e.target.value;
-            // Solo permitir números, una coma o punto
-            const sanitized = val.replace(/[^0-9,.]/g, "");
+            const sanitized = sanitizeMoneyInput(e.target.value);
             setDisplayAmount(sanitized);
             
             const normalized = normalizeMoneyInput(sanitized);
@@ -511,6 +425,10 @@ export default function CreateInvoiceForm({
             if (amount > 0) {
               setDisplayAmount(formatMoneyForDisplay(amount));
             }
+          }}
+          onFocus={() => {
+            // Removemos el formato al hacer foco para evitar que el cursor salte
+            setDisplayAmount(sanitizeMoneyInput(displayAmount));
           }}
           required
           placeholder="Ej: 1000,00 o 1000.00"
@@ -608,16 +526,16 @@ export default function CreateInvoiceForm({
         ></textarea>
       </div>
 
-      {/* PDF Upload */}
+      {/* Archivo (PDF o imagen) */}
       <div>
         <label htmlFor="pdfFile" className="mb-2 block text-sm font-medium">
-          Cargar PDF <span className="text-red-500">*</span>
+          Cargar archivo (PDF o imagen) <span className="text-red-500">*</span>
         </label>
         <input
           id="pdfFile"
           name="pdfFile"
           type="file"
-          accept="application/pdf"
+          accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp"
           onChange={handlePdfChange}
           required
           className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-full file:border-0 file:bg-gray-100 file:py-2 file:px-4 file:text-sm file:font-semibold hover:file:bg-gray-200"

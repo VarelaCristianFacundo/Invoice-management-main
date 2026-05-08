@@ -30,12 +30,21 @@ export function UpdateInvoice({ id }: { id: string }) {
 
 export function DeleteInvoice({
   id,
+  status,
   refreshInvoices,
 }: {
   id: string;
+  status?: string;
   refreshInvoices: () => Promise<void>;
 }) {
+  const isPaid = status === 'pagado';
+
   const handleDelete = async () => {
+    if (isPaid) {
+      Swal.fire("No permitido", "No se puede eliminar una factura que ya fue abonada.", "warning");
+      return;
+    }
+
     const result = await Swal.fire({
       title: "Confirmar Eliminación",
       text: "¿Está seguro de que desea eliminar esta factura?",
@@ -49,6 +58,13 @@ export function DeleteInvoice({
 
     try {
       const res = await fetch(`/api/invoice/${id}`, { method: "DELETE" });
+
+      if (res.status === 403) {
+        const data = await res.json();
+        await Swal.fire("No permitido", data.message || "No se puede eliminar esta factura.", "warning");
+        return;
+      }
+
       if (!res.ok) throw new Error("Error al eliminar la factura");
 
       await Swal.fire("¡Eliminada!", "La factura fue eliminada con éxito.", "success");
@@ -62,7 +78,13 @@ export function DeleteInvoice({
   return (
     <button
       onClick={handleDelete}
-      className="rounded-md border p-2 text-red-600 hover:bg-gray-100 hover:text-red-800"
+      disabled={isPaid}
+      title={isPaid ? "No se puede eliminar una factura abonada" : "Eliminar factura"}
+      className={`rounded-md border p-2 ${
+        isPaid
+          ? "text-gray-300 cursor-not-allowed"
+          : "text-red-600 hover:bg-gray-100 hover:text-red-800"
+      }`}
     >
       <TrashIcon className="w-5" />
     </button>

@@ -3,7 +3,9 @@ import DashboardFilters from '@/app/ui/dashboard/filters';
 import StatusSummaryChartWrapper from '@/app/ui/dashboard/status-summary-chart-wrapper';
 import { roboto } from '@/app/ui/fonts';
 import { CardsSkeleton, StatusSummaryChartSkeleton } from '@/app/ui/skeletons';
+import { authOptions } from '@/authOptions';
 import { Metadata } from 'next';
+import { getServerSession } from 'next-auth/next';
 import { Suspense } from 'react';
 
 export const metadata: Metadata = {
@@ -19,6 +21,14 @@ export default async function Page({
 }: {
   searchParams?: { status?: string; year?: string; company?: string };
 }) {
+  // Obtener sesión y calcular areaId
+  const session = await getServerSession(authOptions);
+  const userRole = session?.user?.role || '';
+  const isAreaUser = userRole?.startsWith('usuario_') && 
+                     userRole !== 'usuario' && 
+                     userRole !== 'usuario_presupuestos';
+  const userAreaId = isAreaUser ? session?.user?.area_id : null;
+
   return (
     <main>
       <h1 className={`${roboto.className} mb-4 text-xl md:text-2xl`}>
@@ -31,14 +41,14 @@ export default async function Page({
       {/* Tarjetas de resumen */}
       <div className="gap-6">
         <Suspense fallback={<CardsSkeleton />}>
-          <CardWrapper searchParams={searchParams} />
+          <CardWrapper searchParams={searchParams} areaId={userAreaId} />
         </Suspense>
       </div>
 
       {/* Gráficos y últimas facturas en la misma fila */}
       <div className="mt-6 grid grid-cols-1 gap-6">
         <Suspense fallback={<StatusSummaryChartSkeleton />}>
-          <StatusSummaryChartWrapper searchParams={searchParams} />
+          <StatusSummaryChartWrapper searchParams={searchParams} areaId={userAreaId} />
         </Suspense>
       </div>
     </main>

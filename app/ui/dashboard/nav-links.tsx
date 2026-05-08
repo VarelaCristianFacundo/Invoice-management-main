@@ -12,24 +12,36 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const areaRoles = [
+  'usuario_administracion',
+  'usuario_contable',
+  'usuario_logistica',
+  'usuario_marketing',
+  'usuario_produccion',
+  'usuario_rrhh',
+  'usuario_sistemas',
+  'usuario_ventas',
+  'usuario_eventos'
+];
+
 const links = [
   { 
     name: 'Inicio', 
     href: '/dashboard', 
     icon: HomeIcon, 
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'] 
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', ...areaRoles] 
   },
   {
     name: 'Proyectos',
     href: '/dashboard/budgets',
     icon: CurrencyDollarIcon,
-    roles: ['admin', 'usuario_presupuestos'],
+    roles: ['admin', 'usuario_presupuestos', ...areaRoles],
   },
   {
     name: 'Facturas',
     href: '/dashboard/invoices',
     icon: DocumentDuplicateIcon,
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
+    roles: ['admin', 'usuario', 'tesorero', ...areaRoles],
   },
   {
     name: 'Fondos',
@@ -41,19 +53,13 @@ const links = [
     name: 'Proveedores',
     href: '/dashboard/customers',
     icon: UserGroupIcon,
-    roles: ['admin', 'tesorero', 'usuario', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
+    roles: ['admin', 'tesorero', 'usuario', ...areaRoles],
   },
-  // {
-  //   name: 'Presupuestos Rechazados',
-  //   href: '/dashboard/budgets/rejected',
-  //   icon: XMarkIcon,
-  //   roles: ['admin', 'usuario_presupuestos'],
-  // },
   {
     name: 'Perfil',
     href: '/dashboard/profile',
     icon: UserIcon,
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_administracion', 'usuario_contable', 'usuario_logistica', 'usuario_marketing', 'usuario_produccion', 'usuario_rrhh', 'usuario_sistemas', 'usuario_ventas'],
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', ...areaRoles],
   },
 ];
 

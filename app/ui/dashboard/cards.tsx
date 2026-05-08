@@ -18,8 +18,10 @@ const iconMap = {
 
 export default async function CardWrapper({
   searchParams,
+  areaId,
 }: {
   searchParams?: { status?: string; year?: string; company?: string };
+  areaId?: string | null;
 }) {
   const {
     numberOfCustomers,
@@ -30,7 +32,7 @@ export default async function CardWrapper({
     sumApproved,
     countPending,
     sumPending,
-  } = await fetchCardData(searchParams)
+  } = await fetchCardData({ ...searchParams, areaId })
 
   // Actualizar los links para que mantengan los otros filtros si es necesario
   const getFilterParams = (status?: string) => {

@@ -22,7 +22,6 @@ export default withAuth({
       // Roles con acceso a todas las áreas
       const adminRoles = ['admin', 'usuario'];
       
-      // Roles de usuarios por área
       const areaRoles = [
         'usuario_administracion',
         'usuario_contable',
@@ -31,12 +30,15 @@ export default withAuth({
         'usuario_produccion',
         'usuario_rrhh',
         'usuario_sistemas',
-        'usuario_ventas'
+        'usuario_ventas',
+        'usuario_eventos'
       ];
 
       // Define las rutas protegidas y los roles permitidos
+      // IMPORTANTE: rutas más específicas deben ir ANTES que las más generales
       const roleBasedRoutes: { [key: string]: string[] } = {
-        '/dashboard/budgets': ['admin', 'usuario_presupuestos'],
+        '/dashboard/budgets/rejected': ['admin', 'usuario_presupuestos'],
+        '/dashboard/budgets': ['admin', 'usuario_presupuestos', ...areaRoles],
         '/dashboard/invoices': [
           'admin', 
           'usuario', 
@@ -51,7 +53,6 @@ export default withAuth({
           'usuario',
           ...areaRoles
         ],
-        '/dashboard/budgets/rejected': ['admin', 'usuario_presupuestos'],
       };
 
       // Verifica si la ruta coincide y si el rol tiene acceso

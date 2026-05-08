@@ -57,10 +57,16 @@ export default function InvoicesTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, currentPage, selectedCompany, userAreaId]);
 
-  const hasValidPdf = (file?: string | null) => {
+  const hasValidFile = (file?: string | null) => {
     if (!file) return false;
-    const prefix = "data:application/pdf;base64,";
-    return file.startsWith(prefix) && file.length > prefix.length;
+    const validPrefixes = [
+      "data:application/pdf;base64,",
+      "data:image/png;base64,",
+      "data:image/jpeg;base64,",
+      "data:image/jpg;base64,",
+      "data:image/webp;base64,",
+    ];
+    return validPrefixes.some(prefix => file.startsWith(prefix) && file.length > prefix.length);
   };
 
   const toggleSort = (nextKey: SortKey) => {
@@ -225,7 +231,7 @@ export default function InvoicesTable({
                   </td>
 
                   <td className="px-4 py-2">
-                    {hasValidPdf(invoice.file) ? (
+                    {hasValidFile(invoice.file) ? (
                       <a
                         href={`/api/invoices/${invoice.id}/file`}
                         target="_blank"
@@ -233,7 +239,7 @@ export default function InvoicesTable({
                         className="flex items-center text-blue-600 hover:underline"
                       >
                         <DocumentTextIcon className="h-5 w-5 mr-1" />
-                        Ver PDF
+                        Ver archivo
                       </a>
                     ) : (
                       <span className="text-xs text-gray-400">Ningún archivo</span>
@@ -251,7 +257,7 @@ export default function InvoicesTable({
                     {isAdmin && (
                       <>
                         <UpdateInvoice id={invoice.id} />
-                        <DeleteInvoice id={invoice.id} refreshInvoices={loadInvoices} />
+                        <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
                       </>
                     )}
                   </td>

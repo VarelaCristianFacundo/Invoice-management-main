@@ -57,6 +57,7 @@ export async function fetchCardData(filters?: {
   status?: string;
   year?: string;
   company?: string;
+  areaId?: string | null;
 }) {
   let whereClause = 'WHERE 1=1';
   const params: any[] = [];
@@ -72,6 +73,10 @@ export async function fetchCardData(filters?: {
   if (filters?.company && filters.company !== 'all') {
     params.push(filters.company);
     whereClause += ` AND company_id = $${params.length}`;
+  }
+  if (filters?.areaId) {
+    params.push(filters.areaId);
+    whereClause += ` AND area_id = $${params.length}`;
   }
 
   // 1) Contar cuántas facturas hay de cada estado
@@ -189,7 +194,7 @@ export async function fetchFilteredInvoices(
       OR i.status ILIKE $1
       OR b.project_name ILIKE $1
       OR a.name ILIKE $1)
-      ${areaId ? 'AND ba.area_id = $4' : ''}
+      ${areaId ? 'AND i.area_id = $4' : ''}
 
     ORDER BY i.date DESC
     LIMIT $2 OFFSET $3
@@ -264,7 +269,7 @@ export async function fetchInvoicesPages(query: string, areaId?: string | null) 
       i.status ILIKE $1 OR
       b.project_name ILIKE $1 OR
       a.name ILIKE $1)
-      ${areaId ? 'AND ba.area_id = $2' : ''}
+      ${areaId ? 'AND i.area_id = $2' : ''}
   `;
   const params: any[] = [`%${query}%`];
   if (areaId) {
@@ -423,13 +428,26 @@ export async function fetchCustomerById(id: string) {
   return customers[0];
 }
 
-export async function fetchBudgetsPages(query: string): Promise<number> {
-  const queryText = `
-    SELECT COUNT(*)
-    FROM budgets
-    WHERE project_name ILIKE $1;
+export async function fetchBudgetsPages(query: string, areaId?: string | null): Promise<number> {
+  let queryText = `
+    SELECT COUNT(DISTINCT b.id)
+    FROM budgets b
   `;
-  const values = [`%${query}%`];
+  const values: any[] = [`%${query}%`];
+
+  if (areaId) {
+    queryText += ` JOIN budget_allocations ba ON b.id = ba.project_id`;
+    values.push(areaId);
+  }
+
+  queryText += `
+    WHERE b.project_name ILIKE $1
+  `;
+
+  if (areaId) {
+    queryText += ` AND ba.area_id = $2`;
+  }
+
   const result = await pool.query(queryText, values);
   const total = parseInt(result.rows[0].count, 10);
   return Math.ceil(total / 10); // 10 ítems por página
@@ -501,6 +519,7 @@ export async function fetchBudgetById(id: string) {
       b.id AS budget_id,
       b.year,
       b.project_name,
+      b.status,
       ba.program,
       ba.allocated_amount,
       ba.executed_amount,
@@ -680,7 +699,15 @@ export async function fetchBudgetsByCompany(
   }
 }
 
-export async function generateExcelReport(): Promise<NextResponse> {
+export async function generateExcelReport(areaId?: string | null): Promise<NextResponse> {
+  const params: any[] = [];
+  let whereClause = '';
+
+  if (areaId) {
+    params.push(areaId);
+    whereClause = `WHERE iv.area_id = $1`;
+  }
+
   const queryText = `
     SELECT 
       iv.id, 
@@ -705,11 +732,12 @@ export async function generateExcelReport(): Promise<NextResponse> {
     LEFT JOIN 
       budgets bu ON ba.project_id = bu.id
     LEFT JOIN 
-      areas ar ON iv.area_id = ar.id;
+      areas ar ON iv.area_id = ar.id
+    ${whereClause};
   `;
 
   try {
-    const result = await pool.query(queryText);
+    const result = await pool.query(queryText, params);
     const rows = result.rows;
 
     // Crear un nuevo workbook y worksheet
