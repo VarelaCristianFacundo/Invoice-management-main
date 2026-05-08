@@ -153,6 +153,7 @@ export interface BudgetForm {
   year: number;
   project_name: string;
   program?: string;
+  half?: number;
   allocated_amount?: number;
   executed_amount?: number;
   area_id?: string;

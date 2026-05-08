@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { updateBudgetProject } from '@/app/lib/actions';
-import { BudgetForm, CustomerField } from '@/app/lib/definitions';
+import { createProgram, updateBudgetProject } from '@/app/lib/actions';
+import { AreaType, BudgetForm, CustomerField } from '@/app/lib/definitions';
 import { normalizeMoneyInput, formatMoneyForDisplay, sanitizeMoneyInput } from '@/app/lib/money-utils';
 import { Button } from '@/app/ui/button';
+import CustomAutocompleteProgram from '@/app/ui/autocomplete';
 import {
   CalendarIcon,
   CheckIcon,
@@ -20,9 +21,11 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 export default function EditBudgetForm({
   budget,
   customers, // Not used currently, but kept for compatibility with the page props.
+  areas,
 }: {
   budget: BudgetForm;
   customers: CustomerField[];
+  areas: AreaType[];
 }) {
   const router = useRouter();
 
@@ -32,13 +35,27 @@ export default function EditBudgetForm({
   const [allocatedAmount, setAllocatedAmount] = useState<number>(
     budget.allocated_amount ?? 0
   );
+  const [program, setProgram] = useState<string>(budget.program ?? '');
+  const [newProgramCandidate, setNewProgramCandidate] = useState<string>('');
+  const [half, setHalf] = useState<number>(budget.half ?? 1);
+  const [areaId, setAreaId] = useState<string>(
+    budget.area_id ?? (areas.length === 1 ? areas[0].id : ''),
+  );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
+    if (!areaId) {
+      await Swal.fire('Error!', 'Seleccioná un área antes de guardar.', 'error');
+      return;
+    }
+
     // Build FormData but normalize monetary fields before sending.
     const formData = new FormData(event.currentTarget);
     formData.set('allocated_amount', normalizeMoneyInput(displayAmount));
+    formData.set('program', program);
+    formData.set('half', String(half));
+    formData.set('area_id', areaId);
 
     // IMPORTANT: "paid/executed amount" must not be modified by the form.
     // We intentionally do NOT send "amount" updates (input is disabled anyway).
@@ -56,8 +73,16 @@ export default function EditBudgetForm({
 
       if (!result.isConfirmed) return;
 
+      if (newProgramCandidate.trim().length > 0) {
+        await createProgram(newProgramCandidate.trim());
+        setNewProgramCandidate('');
+      }
+
       const response = await updateBudgetProject(budget.id, formData, '');
-      if (!response.success) throw new Error(response.message);
+      if (!response.success) {
+        await Swal.fire('Error!', response.message, 'error');
+        return;
+      }
 
       await Swal.fire('Actualizado!', 'El proyecto fue actualizado con éxito.', 'success');
 
@@ -144,6 +169,57 @@ export default function EditBudgetForm({
               }}
             />
             <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
+          </div>
+        </div>
+
+        {/* Área */}
+        <div className="mt-6">
+          <label htmlFor="area_id" className="mb-1 block text-sm font-medium text-gray-900">
+            Área
+          </label>
+          <select
+            id="area_id"
+            name="area_id"
+            value={areaId}
+            onChange={(e) => setAreaId(e.target.value)}
+            className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm outline-2"
+            required
+          >
+            <option value="">Seleccionar un área</option>
+            {areas.map((area) => (
+              <option key={area.id} value={area.id}>
+                {area.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Programa + Semestre */}
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <CustomAutocompleteProgram
+              initialValue={budget.program ?? ''}
+              onProgramSelected={(programName, isNew) => {
+                setProgram(programName);
+                setNewProgramCandidate(isNew ? programName : '');
+              }}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="half" className="mb-1 block text-sm font-medium text-gray-900">
+              Semestre
+            </label>
+            <select
+              id="half"
+              name="half"
+              value={half}
+              onChange={(e) => setHalf(Number(e.target.value))}
+              className="block w-full rounded-md border border-gray-200 py-2 px-3 text-sm outline-2"
+            >
+              <option value={1}>Primer Semestre</option>
+              <option value={2}>Segundo Semestre</option>
+            </select>
           </div>
         </div>
       </div>

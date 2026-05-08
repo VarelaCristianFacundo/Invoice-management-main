@@ -475,6 +475,7 @@ export async function fetchBudgetById(id: string) {
       project_name: budgets.projectName,
       status: budgets.status,
       program: budgetAllocations.program,
+      half: budgetAllocations.half,
       allocated_amount: budgetAllocations.allocatedAmount,
       executed_amount: budgetAllocations.executedAmount,
       area_id: budgetAllocations.areaId,
@@ -499,6 +500,7 @@ export async function fetchBudgetById(id: string) {
     project_name: row.project_name,
     status: row.status ?? 'pending',
     program: row.program ?? undefined,
+    half: row.half ?? undefined,
     allocated_amount:
       row.allocated_amount != null ? Number(row.allocated_amount) : undefined,
     executed_amount:

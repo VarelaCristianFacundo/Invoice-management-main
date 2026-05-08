@@ -1053,11 +1053,30 @@ export async function updateBudgetProject(
     formData.get('allocated_amount') ?? '0',
   );
   const status = String(formData.get('status') ?? 'pending');
+  const programRaw = String(formData.get('program') ?? '').trim();
+  const program = programRaw.length > 0 ? programRaw : null;
+  const half = Number(formData.get('half'));
+  const areaIdRaw = String(formData.get('area_id') ?? '').trim();
+  const areaId = areaIdRaw.length > 0 ? areaIdRaw : null;
 
   if (!year || !projectName) {
     return {
       success: false,
       message: 'Datos inválidos: año y nombre de proyecto son obligatorios.',
+    };
+  }
+
+  if (half !== 1 && half !== 2) {
+    return {
+      success: false,
+      message: 'Semestre inválido: debe ser 1 o 2.',
+    };
+  }
+
+  if (!areaId) {
+    return {
+      success: false,
+      message: 'Área inválida: seleccioná un área para el proyecto.',
     };
   }
 
@@ -1070,17 +1089,48 @@ export async function updateBudgetProject(
 
       // Solo actualizar allocated_amount; executed_amount es calculado y no debe
       // modificarse desde este formulario.
-      await tx
+      const updatedAllocations = await tx
         .update(budgetAllocations)
-        .set({ allocatedAmount: String(allocatedAmount) })
-        .where(eq(budgetAllocations.projectId, id));
+        .set({
+          allocatedAmount: String(allocatedAmount),
+          program,
+          half,
+          year,
+          areaId,
+        })
+        .where(eq(budgetAllocations.projectId, id))
+        .returning({ id: budgetAllocations.id });
+
+      if (updatedAllocations.length === 0) {
+        // No allocation existed for this budget — create it now (paso 2 incompleto en el create).
+        await tx.insert(budgetAllocations).values({
+          projectId: id,
+          areaId,
+          year,
+          half,
+          program,
+          allocatedAmount: String(allocatedAmount),
+        });
+      }
     });
+
+    revalidatePath('/dashboard/budgets');
+    revalidatePath(`/dashboard/budgets/${id}/edit`);
 
     return {
       success: true,
       message: 'Proyecto actualizado exitosamente.',
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const code = (error as { code?: string })?.code;
+    const message = error instanceof Error ? error.message : String(error);
+    if (code === '23505' || /budget_allocations_area_id_year_half_key|unique/i.test(message)) {
+      return {
+        success: false,
+        message:
+          'Ya existe una asignación para esa área en ese año y semestre. Cambiá el año o el semestre.',
+      };
+    }
     console.error('Database Error updating budget:', error);
     return {
       success: false,

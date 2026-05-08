@@ -8,14 +8,16 @@ export type Program = { id: string; name: string };
 
 interface CustomAutocompleteProps {
     onProgramSelected: (programName: string, isNew?: boolean) => void;
+    initialValue?: string;
 }
 
 export default function CustomAutocompleteProgram({
     onProgramSelected,
+    initialValue = "",
 }: CustomAutocompleteProps) {
     const [allPrograms, setAllPrograms] = useState<Program[]>([]);
     const [filtered, setFiltered] = useState<Program[]>([]);
-    const [userInput, setUserInput] = useState("");
+    const [userInput, setUserInput] = useState(initialValue);
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     const containerRef = useRef<HTMLDivElement>(null);
