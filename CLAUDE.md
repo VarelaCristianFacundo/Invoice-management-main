@@ -22,7 +22,7 @@ What "update" means concretely:
 - Replace obsolete steps; don't leave the old next to the new ("`npm run seed`" alongside "`npm run db:seed`" confuses readers — pick one).
 - Keep destructive-action warnings **loud and prominent**. The `POSTGRES_URL` block in `README.md` is the template: blockquote, `# ⚠️` heading, explicit "rules mínimas" list.
 - Use clickable markdown file paths (`[file](path)`) so the doc is navigable.
-- Cross-reference related docs (OPERATIONS.md, API.md) when they exist.
+- Cross-reference related docs ([docs/OPERATIONS.md](docs/OPERATIONS.md), [docs/API.md](docs/API.md)) when they exist.
 
 Skip the README update for tiny internal refactors that don't change the surface developers interact with (renaming a private helper, fixing a bug in one function, etc.).
 

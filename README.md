@@ -28,6 +28,7 @@ app/
   login/               ← Página de login
   ui/                  ← Componentes reutilizables (tables, forms, chips)
 drizzle/               ← Migraciones SQL versionadas (drizzle-kit) + meta/snapshot
+docs/                  ← Documentación complementaria (API, OPERATIONS, planes, deuda técnica)
 public/                ← Assets estáticos
 scripts/
   seed-drizzle.ts      ← Seed inicial con datos mínimos (npm run db:seed)
@@ -88,7 +89,7 @@ El schema se gestiona con **Drizzle ORM**. Fuente de verdad: [`app/lib/drizzle/s
 > - Nunca dejes `POSTGRES_URL=` de prod en tu `.env` local.
 > - Antes de cualquier comando `db:*`, ejecutá `echo $env:POSTGRES_URL` (PowerShell) o `echo $POSTGRES_URL` (bash) y leé la URL.
 > - **Nunca uses `db:push` contra prod.** Es para prototipar en local; pisa el schema sin versionar.
-> - Hacé backup (`pg_dump`) ANTES de aplicar migraciones a prod. Ver OPERATIONS.md.
+> - Hacé backup (`pg_dump`) ANTES de aplicar migraciones a prod. Ver [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 ### Comandos disponibles
 
@@ -151,7 +152,7 @@ Drizzle mantiene una tabla `__drizzle_migrations` en la DB con las migraciones a
 ### Despliegue a producción
 
 1. PR mergeado a `main` con la migración nueva generada y revisada.
-2. **Backup de prod ANTES de migrar** (`pg_dump` — ver OPERATIONS.md).
+2. **Backup de prod ANTES de migrar** (`pg_dump` — ver [docs/OPERATIONS.md](docs/OPERATIONS.md)).
 3. En el entorno de prod, con `POSTGRES_URL` apuntando a prod:
    ```bash
    npm run db:migrate
@@ -170,7 +171,7 @@ Drizzle mantiene una tabla `__drizzle_migrations` en la DB con las migraciones a
 
 ### Backup/Restore rápido
 
-Vea **OPERATIONS.md** para comandos `pg_dump` / `psql` y recomendaciones de respaldo.
+Vea [docs/OPERATIONS.md](docs/OPERATIONS.md) para comandos `pg_dump` / `psql` y recomendaciones de respaldo.
 
 ## 🔑 Autenticación
 
@@ -210,7 +211,7 @@ Sugerido: agregar **Husky** para formateo y lint en pre-commit.
 
 ## 🧭 Rutas API (resumen)
 
-Listado completo en **API.md**. Grupos principales:
+Listado completo en [docs/API.md](docs/API.md). Grupos principales:
 
 - `/api/invoices`, `/api/invoices/export-excel`, `/api/invoices/export-txt`
 - `/api/customers`, `/api/programs`, `/api/budgets`, `/api/budget-allocations`
