@@ -22,11 +22,16 @@ Sistema de gestión de **presupuestos, asignaciones y facturas** con exportació
 app/
   api/                 ← Endpoints REST (Route Handlers)
   dashboard/           ← Módulos UI: invoices, budgets, customers, etc.
-  lib/                 ← DB, helpers y servicios (auth, mail, utils)
+  lib/
+    drizzle/           ← Schema, relations y cliente Drizzle (fuente de verdad de la DB)
+    *.ts               ← Helpers y servicios (auth, mail, utils, data, actions)
   login/               ← Página de login
   ui/                  ← Componentes reutilizables (tables, forms, chips)
+drizzle/               ← Migraciones SQL versionadas (drizzle-kit) + meta/snapshot
 public/                ← Assets estáticos
-scripts/               ← Seed de BD
+scripts/
+  seed-drizzle.ts      ← Seed inicial con datos mínimos (npm run db:seed)
+  data/                ← Migraciones de datos puntuales (proveedores reales, etc.)
 ```
 
 Páginas y módulos destacados:
