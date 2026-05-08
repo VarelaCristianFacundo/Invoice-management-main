@@ -20,7 +20,7 @@ Sistema de gestión de **presupuestos, asignaciones y facturas** con exportació
 
 ```
 app/
-  api/                 ← Endpoints REST (Route Handlers)
+  api/                 ← Endpoints REST (Route Handlers).
   dashboard/           ← Módulos UI: invoices, budgets, customers, etc.
   lib/
     drizzle/           ← Schema, relations y cliente Drizzle (fuente de verdad de la DB)
