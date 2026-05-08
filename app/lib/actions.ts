@@ -1,8 +1,18 @@
 'use server';
 // import { signIn } from 'next-auth/react';
 import { revalidatePath } from 'next/cache';
-import { Pool } from 'pg';
 import { z } from 'zod';
+import { and, eq, sql } from 'drizzle-orm';
+import { drizzleDb, type Tx } from './drizzle/db';
+import {
+  areaFunds,
+  areas,
+  budgetAllocations,
+  budgets,
+  customers,
+  invoices,
+  programs,
+} from './drizzle/schema';
 import { sendEmail } from './SendMail';
 import { isValidCuitCuil } from './utils';
 
@@ -33,30 +43,6 @@ const ivaConditionValues = [
   'No Responsable',
 ];
 
-const CustomerFormSchema = z.object({
-  name: z.string().min(1, { message: 'Por favor ingrese un nombre válido.' }),
-  email: z.string().email({ message: 'Por favor ingrese un email válido.' }),
-  cuit_cuil: z
-    .string()
-    .regex(/^\d{11}$/, { message: 'CUIT/CUIL debe tener 11 dígitos.' })
-    .optional(),
-  cbu_cvu: z
-    .string()
-    .regex(/^\d{22}$/, { message: 'CBU/CVU debe tener 22 dígitos.' })
-    .optional(),
-  phone: z
-    .string()
-    .min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' })
-    .max(15, { message: 'El teléfono no debe superar los 15 dígitos.' })
-    .regex(/^\d+$/, { message: 'El teléfono debe contener solo números.' }),
-  iva_condition: z
-    .enum(ivaConditionValues as [string, ...string[]])
-    .or(z.string())
-    .refine((val) => ivaConditionValues.includes(val), {
-      message: 'Seleccione una condición válida.',
-    }),
-  company_id: z.coerce.number().min(1, { message: 'Por favor selecciona la empresa.' }),
-});
 const emptyToUndefined = (val: unknown) => {
   if (typeof val !== 'string') return val;
   const trimmed = val.trim();
@@ -121,10 +107,6 @@ const CreateInvoice = FormSchema.extend({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Fecha inválida (YYYY-MM-DD)' }),
 }).omit({ id: true, date: true });
 
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
-
 export type State = {
   errors?: {
     customerId?: string[];
@@ -182,11 +164,17 @@ export async function createInvoice(formData: {
   } = validatedFields.data;
 
   // Check for duplicated invoice number per customer (proveedor)
-  const duplicate = await pool.query(
-    'SELECT 1 FROM invoices WHERE invoice_number = $1 AND customer_id = $2',
-    [invoice_number, customerId],
-  );
-  if (duplicate.rows.length > 0) {
+  const duplicate = await drizzleDb
+    .select({ id: invoices.id })
+    .from(invoices)
+    .where(
+      and(
+        eq(invoices.invoiceNumber, invoice_number),
+        eq(invoices.customerId, customerId),
+      ),
+    )
+    .limit(1);
+  if (duplicate.length > 0) {
     return {
       success: false,
       message: 'Factura cargada previamente. El número de factura ya existe para este proveedor.',
@@ -196,29 +184,23 @@ export async function createInvoice(formData: {
   const amountInCents = amount * 1;
 
   try {
-    const queryText = `
-      INSERT INTO invoices (
-        customer_id, amount, status, date, area_id, year, budget_allocation_id, file, company_id, observations, invoice_number, issue_date, contable_item_id
-      )
-      VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-    `;
-    const params = [
+    await drizzleDb.insert(invoices).values({
       customerId,
-      amountInCents,
+      amount: String(amountInCents),
       status,
+      date: sql`CURRENT_DATE`,
       areaId,
       year,
       budgetAllocationId,
       file,
-      company_id,
+      companyId: company_id,
       observations,
-      invoice_number,
-      issue_date,
-      contable_item_id ?? null,
-    ];
-    await pool.query(queryText, params);
+      invoiceNumber: invoice_number,
+      issueDate: issue_date,
+      contableItemId: contable_item_id ?? null,
+    });
 
-    await sendInvoiceEmail(pool, customerId, amountInCents, status, issue_date);
+    await sendInvoiceEmail(customerId, amountInCents, status, issue_date);
     return {
       success: true,
       message: 'Factura creada satisfactoriamente.',
@@ -246,18 +228,18 @@ export async function updateAreaFunds(
         continue;
       }
       console.debug(`Actualizando fondos para el área ${areaId}: ${amount}`);
-      // Usamos ON CONFLICT para que no cree duplicados
-      // si ya existe la fila con (area_id, year, half).
-      await pool.query(
-        `
-        INSERT INTO area_funds (area_id, allocated_funds, year, half)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (area_id, year, half)
-        DO UPDATE SET
-          allocated_funds = EXCLUDED.allocated_funds
-      `,
-        [areaId, amount, year, half],
-      );
+      await drizzleDb
+        .insert(areaFunds)
+        .values({
+          areaId,
+          allocatedFunds: String(amount),
+          year,
+          half,
+        })
+        .onConflictDoUpdate({
+          target: [areaFunds.areaId, areaFunds.year, areaFunds.half],
+          set: { allocatedFunds: String(amount) },
+        });
     }
     console.log('Fondos actualizados exitosamente');
   } catch (error) {
@@ -304,23 +286,16 @@ export async function addCustomer(formData: {
     validatedFields.data;
 
   try {
-    const queryText = `
-      INSERT INTO customers (name, email, cuit_cuil, cbu_cvu, phone, iva_condition, image_url, company_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `;
-
-    const params = [
+    await drizzleDb.insert(customers).values({
       name,
-      email ?? null,
-      cuit_cuil ?? null,
-      cbu_cvu ?? null,
-      phone ?? null,
-      iva_condition ?? 'Pendiente',
-      '/customers/placeholder.png',
-      company_id || 1,
-    ];
-
-    await pool.query(queryText, params);
+      email: email ?? null,
+      cuitCuil: cuit_cuil ?? null,
+      cbuCvu: cbu_cvu ?? null,
+      phone: phone ?? null,
+      ivaCondition: iva_condition ?? 'Pendiente',
+      imageUrl: '/customers/placeholder.png',
+      companyId: company_id || 1,
+    });
 
     return { success: true, message: 'Proveedor agregado exitosamente.' };
   } catch (error) {
@@ -406,11 +381,18 @@ export async function updateInvoice(
 
   // Avoid duplicated invoice numbers when updating
   if (invoice_number) {
-    const duplicate = await pool.query(
-      'SELECT id FROM invoices WHERE invoice_number = $1 AND customer_id = $2 AND id <> $3',
-      [invoice_number, data.customerId, id],
-    );
-    if (duplicate.rows.length > 0) {
+    const duplicate = await drizzleDb
+      .select({ id: invoices.id })
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.invoiceNumber, invoice_number),
+          eq(invoices.customerId, data.customerId),
+          sql`${invoices.id} <> ${id}`,
+        ),
+      )
+      .limit(1);
+    if (duplicate.length > 0) {
       return {
         success: false,
         message: 'Factura cargada previamente. El número de factura ya existe para este proveedor.',
@@ -419,15 +401,11 @@ export async function updateInvoice(
   }
 
   try {
-    // Obtener la factura actual para otros procesos
-    const invoice = await getInvoiceData(pool, id);
-    console.log('Invoice data from DB:', invoice);
+    const invoice = await getInvoiceData(id);
     const currentStatus = invoice.status;
-    const currentAmount = invoice.amount; // ya en centavos
+    const currentAmount = invoice.amount;
 
-    // Chequeo de fondos (según reglas existentes)
     const fundsAvailable = await checkProjectFundsByInoviceId(
-      pool,
       parseFloat(formData.get('amount') as string),
       id,
     );
@@ -438,51 +416,34 @@ export async function updateInvoice(
         message: 'Fondos Insuficientes para aprobar la factura.',
       };
     } else {
-      console.log('currentStatus:', currentStatus);
-      console.log('newStatus:', data.newStatus);
-      if (currentStatus !== data.newStatus) {
-        if (data.newStatus === 'pending') {
-          await updateAvailableAreaFounds(
-            pool,
-            currentAmount,
-            invoice.budgetAllocationId,
-            data.newStatus,
-          );
-        } else {
-          await updateAvailableAreaFounds(
-            pool,
-            parseFloat(formData.get('amount') as string),
-            invoice.budgetAllocationId,
-            data.newStatus,
-          );
-        }
+      if (currentStatus !== data.newStatus && invoice.budgetAllocationId) {
+        const fundAmount =
+          data.newStatus === 'pending'
+            ? currentAmount
+            : parseFloat(formData.get('amount') as string);
+        await updateAvailableAreaFounds(
+          fundAmount,
+          invoice.budgetAllocationId,
+          data.newStatus,
+        );
       }
     }
 
-    // Actualizar la factura
-    const updateQuery = `
-      UPDATE invoices
-      SET customer_id = $1, amount = $2, status = $3, file = $4, company_id = $5, observations = $6,
-          invoice_number = $7, issue_date = $8, contable_item_id = $9
-      WHERE id = $10
-    `;
-    const updateParams = [
-      data.customerId,
-      data.amount,
-      data.newStatus,
-      file,
-      company_id || invoice.company_id,
-      data.observations,
-      data.invoice_number,
-      data.issue_date,
-      contable_item_id ? Number(contable_item_id) : null,
-      id,
-    ];
-    await pool.query(updateQuery, updateParams);
+    await drizzleDb
+      .update(invoices)
+      .set({
+        customerId: data.customerId,
+        amount: String(data.amount),
+        status: data.newStatus,
+        file,
+        companyId: company_id || invoice.company_id,
+        observations: data.observations,
+        invoiceNumber: data.invoice_number,
+        issueDate: data.issue_date,
+        contableItemId: contable_item_id ? Number(contable_item_id) : null,
+      })
+      .where(eq(invoices.id, id));
 
-    console.log('Invoice updated with params:', updateParams);
-
-    // Revalida la ruta para que se vean los datos actualizados
     revalidatePath('/dashboard/invoices');
 
     return {
@@ -498,29 +459,20 @@ export async function updateInvoice(
   }
 }
 
-// ----------------------------------------------------------------------------------
-// 1. createProject
-// ----------------------------------------------------------------------------------
 export async function createProject(
   project_name: string,
   year: number,
   company_id: number,
 ) {
   try {
-    const queryText = `
-      INSERT INTO budgets (project_name, year, company_id)
-      VALUES ($1, $2, $3)
-      RETURNING id
-    `;
-    const params = [project_name, year, company_id];
-    const result = await pool.query(queryText, params);
-
-    // Obtenemos el nuevo ID
-    const newProjectId = result.rows[0].id as string;
+    const [{ id }] = await drizzleDb
+      .insert(budgets)
+      .values({ projectName: project_name, year, companyId: company_id })
+      .returning({ id: budgets.id });
 
     return {
       success: true,
-      projectId: newProjectId,
+      projectId: id,
       message: 'Proyecto creado satisfactoriamente.',
     };
   } catch (error) {
@@ -533,53 +485,31 @@ export async function createProject(
   }
 }
 
-// ----------------------------------------------------------------------------------
-// 2. createBudgetAllocation
-// ----------------------------------------------------------------------------------
 export async function createBudgetAllocation(
   project_id: string,
   area_id: string,
   allocated_amount: number,
   half: number,
   program: string,
-  year: number, // <---- Añadimos el year aquí
+  year: number,
 ) {
   try {
-    // Notar que ahora incluimos también la columna "year"
-    const queryText = `
-      INSERT INTO budget_allocations 
-        (project_id, area_id, year, allocated_amount, executed_amount, half, program)
-      VALUES ($1, $2, $3, $4, 0, $5, $6)
-    `;
-    // Orden de parámetros: [project_id, area_id, year, allocated_amount, half, program]
-    const params = [
-      project_id,
-      area_id,
-      year, // <---- Insertamos year en la tercera posición
-      allocated_amount,
+    await drizzleDb.insert(budgetAllocations).values({
+      projectId: project_id,
+      areaId: area_id,
+      year,
+      allocatedAmount: String(allocated_amount),
+      executedAmount: '0',
       half,
       program,
-    ];
-    await pool.query(queryText, params);
+    });
 
     return {
       success: true,
       message: 'Asignación de proyecto creada exitosamente.',
     };
   } catch (error) {
-    if (error instanceof Error) {
-      console.error(
-        'Error al crear la asignación del proyecto:',
-        error.message,
-      );
-    } else {
-      console.error('Error al crear la asignación del proyecto:', error);
-    }
-    if (error instanceof Error) {
-      console.error(error.stack);
-    } else {
-      console.error(error);
-    }
+    console.error('Error al crear la asignación del proyecto:', error);
     return {
       success: false,
       message:
@@ -596,7 +526,7 @@ export async function createBudget({
   year,
   half,
   program,
-  company_id, // Añadimos company_id aquí
+  company_id,
 }: {
   id: string;
   projectId: string;
@@ -605,66 +535,58 @@ export async function createBudget({
   year: number;
   half: number;
   program: string;
-  company_id: string; // Tipo de company_id
+  company_id: string;
 }) {
   try {
     if (id === 'new') {
-      // Primero creamos el proyecto en la tabla 'budgets'
-      const queryText = `
-        INSERT INTO budgets (project_name, year, company_id)
-        VALUES ($1, $2, $3) RETURNING id
-      `;
-      const params = [, year, company_id]; // Incluimos company_id en los parámetros
-      const result = await pool.query(queryText, params);
-      const projectId = result.rows[0].id; // Obtenemos el ID del nuevo proyecto.
+      const [{ id: newProjectId }] = await drizzleDb
+        .insert(budgets)
+        .values({
+          projectName: projectId,
+          year,
+          companyId: Number(company_id),
+        })
+        .returning({ id: budgets.id });
 
-      // Ahora asignamos los fondos y áreas en 'budget_allocations'
-      const queryTextInsert = `
-        INSERT INTO budget_allocations (project_id, area_id, allocated_amount, executed_amount, program, half, year)
-        VALUES ($1, $2, $3, 0, $4, $5, $6)
-      `;
-      const paramsAllocations = [
-        projectId,
+      await drizzleDb.insert(budgetAllocations).values({
+        projectId: newProjectId,
         areaId,
-        allocated_amount,
+        allocatedAmount: String(allocated_amount),
+        executedAmount: '0',
         program,
         half,
-        year, // Año incluido aquí
-      ];
-      await pool.query(queryTextInsert, paramsAllocations);
-      console.log('Budget created and areas assigned:', paramsAllocations);
+        year,
+      });
 
       return {
         success: true,
         message: 'Proyecto y área asignados exitosamente.',
       };
     } else {
-      // Si no es un proyecto nuevo, actualizamos
-      const queryText = `
-        UPDATE budgets
-        SET project_name = $1, year = $2, company_id = $3
-        WHERE id = $4
-      `;
-      const params = [projectId, year, company_id, id]; // Incluimos company_id en los parámetros
-      await pool.query(queryText, params);
+      await drizzleDb
+        .update(budgets)
+        .set({
+          projectName: projectId,
+          year,
+          companyId: Number(company_id),
+        })
+        .where(eq(budgets.id, id));
 
-      // Actualizamos los fondos
-      const queryTextUpdate = `
-        UPDATE budget_allocations
-        SET allocated_amount = $3, executed_amount = 0, program = $4, half = $5, year = $6
-        WHERE project_id = $1 AND area_id = $2
-      `;
-      const paramsUpdate = [
-        projectId,
-        areaId,
-        allocated_amount,
-        program,
-        half,
-        year, // Año incluido aquí
-      ];
-      await pool.query(queryTextUpdate, paramsUpdate);
-
-      console.log('Project and area updated:', paramsUpdate);
+      await drizzleDb
+        .update(budgetAllocations)
+        .set({
+          allocatedAmount: String(allocated_amount),
+          executedAmount: '0',
+          program,
+          half,
+          year,
+        })
+        .where(
+          and(
+            eq(budgetAllocations.projectId, projectId),
+            eq(budgetAllocations.areaId, areaId),
+          ),
+        );
 
       return {
         success: true,
@@ -683,9 +605,8 @@ export async function createBudget({
 export async function updateBudget(
   id: string,
   formData: FormData,
-  changedBy: string,
+  _changedBy: string,
 ) {
-  // Datos que realmente vienen del formulario de edición
   const year = Number(formData.get('year'));
   const projectName = (formData.get('project_name') ?? '').toString().trim();
   const allocatedAmount = Number(formData.get('allocated_amount') ?? 0);
@@ -699,53 +620,32 @@ export async function updateBudget(
     };
   }
 
-  const client = await pool.connect();
-
   try {
-    await client.query('BEGIN');
+    await drizzleDb.transaction(async (tx: Tx) => {
+      await tx
+        .update(budgets)
+        .set({ year, projectName, status })
+        .where(eq(budgets.id, id));
 
-    // 1) Actualizar datos básicos del proyecto
-    await client.query(
-      `
-        UPDATE budgets
-        SET year = $1,
-            project_name = $2,
-            status = $3
-        WHERE id = $4
-      `,
-      [year, projectName, status, id],
-    );
-
-    // 2) Actualizar la asignación principal del proyecto
-    //    (si tenés más de una allocation por proyecto, esto las actualiza a todas)
-    await client.query(
-      `
-        UPDATE budget_allocations
-        SET allocated_amount = $1,
-            executed_amount = $2
-        WHERE project_id = $3
-      `,
-      [allocatedAmount, amount, id],
-    );
-
-    // TODO opcional: si querés loguear auditoría, acá podrías llamar a logBudgetAudit
-    // await logBudgetAudit(pool, id, "update", amount, changedBy);
-
-    await client.query('COMMIT');
+      await tx
+        .update(budgetAllocations)
+        .set({
+          allocatedAmount: String(allocatedAmount),
+          executedAmount: String(amount),
+        })
+        .where(eq(budgetAllocations.projectId, id));
+    });
 
     return {
       success: true,
       message: 'Proyecto actualizado exitosamente.',
     };
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error updating budget:', error);
     return {
       success: false,
       message: 'No se pudo actualizar el proyecto.',
     };
-  } finally {
-    client.release();
   }
 }
 
@@ -803,34 +703,26 @@ export async function updateCustomer(
   const { name, email, cuit_cuil, cbu_cvu, phone, iva_condition, company_id } =
     validatedFields.data;
 
-  const queryText = `
-    UPDATE customers
-    SET
-      name = $1,
-      email = $2,
-      cuit_cuil = $3,
-      cbu_cvu = $4,
-      phone = $5,
-      iva_condition = $6,
-      company_id = COALESCE($7, company_id)
-    WHERE id = $8
-  `;
-
-  const params = [
-    name,
-    email ?? null,
-    cuit_cuil ?? null,
-    cbu_cvu ?? null,
-    phone ?? null,
-    iva_condition ?? 'Pendiente',
-    company_id ?? null,
-    id,
-  ];
-
   try {
-    const result = await pool.query(queryText, params);
+    const updates: Record<string, unknown> = {
+      name,
+      email: email ?? null,
+      cuitCuil: cuit_cuil ?? null,
+      cbuCvu: cbu_cvu ?? null,
+      phone: phone ?? null,
+      ivaCondition: iva_condition ?? 'Pendiente',
+    };
+    if (company_id != null) {
+      updates.companyId = company_id;
+    }
 
-    if (result.rowCount === 0) {
+    const result = await drizzleDb
+      .update(customers)
+      .set(updates)
+      .where(eq(customers.id, id))
+      .returning({ id: customers.id });
+
+    if (result.length === 0) {
       return {
         success: false,
         message: 'No se encontró el proveedor para actualizar.',
@@ -849,18 +741,19 @@ export async function updateCustomer(
 
 export async function deleteInvoice(id: string) {
   try {
-    // Verificar que la factura no esté pagada
-    const check = await pool.query('SELECT status FROM invoices WHERE id = $1', [id]);
-    if (check.rows[0]?.status === 'pagado') {
+    const check = await drizzleDb
+      .select({ status: invoices.status })
+      .from(invoices)
+      .where(eq(invoices.id, id))
+      .limit(1);
+    if (check[0]?.status === 'pagado') {
       return {
         success: false,
         message: 'No se puede eliminar una factura que ya fue abonada.',
       };
     }
 
-    const queryText = 'DELETE FROM invoices WHERE id = $1';
-    const params = [id];
-    await pool.query(queryText, params);
+    await drizzleDb.delete(invoices).where(eq(invoices.id, id));
     revalidatePath('/dashboard/invoices');
     return { success: true, message: 'Factura eliminada.' };
   } catch (error) {
@@ -872,85 +765,25 @@ export async function deleteInvoice(id: string) {
   }
 }
 
-export async function sumApprovedBudgetsByAreaAndQuarter(
-  pool: Pool,
-  areaId: string,
-  year: string,
-  quarter: number,
-): Promise<number> {
-  const queryText = `
-    SELECT SUM(amount) AS total_amount
-    FROM budgets
-    WHERE area_id = $1 AND year = $2 AND quarter = $3 AND status = 'approved'
-  `;
-  const queryParams = [areaId, year, quarter];
-
-  try {
-    const result = await pool.query(queryText, queryParams);
-    const totalAmount = result.rows[0].total_amount || 0;
-    return totalAmount;
-  } catch (error) {
-    console.error('Error summing approved budgets:', error);
-    throw new Error('Error summing approved budgets');
-  }
-}
-
-export async function checkProjectFunds(
-  pool: Pool,
-  budgetAllocationId: string,
-  amount: number,
-): Promise<boolean> {
-  try {
-    const queryText = `
-      SELECT 
-        executed_amount AS budget_executed_amount
-      FROM 
-        budget_allocations
-      WHERE 
-        id = $1
-    `;
-    const queryParams = [budgetAllocationId];
-    const result = await pool.query(queryText, queryParams);
-
-    if (result.rows.length === 0) {
-      throw new Error('No se encontraron registros coincidentes');
-    }
-
-    const budgetExecutedAmount = result.rows[0].budget_executed_amount || 0;
-    return budgetExecutedAmount > amount;
-  } catch (error) {
-    console.error('Error checking project funds:', error);
-    return false;
-  }
-}
-
 export async function checkProjectFundsByInoviceId(
-  pool: Pool,
   amount: number,
   invoice_id: string,
 ): Promise<boolean> {
   try {
-    const queryText = `
-    SELECT 
-      ba.executed_amount AS budget_executed_amount,
-      ba.allocated_amount AS budget_allocated_amount
-    FROM 
-      budget_allocations ba
-    JOIN 
-      invoices i ON i.budget_allocation_id = ba.id
-    WHERE 
-      i.id = $1
-  `;
-    const queryParams = [invoice_id];
-    const result = await pool.query(queryText, queryParams);
+    const rows = await drizzleDb
+      .select({
+        executed: budgetAllocations.executedAmount,
+        allocated: budgetAllocations.allocatedAmount,
+      })
+      .from(budgetAllocations)
+      .innerJoin(invoices, eq(invoices.budgetAllocationId, budgetAllocations.id))
+      .where(eq(invoices.id, invoice_id))
+      .limit(1);
 
-    if (result.rows.length === 0) {
+    if (rows.length === 0) {
       throw new Error('No se encontraron registros coincidentes');
     }
-    const budgetExecutedAmount = result.rows[0].budget_executed_amount;
-    const budgetAllocatedAmount = result.rows[0].budget_allocated_amount;
-    console.log(budgetExecutedAmount);
-    return budgetAllocatedAmount > amount + budgetExecutedAmount;
+    return Number(rows[0].allocated) > amount + Number(rows[0].executed);
   } catch (error) {
     console.error('Error checking project funds:', error);
     return false;
@@ -986,7 +819,6 @@ export async function checkProjectFundsByInoviceId(
 // }
 
 export async function sendBudgetEmail(
-  pool: Pool,
   year: string,
   areaId: string,
   program: string,
@@ -996,19 +828,17 @@ export async function sendBudgetEmail(
   amount: number,
   status: string,
 ) {
-  const queryMailData = `
-    SELECT a.name as area_name, c.name as customer_name
-    FROM areas a
-    JOIN customers c ON c.id = $2
-    WHERE a.id = $1
-  `;
-
-  const mailDataValues = [areaId, customerId];
-
   try {
-    const result = await pool.query(queryMailData, mailDataValues);
-    const areaName = result.rows[0].area_name;
-    const customerName = result.rows[0].customer_name;
+    const [{ areaName }] = await drizzleDb
+      .select({ areaName: areas.name })
+      .from(areas)
+      .where(eq(areas.id, areaId))
+      .limit(1);
+    const [{ customerName }] = await drizzleDb
+      .select({ customerName: customers.name })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
 
     const to = 'jmaragames@gmail.com';
     const body = `Nuevo Presupuesto Creado:\n\nAño: ${year}\nÁrea: ${areaName}\nPrograma: ${program}\nProyecto: ${project}\nCliente: ${customerName}\nConcepto: ${concept}\nMonto: ${amount}\nEstado: ${status}`;
@@ -1023,23 +853,17 @@ export async function sendBudgetEmail(
 }
 
 export async function sendInvoiceEmail(
-  pool: Pool,
   customerId: string,
   amountInCents: number,
   status: string,
   date: string,
 ) {
-  const queryMailData = `
-    SELECT name as customer_name
-    FROM customers
-    WHERE id = $1
-  `;
-
-  const mailDataValues = [customerId];
-
   try {
-    const result = await pool.query(queryMailData, mailDataValues);
-    const customerName = result.rows[0].customer_name;
+    const [{ customerName }] = await drizzleDb
+      .select({ customerName: customers.name })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1);
 
     const to = 'jmaragames@gmail.com';
     const body = `Nueva Factura Creada:\n\nCliente: ${customerName}\nMonto: ${amountInCents}\nEstado: ${status}\nFecha: ${date}`;
@@ -1053,242 +877,77 @@ export async function sendInvoiceEmail(
   }
 }
 
-export async function validateFunds(
-  pool: Pool,
-  areaId: String,
-  requiredAmount: number,
-  year: string,
-  quarter: number,
-): Promise<boolean> {
-  const queryText = `
-    SELECT executed_funds
-    FROM area_funds
-    WHERE area_id = $1 AND year = $2 AND quarter = $3 
-  `;
-  const values = [areaId, year, quarter];
-
-  try {
-    const result = await pool.query(queryText, values);
-    if (result.rows.length === 0) {
-      throw new Error(`Area encontrada id buscado: ${areaId}`);
-    }
-
-    const remaining_funds = result.rows[0].executed_funds;
-    return remaining_funds >= requiredAmount;
-  } catch (error) {
-    console.error('Error al validar fondos:', error);
-    throw new Error('Error error al validar fondos.');
-  }
-}
-
 async function updateAvailableAreaFounds(
-  pool: Pool,
   amount: number,
   budgetAllocationId: string,
   status: string,
 ) {
   try {
-    updateBudgetAllocation(pool, budgetAllocationId, amount, status);
-  } catch (error) {
-    console.error('Error updating area funds:', error);
-    throw new Error('Error updating area funds');
-  }
-}
-
-async function updateBudgetAllocation(
-  pool: Pool,
-  budgetAllocationId: string,
-  amount: number,
-  status: string,
-) {
-  const updateAllocationQuery = `
-    UPDATE budget_allocations
-    SET 
-      executed_amount = executed_amount + 
-        CASE 
-          WHEN $3 = 'aprobado' THEN CAST($1 AS NUMERIC) 
-          WHEN $3 = 'pagado' THEN 0 
-          ELSE -CAST($1 AS NUMERIC) 
-        END
-    WHERE id = $2
-  `;
-  const updateAllocationParams = [amount, budgetAllocationId, status];
-
-  try {
-    console.log('Budget allocation updated:', updateAllocationParams);
-    await pool.query(updateAllocationQuery, updateAllocationParams);
-    console.log('Budget allocation updated:', updateAllocationParams);
+    await drizzleDb
+      .update(budgetAllocations)
+      .set({
+        executedAmount: sql`${budgetAllocations.executedAmount} + CASE
+          WHEN ${status} = 'aprobado' THEN CAST(${amount} AS NUMERIC)
+          WHEN ${status} = 'pagado' THEN 0
+          ELSE -CAST(${amount} AS NUMERIC)
+        END`,
+      })
+      .where(eq(budgetAllocations.id, budgetAllocationId));
   } catch (error) {
     console.error('Error updating budget allocation:', error);
     throw new Error('Error updating budget allocation');
   }
 }
 
-export async function getInvoiceData(
-  pool: Pool,
-  invoiceId: string,
-): Promise<{
+export async function getInvoiceData(invoiceId: string): Promise<{
   status: string;
   amount: number;
-  year: number;
+  year: number | null;
   half: number;
-  areaId: string;
-  budgetAllocationId: string;
-  invoice_number: string;
-  issue_date: string;
-  company_id: number;
+  areaId: string | null;
+  budgetAllocationId: string | null;
+  invoice_number: string | null;
+  issue_date: string | null;
+  company_id: number | null;
 }> {
-  const getStatusQuery = `
-  SELECT 
-    i.status,
-    i.amount,
-    i.year,
-    i.area_id,
-    i.budget_allocation_id,
-    ba.half,
-    i.invoice_number, 
-    i.issue_date,
-    i.company_id
-  FROM 
-    invoices i
-  JOIN 
-    budget_allocations ba ON i.budget_allocation_id = ba.id
-  WHERE 
-  i.id = $1
-  `;
-  const getStatusParams = [invoiceId];
+  const rows = await drizzleDb
+    .select({
+      status: invoices.status,
+      amount: invoices.amount,
+      year: invoices.year,
+      areaId: invoices.areaId,
+      budgetAllocationId: invoices.budgetAllocationId,
+      half: budgetAllocations.half,
+      invoice_number: invoices.invoiceNumber,
+      issue_date: invoices.issueDate,
+      company_id: invoices.companyId,
+    })
+    .from(invoices)
+    .innerJoin(
+      budgetAllocations,
+      eq(invoices.budgetAllocationId, budgetAllocations.id),
+    )
+    .where(eq(invoices.id, invoiceId))
+    .limit(1);
 
-  try {
-    const statusResult = await pool.query(getStatusQuery, getStatusParams);
-    if (statusResult.rows.length === 0) {
-      throw new Error(`Invoice not found with id: ${invoiceId}`);
-    }
-
-    return {
-      status: statusResult.rows[0].status,
-      amount: statusResult.rows[0].amount,
-      year: statusResult.rows[0].year,
-      half: statusResult.rows[0].half,
-      areaId: statusResult.rows[0].areaId,
-      budgetAllocationId: statusResult.rows[0].budget_allocation_id,
-      invoice_number: statusResult.rows[0].invoice_number,
-      issue_date: statusResult.rows[0].issue_date,
-      company_id: statusResult.rows[0].company_id,
-    };
-  } catch (error) {
-    console.error('Error getting invoice status:', error);
-    throw new Error('Error getting invoice status');
+  if (rows.length === 0) {
+    throw new Error(`Invoice not found with id: ${invoiceId}`);
   }
-}
 
-async function logInvoiceAudit(
-  pool: Pool,
-  invoiceId: string,
-  customerId: string,
-  amount: number,
-  status: string,
-  action: string,
-  changedBy: string,
-) {
-  const auditQuery = `
-    INSERT INTO invoice_audit (invoice_id, customer_id, amount, status, action, changed_by)
-    VALUES ($1, $2, $3, $4, $5, $6)
-  `;
-  const auditParams = [
-    invoiceId,
-    customerId,
-    amount,
-    status,
-    action,
-    changedBy,
-  ];
-
-  try {
-    await pool.query(auditQuery, auditParams);
-    console.log('Invoice audit logged:', auditParams);
-  } catch (error) {
-    console.error('Error logging invoice audit:', error);
-    throw new Error('Error logging invoice audit');
-  }
-}
-
-async function logBudgetAudit(
-  pool: Pool,
-  budgetId: string,
-  year: number,
-  areaId: string,
-  program: string,
-  project: string,
-  customerId: string,
-  concept: string,
-  amount: number,
-  status: string,
-  action: string,
-  changedBy: string,
-) {
-  const auditQuery = `
-    INSERT INTO budget_audit (budget_id, year, area_id, program, project, customer_id, concept, amount, status, action, changed_by)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-  `;
-  const auditParams = [
-    budgetId,
-    year,
-    areaId,
-    program,
-    project,
-    customerId,
-    concept,
-    amount,
-    status,
-    action,
-    changedBy,
-  ];
-
-  try {
-    await pool.query(auditQuery, auditParams);
-    console.log('Budget audit logged:', auditParams);
-  } catch (error) {
-    console.error('Error logging budget audit:', error);
-    throw new Error('Error logging budget audit');
-  }
-}
-
-export async function getHalfByBudgetAllocationId(
-  pool: Pool,
-  budgetAllocationId: string,
-): Promise<number> {
-  const queryText = `
-    SELECT ba.half
-    FROM budget_allocations ba
-    WHERE ba.id = $1
-  `;
-  const queryParams = [budgetAllocationId];
-  try {
-    const result = await pool.query(queryText, queryParams);
-    if (result.rows.length === 0) {
-      throw new Error(
-        `No budget allocation found with id: ${budgetAllocationId}`,
-      );
-    }
-    return result.rows[0].half;
-  } catch (error) {
-    console.error('Error fetching half:', error);
-    throw new Error('Error al obtener el semestre');
-  }
+  return {
+    ...rows[0],
+    amount: Number(rows[0].amount),
+  };
 }
 
 export async function createProgram(name: string) {
   try {
-    const queryText = `
-      INSERT INTO programs (name)
-      VALUES ($1)
-      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
-      RETURNING id
-    `;
-    const params = [name];
-    const result = await pool.query(queryText, params);
-    const programId = result.rows[0].id as string;
-    return programId;
+    const [{ id }] = await drizzleDb
+      .insert(programs)
+      .values({ name })
+      .onConflictDoUpdate({ target: programs.name, set: { name } })
+      .returning({ id: programs.id });
+    return id;
   } catch (error) {
     console.error('Error creating program:', error);
     throw new Error('No se pudo crear u obtener el programa');
@@ -1402,57 +1061,37 @@ export async function updateBudgetProject(
     };
   }
 
-  const client = await pool.connect();
-
   try {
-    await client.query('BEGIN');
+    await drizzleDb.transaction(async (tx: Tx) => {
+      await tx
+        .update(budgets)
+        .set({ year, projectName, status })
+        .where(eq(budgets.id, id));
 
-    // Actualizar datos básicos del proyecto, incluyendo status
-    await client.query(
-      `
-        UPDATE budgets
-        SET year = $1,
-            project_name = $2,
-            status = $3
-        WHERE id = $4
-      `,
-      [year, projectName, status, id],
-    );
-
-    // Solo actualizar allocated_amount; executed_amount es calculado y no debe
-    // modificarse desde este formulario (el input está deshabilitado en el front).
-    await client.query(
-      `
-        UPDATE budget_allocations
-        SET allocated_amount = $1
-        WHERE project_id = $2
-      `,
-      [allocatedAmount, id],
-    );
-
-    await client.query('COMMIT');
+      // Solo actualizar allocated_amount; executed_amount es calculado y no debe
+      // modificarse desde este formulario.
+      await tx
+        .update(budgetAllocations)
+        .set({ allocatedAmount: String(allocatedAmount) })
+        .where(eq(budgetAllocations.projectId, id));
+    });
 
     return {
       success: true,
       message: 'Proyecto actualizado exitosamente.',
     };
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('Database Error updating budget:', error);
     return {
       success: false,
       message: 'No se pudo actualizar el proyecto.',
     };
-  } finally {
-    client.release();
   }
 }
 
 export async function deleteCustomer(id: string) {
   try {
-    const queryText = 'DELETE FROM customers WHERE id = $1';
-    const params = [id];
-    await pool.query(queryText, params);
+    await drizzleDb.delete(customers).where(eq(customers.id, id));
     revalidatePath('/dashboard/customers');
     return { success: true, message: 'Proveedor eliminado exitosamente.' };
   } catch (error) {

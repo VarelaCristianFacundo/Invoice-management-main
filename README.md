@@ -8,13 +8,12 @@ Sistema de gestión de **presupuestos, asignaciones y facturas** con exportació
 
 ## 🧱 Stack técnico
 
-- **Next.js 13.4.12 (App Router)** + **React 18.2.0**
+- **Next.js 15 (App Router)** + **React 18.2.0**
 - **TypeScript 5.1.6**
 - **Tailwind CSS 3**, `@tailwindcss/forms`, `clsx`
 - **NextAuth 4** (Credentials Provider)
-- **PostgreSQL** (`pg` / `@vercel/postgres`)
-- **Supabase JS** (para utilidades puntuales desde el cliente)
-- **Zod**, **bcrypt**, **xlsx**, **nodemailer**
+- **PostgreSQL** (`pg`) + **Drizzle ORM** + `drizzle-kit` (migraciones)
+- **Zod**, **bcrypt**, **exceljs**, **nodemailer**
 - Linting/format: **ESLint**, **Prettier**
 
 ## 📁 Estructura principal
@@ -50,7 +49,7 @@ Cree un archivo `.env` basado en [`.env.example`](.env.example). Claves utilizad
 
 ## ▶️ Puesta en marcha (dev)
 
-Requisitos: **Node 18.17+** y **pnpm** o **npm**.
+Requisitos: **Node 18.17+** y **npm**.
 
 ```bash
 # 1) Clonar el repo
@@ -59,23 +58,110 @@ cd <REPO_DIR>
 
 # 2) Variables de entorno
 cp .env.example .env
-# Completar los valores reales
+# Completar los valores reales (ver advertencia en sección "Base de datos")
 
 # 3) Dependencias
 npm install
 
-# 4) Base de datos (opcional según entorno)
-npm run seed   # usa scripts/seed.js (requiere POSTGRES_URL)
+# 4) Crear el schema en una DB local vacía (ver sección de migraciones)
+npm run db:migrate
+npm run db:seed   # opcional — carga datos mínimos para probar
 
 # 5) Levantar
 npm run dev
 ```
 
-## 🗂️ Base de datos
+## 🗂️ Base de datos y migraciones
 
-- Conexión centralizada en `app/lib/db.ts` (usa `POSTGRES_URL`).
-- Seed: `scripts/seed.js`.
-- Ejemplos de entidades: `users`, `customers`, `invoices`, `budgets`, `programs`, etc.
+El schema se gestiona con **Drizzle ORM**. Fuente de verdad: [`app/lib/drizzle/schema.ts`](app/lib/drizzle/schema.ts). Las migraciones SQL versionadas viven en [`drizzle/`](drizzle/) y se aplican con `drizzle-kit`.
+
+> # ⚠️ ATENCIÓN — VERIFICÁ `POSTGRES_URL` ANTES DE CADA COMANDO DB
+>
+> Los comandos `db:migrate`, `db:push` y `db:seed` aplican cambios contra **la DB que apunte tu `.env` actual**. Si `POSTGRES_URL` apunta a producción, **los cambios afectan producción**. No hay confirmación, no hay rollback automático.
+>
+> **Reglas mínimas:**
+> - Nunca dejes `POSTGRES_URL=` de prod en tu `.env` local.
+> - Antes de cualquier comando `db:*`, ejecutá `echo $env:POSTGRES_URL` (PowerShell) o `echo $POSTGRES_URL` (bash) y leé la URL.
+> - **Nunca uses `db:push` contra prod.** Es para prototipar en local; pisa el schema sin versionar.
+> - Hacé backup (`pg_dump`) ANTES de aplicar migraciones a prod. Ver OPERATIONS.md.
+
+### Comandos disponibles
+
+| Comando | Qué hace | Modifica DB? |
+|---|---|---|
+| `npm run db:pull` | Introspecciona la DB y regenera `schema.ts` (solo en resync inicial) | No |
+| `npm run db:generate` | Compara `schema.ts` con el snapshot y genera `drizzle/00xx_*.sql` con el diff | No |
+| `npm run db:migrate` | Aplica las migraciones pendientes a `POSTGRES_URL` | **Sí** |
+| `npm run db:push` | Sincroniza schema directo contra DB **sin versionar** (solo dev) | **Sí** |
+| `npm run db:studio` | Abre UI web de Drizzle para inspeccionar/editar datos | Lee/escribe |
+| `npm run db:seed` | Carga datos mínimos (companies, areas, admin, customers de prueba) | **Sí** |
+
+### Setup inicial (primera vez, DB local vacía)
+
+```bash
+# 1. Crear DB vacía (ej. en psql)
+#    CREATE DATABASE invoices_local;
+
+# 2. Apuntar POSTGRES_URL a esa DB en .env
+#    POSTGRES_URL=postgres://user:pass@localhost:5432/invoices_local
+
+# 3. Aplicar todas las migraciones existentes
+npm run db:migrate
+
+# 4. (Opcional) Cargar datos mínimos
+npm run db:seed
+# → admin@camarco.local / admin123
+
+# 5. Listo
+npm run dev
+```
+
+### Cuando cambia el schema
+
+Cualquier modificación a `app/lib/drizzle/schema.ts` (agregar columna, tabla, constraint, índice, etc.):
+
+```bash
+# 1. Generar el SQL de migración (offline, no toca la DB)
+npm run db:generate
+# → crea drizzle/00xx_<nombre>.sql con el ALTER/CREATE necesario
+
+# 2. REVISAR el SQL generado antes de aplicarlo
+#    Abrí el archivo nuevo en drizzle/ y leelo entero.
+#    Drizzle ocasionalmente puede inferir DROPs o renames no deseados.
+
+# 3. Aplicar a tu DB local
+npm run db:migrate
+
+# 4. Probar que todo sigue funcionando
+npm run dev
+
+# 5. Commit del cambio
+#    Subí TANTO schema.ts COMO el .sql generado y los archivos de drizzle/meta/
+git add app/lib/drizzle/ drizzle/
+git commit -m "db: <descripción del cambio>"
+```
+
+Drizzle mantiene una tabla `__drizzle_migrations` en la DB con las migraciones aplicadas. **Nunca borres ni edites una migración ya aplicada** — siempre generá una nueva que la complemente o la revierta.
+
+### Despliegue a producción
+
+1. PR mergeado a `main` con la migración nueva generada y revisada.
+2. **Backup de prod ANTES de migrar** (`pg_dump` — ver OPERATIONS.md).
+3. En el entorno de prod, con `POSTGRES_URL` apuntando a prod:
+   ```bash
+   npm run db:migrate
+   ```
+4. Verificar que la migración aplicó correctamente y que la app sigue OK.
+
+### `db:push` vs `db:migrate`
+
+| | `db:migrate` (recomendado) | `db:push` |
+|---|---|---|
+| Versionado | Sí, archivos `.sql` en repo | No |
+| Reproducible | Sí | No |
+| Audit-friendly | Sí (revisás el SQL antes) | No |
+| Apto para prod | **Sí** | **Nunca** |
+| Útil para | Workflow normal | Prototipar muy rápido en local |
 
 ### Backup/Restore rápido
 
