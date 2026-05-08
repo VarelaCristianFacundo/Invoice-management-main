@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import {
   AreaFund,
   AreaType,
@@ -712,15 +712,18 @@ export async function generateExcelReport(): Promise<NextResponse> {
     const result = await pool.query(queryText);
     const rows = result.rows;
 
-    // Crear un nuevo workbook y worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Report');
 
-    // Agregar la worksheet al workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    if (rows.length > 0) {
+      worksheet.columns = Object.keys(rows[0]).map((key) => ({
+        header: key,
+        key,
+      }));
+      worksheet.addRows(rows);
+    }
 
-    // Escribir el workbook a un buffer
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Crear una respuesta con el buffer
     const response = new NextResponse(buffer, {
