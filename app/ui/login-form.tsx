@@ -9,26 +9,37 @@ import { useState } from 'react';
 export default function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const email = e.currentTarget.email.value;
     const password = e.currentTarget.password.value;
 
-    const res = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-    });
+    setError('');
+    setIsSubmitting(true);
 
-    if (res?.error) {
-      console.error('Authentication failed:', res.error);
-      setError('Credenciales inválidas.');
-    } else {
-      // Redirigir al dashboard si la autenticación fue exitosa
-      router.push('/dashboard');
-      router.refresh();
+    try {
+      const res = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (res?.error) {
+        console.error('Authentication failed:', res.error);
+        setError('Credenciales inválidas.');
+        setIsSubmitting(false);
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch (err) {
+      console.error('Authentication error:', err);
+      setError('Ocurrió un error al iniciar sesión. Intentá nuevamente.');
+      setIsSubmitting(false);
     }
   };
 
@@ -44,7 +55,8 @@ export default function LoginForm() {
             autoComplete="email"
             placeholder="Ingresa tu correo"
             required
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+            disabled={isSubmitting}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 sm:text-sm"
           />
         </div>
       </div>
@@ -58,16 +70,19 @@ export default function LoginForm() {
             type="password"
             autoComplete="current-password"
             required
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+            disabled={isSubmitting}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 sm:text-sm"
           />
         </div>
       </div>
       <div>
         <button
           type="submit"
-          className="flex w-full justify-center rounded-md border border-transparent bg-gray-800 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+          disabled={isSubmitting}
+          aria-busy={isSubmitting}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-transparent bg-gray-800 py-2 px-4 text-sm font-medium text-white shadow-sm transition-opacity hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-gray-800"
         >
-          Iniciar Sesión
+          {isSubmitting ? 'Iniciando sesión…' : 'Iniciar Sesión'}
         </button>
       </div>
     </form>
