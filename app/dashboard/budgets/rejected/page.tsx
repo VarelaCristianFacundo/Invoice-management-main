@@ -8,14 +8,17 @@ export default async function RejectedBudgetsPage() {
     const budgets = await fetchRejectedBudgets();
 
     // Agrupamos los presupuestos por area_name
-    const groupedBudgets = budgets.reduce((acc, budget) => {
-        const area = budget.area_name || 'N/A';
-        if (!acc[area]) {
-            acc[area] = [];
-        }
-        acc[area].push(budget);
-        return acc;
-    }, {});
+    const groupedBudgets = budgets.reduce(
+        (acc: Record<string, any[]>, budget: any) => {
+            const area = budget.area_name || 'N/A';
+            if (!acc[area]) {
+                acc[area] = [];
+            }
+            acc[area].push(budget);
+            return acc;
+        },
+        {} as Record<string, any[]>,
+    );
 
     return (
         <div>

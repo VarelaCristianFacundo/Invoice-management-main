@@ -258,12 +258,13 @@ export async function fetchInvoiceById(id: string) {
 
   return {
     ...row,
+    amount: row.amount != null ? Number(row.amount) : 0,
     contable_item:
       row.contable_item_id && row.contable_item_nombre
         ? {
             id: row.contable_item_id,
             nombre: row.contable_item_nombre,
-            codigo: row.contable_item_codigo,
+            codigo: row.contable_item_codigo ?? undefined,
           }
         : null,
   };
@@ -492,9 +493,19 @@ export async function fetchBudgetById(id: string) {
   const row = rows[0];
 
   return {
-    ...row,
-    amount: row.executed_amount ?? 0,
+    id: row.id,
+    budget_id: row.budget_id,
+    year: row.year,
+    project_name: row.project_name,
     status: row.status ?? 'pending',
+    program: row.program ?? undefined,
+    allocated_amount:
+      row.allocated_amount != null ? Number(row.allocated_amount) : undefined,
+    executed_amount:
+      row.executed_amount != null ? Number(row.executed_amount) : undefined,
+    area_id: row.area_id ?? undefined,
+    area_name: row.area_name ?? undefined,
+    amount: row.executed_amount != null ? Number(row.executed_amount) : 0,
   };
 }
 

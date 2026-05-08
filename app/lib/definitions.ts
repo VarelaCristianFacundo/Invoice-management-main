@@ -116,19 +116,21 @@ export type CustomerField = {
 };
 
 export type InvoiceForm = {
-  contable_item: null;
-  file: string;
+  contable_item:
+    | { id: number; nombre: string; codigo?: string }
+    | null;
+  file: string | null;
   id: string;
   customer_id: string;
   amount: number;
-  status: 'pending' | 'paid';
-  observations: string;
-  invoice_number: string;
-  issue_date: string;
-  contable_item_id: string;
-  contable_item_nombre: string;
-  contable_item_codigo: string;
-  company_id: number;
+  status: 'pending' | 'paid' | string;
+  observations: string | null;
+  invoice_number: string | null;
+  issue_date: string | null;
+  contable_item_id: string | number | null;
+  contable_item_nombre?: string | null;
+  contable_item_codigo?: string | null;
+  company_id?: number;
 };
 
 export type CustomerForm = {
