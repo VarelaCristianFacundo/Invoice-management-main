@@ -2,6 +2,7 @@
 
 import { formatCurrency } from "@/app/lib/utils";
 import { DeleteBudget, UpdateBudget } from "@/app/ui/budgets/buttons";
+import BudgetStatus from "@/app/ui/budgets/status";
 import { useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
@@ -10,6 +11,7 @@ type Budget = {
   project_name: string;
   program: string;
   year: number;
+  status: string;
   total_allocated_amount: number;
   total_executed_amount: number;
   area_names: string;
@@ -18,9 +20,10 @@ type Budget = {
 type TableProps = {
   query: string;
   currentPage: number;
+  userAreaId?: string | null;
 };
 
-export default function BudgetsTable({ query, currentPage }: TableProps) {
+export default function BudgetsTable({ query, currentPage, userAreaId }: TableProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number | null>(1); // Default CAMARCO
@@ -30,8 +33,9 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
     try {
       setLoading(true);
 
+      const areaParam = userAreaId ? `&areaId=${encodeURIComponent(userAreaId)}` : '';
       const res = await fetch(
-        `/api/budgets?query=${encodeURIComponent(search)}&currentPage=1&companyId=${selectedCompany || ""}`
+        `/api/budgets?query=${encodeURIComponent(search)}&currentPage=1&companyId=${selectedCompany || ""}${areaParam}`
       );
 
       if (res.status === 404) {
@@ -55,7 +59,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedCompany]);
+  }, [search, selectedCompany, userAreaId]);
 
 
   useEffect(() => {
@@ -113,6 +117,7 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
                 <th className="px-4 py-2">Monto Asignado</th>
                 <th className="px-4 py-2">Monto Abonado</th>
                 <th className="px-4 py-2">Areas</th>
+                <th className="px-4 py-2">Estado</th>
                 <th className="px-4 py-2">Acciones</th>
               </tr>
             </thead>
@@ -125,6 +130,9 @@ export default function BudgetsTable({ query, currentPage }: TableProps) {
                   <td className="px-4 py-2">{formatCurrency(budget.total_allocated_amount)}</td>
                   <td className="px-4 py-2">{formatCurrency(budget.total_executed_amount)}</td>
                   <td className="px-4 py-2">{budget.area_names}</td>
+                  <td className="px-4 py-2">
+                    <BudgetStatus status={budget.status || 'pending'} />
+                  </td>
                   <td className="px-4 py-2 flex gap-2">
                     <>
                       <UpdateBudget id={budget.budget_id} />

@@ -53,7 +53,7 @@ async function fetchFilteredInvoices(
         b.project_name ILIKE $2 OR 
         a.name ILIKE $2
       )
-      ${areaId ? 'AND ba.area_id = $5' : ''}
+      ${areaId ? 'AND i.area_id = $5' : ''}
     ORDER BY i.date DESC
     LIMIT $3 OFFSET $4;
   `;

@@ -13,6 +13,23 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   }
 
   try {
+    // Verificar que la factura no esté pagada antes de eliminar
+    const check = await pool.query('SELECT status FROM invoices WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return NextResponse.json(
+        { message: 'Factura no encontrada' },
+        { status: 404 },
+      );
+    }
+
+    const status = check.rows[0].status;
+    if (status === 'pagado') {
+      return NextResponse.json(
+        { message: 'No se puede eliminar una factura que ya fue abonada.' },
+        { status: 403 },
+      );
+    }
+
     const queryText = 'DELETE FROM invoices WHERE id = $1';
     const result = await pool.query(queryText, [id]);
 

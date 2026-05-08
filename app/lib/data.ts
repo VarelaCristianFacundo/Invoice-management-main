@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import ExcelJS from 'exceljs';
+import { asc, desc, eq } from 'drizzle-orm';
 import {
   AreaFund,
   AreaType,
@@ -8,11 +9,12 @@ import {
   CustomerForm,
   CustomersTableType,
   Invoice,
-  LatestInvoiceRaw,
   Revenue,
   User,
 } from './definitions';
 import { formatCurrency } from './utils';
+import { drizzleDb } from './drizzle/db';
+import { areas, customers, invoices, revenue } from './drizzle/schema';
 
 // Configurar el pool de conexiones
 const pool = new Pool({
@@ -33,23 +35,27 @@ async function queryDatabase<T>(
   }
 }
 
-export async function fetchRevenue() {
-  const queryText = 'SELECT * FROM revenue';
-  return await queryDatabase<Revenue>(queryText);
+export async function fetchRevenue(): Promise<Revenue[]> {
+  return drizzleDb.select().from(revenue);
 }
 
 export async function fetchLatestInvoices() {
-  const queryText = `
-    SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    ORDER BY invoices.date DESC
-    LIMIT 5
-  `;
-  const invoices = await queryDatabase<LatestInvoiceRaw>(queryText);
-  return invoices.map((invoice) => ({
-    ...invoice,
-    amount: formatCurrency(invoice.amount),
+  const rows = await drizzleDb
+    .select({
+      id: invoices.id,
+      amount: invoices.amount,
+      name: customers.name,
+      image_url: customers.imageUrl,
+      email: customers.email,
+    })
+    .from(invoices)
+    .innerJoin(customers, eq(invoices.customerId, customers.id))
+    .orderBy(desc(invoices.date))
+    .limit(5);
+
+  return rows.map((row) => ({
+    ...row,
+    amount: formatCurrency(Number(row.amount)),
   }));
 }
 
@@ -57,6 +63,7 @@ export async function fetchCardData(filters?: {
   status?: string;
   year?: string;
   company?: string;
+  areaId?: string | null;
 }) {
   let whereClause = 'WHERE 1=1';
   const params: any[] = [];
@@ -72,6 +79,10 @@ export async function fetchCardData(filters?: {
   if (filters?.company && filters.company !== 'all') {
     params.push(filters.company);
     whereClause += ` AND company_id = $${params.length}`;
+  }
+  if (filters?.areaId) {
+    params.push(filters.areaId);
+    whereClause += ` AND area_id = $${params.length}`;
   }
 
   // 1) Contar cuántas facturas hay de cada estado
@@ -189,7 +200,7 @@ export async function fetchFilteredInvoices(
       OR i.status ILIKE $1
       OR b.project_name ILIKE $1
       OR a.name ILIKE $1)
-      ${areaId ? 'AND ba.area_id = $4' : ''}
+      ${areaId ? 'AND i.area_id = $4' : ''}
 
     ORDER BY i.date DESC
     LIMIT $2 OFFSET $3
@@ -264,7 +275,7 @@ export async function fetchInvoicesPages(query: string, areaId?: string | null) 
       i.status ILIKE $1 OR
       b.project_name ILIKE $1 OR
       a.name ILIKE $1)
-      ${areaId ? 'AND ba.area_id = $2' : ''}
+      ${areaId ? 'AND i.area_id = $2' : ''}
   `;
   const params: any[] = [`%${query}%`];
   if (areaId) {
@@ -324,13 +335,10 @@ export async function fetchCustomers() {
 }
 
 export async function fetchAreas(): Promise<AreaType[]> {
-  const query = 'SELECT id, name FROM areas ORDER BY name ASC';
-  const { rows } = await pool.query(query);
-
-  return rows.map((row: { id: number; name: string }) => ({
-    id: String(row.id), // conversion
-    name: row.name,
-  }));
+  return drizzleDb
+    .select({ id: areas.id, name: areas.name })
+    .from(areas)
+    .orderBy(asc(areas.name));
 }
 
 export async function fetchAreaFunds(): Promise<AreaFund[]> {
@@ -423,13 +431,26 @@ export async function fetchCustomerById(id: string) {
   return customers[0];
 }
 
-export async function fetchBudgetsPages(query: string): Promise<number> {
-  const queryText = `
-    SELECT COUNT(*)
-    FROM budgets
-    WHERE project_name ILIKE $1;
+export async function fetchBudgetsPages(query: string, areaId?: string | null): Promise<number> {
+  let queryText = `
+    SELECT COUNT(DISTINCT b.id)
+    FROM budgets b
   `;
-  const values = [`%${query}%`];
+  const values: any[] = [`%${query}%`];
+
+  if (areaId) {
+    queryText += ` JOIN budget_allocations ba ON b.id = ba.project_id`;
+    values.push(areaId);
+  }
+
+  queryText += `
+    WHERE b.project_name ILIKE $1
+  `;
+
+  if (areaId) {
+    queryText += ` AND ba.area_id = $2`;
+  }
+
   const result = await pool.query(queryText, values);
   const total = parseInt(result.rows[0].count, 10);
   return Math.ceil(total / 10); // 10 ítems por página
@@ -501,6 +522,7 @@ export async function fetchBudgetById(id: string) {
       b.id AS budget_id,
       b.year,
       b.project_name,
+      b.status,
       ba.program,
       ba.allocated_amount,
       ba.executed_amount,
@@ -680,7 +702,15 @@ export async function fetchBudgetsByCompany(
   }
 }
 
-export async function generateExcelReport(): Promise<NextResponse> {
+export async function generateExcelReport(areaId?: string | null): Promise<NextResponse> {
+  const params: any[] = [];
+  let whereClause = '';
+
+  if (areaId) {
+    params.push(areaId);
+    whereClause = `WHERE iv.area_id = $1`;
+  }
+
   const queryText = `
     SELECT 
       iv.id, 
@@ -705,11 +735,12 @@ export async function generateExcelReport(): Promise<NextResponse> {
     LEFT JOIN 
       budgets bu ON ba.project_id = bu.id
     LEFT JOIN 
-      areas ar ON iv.area_id = ar.id;
+      areas ar ON iv.area_id = ar.id
+    ${whereClause};
   `;
 
   try {
-    const result = await pool.query(queryText);
+    const result = await pool.query(queryText, params);
     const rows = result.rows;
 
     const workbook = new ExcelJS.Workbook();

@@ -7,7 +7,12 @@
     "prettier": "prettier --write --ignore-unknown .",
     "prettier:check": "prettier --check --ignore-unknown .",
     "seed": "node -r dotenv/config ./scripts/seed.js",
-    "start": "next start"
+    "start": "next start",
+    "db:pull": "drizzle-kit pull",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -17,6 +22,9 @@
     "autoprefixer": "10.4.15",
     "bcrypt": "^6.0.0",
     "clsx": "^2.0.0",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.8.3",
+    "exceljs": "^4.4.0",
     "formidable": "^3.5.2",
     "next": "^15.3.9",
     "next-auth": "^4.24.11",
@@ -33,7 +41,6 @@
     "typescript": "5.1.6",
     "use-debounce": "^10.0.0",
     "uuid": "^11.0.2",
-    "exceljs": "^4.4.0",
     "zod": "^3.22.2"
   },
   "devDependencies": {
@@ -45,6 +52,7 @@
     "@types/react-dom": "18.2.7",
     "@vercel/style-guide": "^5.0.1",
     "dotenv": "^16.3.1",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^8.52.0",
     "eslint-config-next": "^15.3.9",
     "eslint-config-prettier": "9.0.0",

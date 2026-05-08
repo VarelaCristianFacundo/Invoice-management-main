@@ -8,6 +8,7 @@ export async function fetchStatusSummaryData(
   status?: string,
   year?: string,
   companyId?: string,
+  areaId?: string | null,
 ) {
   try {
     const company =
@@ -27,6 +28,10 @@ export async function fetchStatusSummaryData(
     if (year && year !== 'all') {
       params.push(parseInt(year));
       whereClause += ` AND year = $${params.length}`;
+    }
+    if (areaId) {
+      params.push(areaId);
+      whereClause += ` AND area_id = $${params.length}`;
     }
 
     // Una sola query que devuelve todo lo necesario
