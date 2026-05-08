@@ -5,19 +5,7 @@
 
 ---
 
-## 🔴 1. Credenciales SMTP hardcodeadas en código fuente
-
-**Ubicación**: `app/lib/SendMail.ts` (líneas 9-10)
-
-**Descripción**: El password de Gmail para envío de emails está en texto plano directamente en el código fuente. Esto expone las credenciales en el repositorio Git.
-
-**Impacto**: Seguridad crítica. Cualquier persona con acceso al repositorio puede ver y usar las credenciales.
-
-**Corrección sugerida**: Mover `user` y `pass` a variables de entorno (`SMTP_USER`, `SMTP_PASS`) y consumirlas via `process.env`.
-
----
-
-## 🔴 2. PDFs almacenados como base64 en PostgreSQL
+## 🔴 1. PDFs almacenados como base64 en PostgreSQL
 
 **Ubicación**: `app/lib/actions.ts` (createInvoice, updateInvoice) y `app/lib/data.ts` (queries de invoices)
 
@@ -29,7 +17,7 @@
 
 ---
 
-## 🔴 3. API Routes sin protección de autenticación
+## 🔴 2. API Routes sin protección de autenticación
 
 **Ubicación**: `middleware.ts` (líneas 77-79) — el matcher solo cubre `/dashboard/:path*`
 
@@ -41,7 +29,7 @@
 
 ---
 
-## 🔴 4. Pool de conexiones instanciado múltiples veces
+## 🔴 3. Pool de conexiones instanciado múltiples veces
 
 **Ubicación**: `new Pool()` aparece en:
 - `app/lib/actions.ts` (línea 124)
@@ -61,7 +49,7 @@
 
 ---
 
-## 🔴 5. `areaId` enviado por el cliente sin validación server-side
+## 🔴 4. `areaId` enviado por el cliente sin validación server-side
 
 **Ubicación**: `app/api/invoices/route.ts` (línea 95) — `searchParams.get('areaId')`
 

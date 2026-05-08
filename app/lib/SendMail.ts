@@ -1,26 +1,23 @@
 import nodemailer from 'nodemailer';
 
 export async function sendEmail(to: string, body: string, subject: string, cc: string) {
-  // Create a transporter object using SMTP transport
   let transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
     auth: {
-      user: 'jmaragames@gmail.com', // Your email
-      pass: 'btjw ieqt bfgf vofo', // Your email password
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
   });
 
-  // Setup email data
   let mailOptions = {
-    from: 'jmaragames@gmail.com', // Sender address
-    to: to, // List of recipients
-    cc: cc, // CC recipients
-    subject: subject, // Subject line
-    text: body, // Plain text body
+    from: process.env.EMAIL_FROM,
+    to: to,
+    cc: cc,
+    subject: subject,
+    text: body,
   };
 
-  // Send mail with defined transport object
   try {
     let info = await transporter.sendMail(mailOptions);
     console.log('Message sent: %s', info.messageId);
