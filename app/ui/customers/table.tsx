@@ -2,9 +2,9 @@ import { fetchFilteredCustomers } from '@/app/lib/data';
 import { roboto } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
-import Image from 'next/image';
 import Link from 'next/link';
 import { CreateCustomer, DeleteCustomer, UpdateCustomer } from './buttons';
+import CustomerAvatar from './customer-avatar';
 
 export default async function CustomersTable({
   query,
@@ -40,20 +40,12 @@ export default async function CustomersTable({
                       <div>
                         <div className="mb-2 flex items-center">
                           <div className="flex items-center gap-3">
-                            {customer.image_url && customer.image_url.trim() ? (
-                              <Image
-                                src={customer.image_url}
-                                className="rounded-full"
-                                alt={`${customer.name}'s profile picture`}
-                                width={28}
-                                height={28}
-                                priority
-                              />
-                            ) : (
-                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">
-                                {customer.name?.[0]?.toUpperCase() ?? "?"}
-                              </div>
-                            )}
+                            <CustomerAvatar
+                              name={customer.name}
+                              imageUrl={customer.image_url}
+                              size={28}
+                              priority
+                            />
                             <p>{customer.name}</p>
                           </div>
                         </div>
@@ -116,19 +108,11 @@ export default async function CustomersTable({
                     <tr key={customer.id} className="group">
                       <td className="whitespace-nowrap bg-white py-5 pl-4 pr-3 text-sm text-black group-first-of-type:rounded-md group-last-of-type:rounded-md sm:pl-6">
                         <div className="flex items-center gap-3">
-                          {customer.image_url && customer.image_url.trim() ? (
-                            <Image
-                              src={customer.image_url}
-                              className="rounded-full"
-                              alt={`${customer.name}'s profile picture`}
-                              width={28}
-                              height={28}
-                            />
-                          ) : (
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">
-                              {customer.name?.[0]?.toUpperCase() ?? "?"}
-                            </div>
-                          )}
+                          <CustomerAvatar
+                            name={customer.name}
+                            imageUrl={customer.image_url}
+                            size={28}
+                          />
                           <p>{customer.name}</p>
                         </div>
                       </td>
