@@ -5,6 +5,8 @@ const nextConfig = {
   experimental: {
     serverActions: true,
   },
+  // Evita que Next.js intente conectar a la DB durante el build estático
+  staticPageGenerationTimeout: 60,
 };
 
 module.exports = nextConfig;
