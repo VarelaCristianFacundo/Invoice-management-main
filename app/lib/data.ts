@@ -495,6 +495,11 @@ export async function fetchBudgetById(id: string) {
     ...row,
     amount: row.executed_amount ?? 0,
     status: row.status ?? 'pending',
+    program: row.program ?? undefined,
+    allocated_amount: row.allocated_amount ?? undefined,
+    executed_amount: row.executed_amount ?? undefined,
+    area_id: row.area_id ?? undefined,
+    area_name: row.area_name ?? undefined,
   };
 }
 
