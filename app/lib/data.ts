@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import ExcelJS from 'exceljs';
-import { asc, desc, eq } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  ilike,
+  or,
+  sql,
+  sum,
+} from 'drizzle-orm';
 import {
   AreaFund,
   AreaType,
@@ -14,26 +25,20 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 import { drizzleDb } from './drizzle/db';
-import { areas, customers, invoices, revenue } from './drizzle/schema';
-
-// Configurar el pool de conexiones
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
-
-// Función para ejecutar consultas y manejar errores
-async function queryDatabase<T>(
-  queryText: string,
-  params?: any[],
-): Promise<T[]> {
-  try {
-    const { rows } = await pool.query(queryText, params);
-    return rows;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('No se pudo ejecutar la consulta a la base de datos.');
-  }
-}
+import {
+  areaFunds,
+  areas,
+  budgetAllocations,
+  budgets,
+  company,
+  contableItems,
+  customers,
+  invoices,
+  programs,
+  revenue,
+  users,
+  year,
+} from './drizzle/schema';
 
 export async function fetchRevenue(): Promise<Revenue[]> {
   return drizzleDb.select().from(revenue);
@@ -65,81 +70,50 @@ export async function fetchCardData(filters?: {
   company?: string;
   areaId?: string | null;
 }) {
-  let whereClause = 'WHERE 1=1';
-  const params: any[] = [];
-
+  const conditions = [];
   if (filters?.status && filters.status !== 'all') {
-    params.push(filters.status);
-    whereClause += ` AND status = $${params.length}`;
+    conditions.push(eq(invoices.status, filters.status));
   }
   if (filters?.year && filters.year !== 'all') {
-    params.push(filters.year);
-    whereClause += ` AND year = $${params.length}`;
+    conditions.push(eq(invoices.year, parseInt(filters.year)));
   }
   if (filters?.company && filters.company !== 'all') {
-    params.push(filters.company);
-    whereClause += ` AND company_id = $${params.length}`;
+    conditions.push(eq(invoices.companyId, parseInt(filters.company)));
   }
   if (filters?.areaId) {
-    params.push(filters.areaId);
-    whereClause += ` AND area_id = $${params.length}`;
+    conditions.push(eq(invoices.areaId, filters.areaId));
   }
+  const where = conditions.length ? and(...conditions) : undefined;
 
-  // 1) Contar cuántas facturas hay de cada estado
-  const countResult = await pool.query(`
-    SELECT
-      COUNT(*) FILTER (WHERE status = 'pagado')     AS countPaid,
-      COUNT(*) FILTER (WHERE status = 'aprobado')   AS countApproved,
-      COUNT(*) FILTER (WHERE status = 'presentado') AS countPending,
-      COUNT(*)                                     AS totalInvoices
-    FROM invoices
-    ${whereClause}
-  `, params);
+  const [stats] = await drizzleDb
+    .select({
+      countPaid: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'pagado')`,
+      countApproved: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'aprobado')`,
+      countPending: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'presentado')`,
+      totalInvoices: sql<string>`COUNT(*)`,
+      sumPaid: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'pagado' THEN ${invoices.amount} END), 0)`,
+      sumApproved: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'aprobado' THEN ${invoices.amount} END), 0)`,
+      sumPending: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'presentado' THEN ${invoices.amount} END), 0)`,
+    })
+    .from(invoices)
+    .where(where);
 
-  // 2) Sumar montos de cada estado
-  const sumResult = await pool.query(`
-    SELECT
-      COALESCE(SUM(CASE WHEN status = 'pagado'     THEN amount END), 0)       AS sumPaid,
-      COALESCE(SUM(CASE WHEN status = 'aprobado'   THEN amount END), 0)       AS sumApproved,
-      COALESCE(SUM(CASE WHEN status = 'presentado' THEN amount END), 0)       AS sumPending,
-      COALESCE(SUM(amount), 0)                                               AS sumAll
-    FROM invoices
-    ${whereClause}
-  `, params);
-
-  // 3) Contar clientes (estos no suelen filtrarse por los mismos criterios de facturas en cards)
-  const custRows = await pool.query(`SELECT COUNT(*)::int AS count FROM customers`);
-
-  const {
-    countpaid: countPaid,
-    countapproved: countApproved,
-    countpending: countPending,
-    totalinvoices: numberOfInvoices,
-  } = countResult.rows[0] as Record<string, number>;
-
-  const {
-    sumpaid: sumPaid,
-    sumapproved: sumApproved,
-    sumpending: sumPending,
-  } = sumResult.rows[0] as Record<string, number>;
-
-  const numberOfCustomers = custRows.rows[0].count;
+  const [{ count: numberOfCustomers }] = await drizzleDb
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(customers);
 
   return {
     numberOfCustomers,
-    numberOfInvoices,
+    numberOfInvoices: Number(stats.totalInvoices),
 
-    // Para “Abonado”
-    countPaid: countPaid ?? 0,
-    sumPaid: formatCurrency(sumPaid ?? 0),
+    countPaid: Number(stats.countPaid),
+    sumPaid: formatCurrency(Number(stats.sumPaid)),
 
-    // Para “Aprobado”
-    countApproved: countApproved ?? 0,
-    sumApproved: formatCurrency(sumApproved ?? 0),
+    countApproved: Number(stats.countApproved),
+    sumApproved: formatCurrency(Number(stats.sumApproved)),
 
-    // Para “Pendiente”
-    countPending: countPending ?? 0,
-    sumPending: formatCurrency(sumPending ?? 0),
+    countPending: Number(stats.countPending),
+    sumPending: formatCurrency(Number(stats.sumPending)),
   };
 }
 
@@ -149,164 +123,138 @@ export async function fetchFilteredInvoices(
   currentPage: number,
   areaId?: string | null,
 ): Promise<Invoice[]> {
-  // Aseguramos el tipo de retorno
-  const ITEMS_PER_PAGE = 10;
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const PAGE_SIZE = 10;
+  const offset = (currentPage - 1) * PAGE_SIZE;
+  const term = `%${query}%`;
 
-  const sql = `
-    SELECT 
-      i.id AS invoice_id,
-      i.customer_id,
-      i.amount,
-      i.status,
-      i.date,
-      i.budget_allocation_id,
-      i.file,
-
-      -- JOINEAMOS customers
-      c.name        AS customer_name,
-      c.email       AS customer_email,
-      c.image_url   AS image_url,
-
-      -- JOINEAMOS budget_allocations
-      ba.project_id AS project_id,
-      ba.area_id    AS allocation_area_id,
-      ba.year       AS allocation_year,
-      ba.allocated_amount,
-      ba.executed_amount,
-      ba.program    AS program, -- Renombramos para mayor claridad
-      ba.half       AS allocation_half,
-
-      -- JOINEAMOS areas
-      a.name AS area_name,
-
-      -- JOINEAMOS budgets (para sacar nombre del proyecto)
-      b.project_name
-        
-    FROM invoices i
-    LEFT JOIN customers c
-      ON i.customer_id = c.id
-    LEFT JOIN budget_allocations ba
-      ON i.budget_allocation_id = ba.id
-    LEFT JOIN areas a
-      ON ba.area_id = a.id
-    LEFT JOIN budgets b
-      ON ba.project_id = b.id
-
-    -- Filtrado simple (ajusta a tus campos)
-    WHERE 
-      (c.name ILIKE $1
-      OR i.amount::text ILIKE $1
-      OR i.status ILIKE $1
-      OR b.project_name ILIKE $1
-      OR a.name ILIKE $1)
-      ${areaId ? 'AND i.area_id = $4' : ''}
-
-    ORDER BY i.date DESC
-    LIMIT $2 OFFSET $3
-  `;
-
-  const params: any[] = [`%${query}%`, ITEMS_PER_PAGE, offset];
+  const conditions = [
+    or(
+      ilike(customers.name, term),
+      sql`${invoices.amount}::text ILIKE ${term}`,
+      ilike(invoices.status, term),
+      ilike(budgets.projectName, term),
+      ilike(areas.name, term),
+    ),
+  ];
   if (areaId) {
-    params.push(areaId);
+    conditions.push(eq(invoices.areaId, areaId));
   }
-  
-  const { rows } = await pool.query(sql, params);
 
-  // Devuelve el array de facturas con la data "unida"
+  const rows = await drizzleDb
+    .select({
+      id: invoices.id,
+      customer_id: invoices.customerId,
+      amount: invoices.amount,
+      status: invoices.status,
+      date: invoices.date,
+      budget_allocation_id: invoices.budgetAllocationId,
+      file: invoices.file,
+      customer_name: customers.name,
+      customer_email: customers.email,
+      image_url: customers.imageUrl,
+      allocation_year: budgetAllocations.year,
+      program: budgetAllocations.program,
+      area_name: areas.name,
+      project_name: budgets.projectName,
+    })
+    .from(invoices)
+    .leftJoin(customers, eq(invoices.customerId, customers.id))
+    .leftJoin(
+      budgetAllocations,
+      eq(invoices.budgetAllocationId, budgetAllocations.id),
+    )
+    .leftJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .leftJoin(budgets, eq(budgetAllocations.projectId, budgets.id))
+    .where(and(...conditions))
+    .orderBy(desc(invoices.date))
+    .limit(PAGE_SIZE)
+    .offset(offset);
+
   return rows.map((r) => ({
-    id: r.invoice_id, // alias invoice_id
+    id: r.id,
     customer_id: r.customer_id,
     name: r.customer_name,
     email: r.customer_email,
     image_url: r.image_url || '/default-user.png',
-
     amount: Number(r.amount) || 0,
     status: r.status,
     date: r.date,
-
     budget_allocation_id: r.budget_allocation_id,
-    project_name: r.project_name, // de budgets
-    area_name: r.area_name, // de areas
-    year: r.allocation_year, // de budget_allocations
-
-    file: r.file, // Añadido para incluir el archivo
-    program: r.program, // Añadido para incluir el programa
-    observations: r.observations, // Añadido para incluir las observaciones
-  }));
+    project_name: r.project_name,
+    area_name: r.area_name,
+    year: r.allocation_year,
+    file: r.file,
+    program: r.program,
+    observations: undefined,
+  })) as unknown as Invoice[];
 }
 
 export async function getFileBase64ByInvoiceId(
-  pool: Pool,
+  _pool: Pool,
   invoiceId: string,
 ): Promise<string> {
-  const queryText = `
-    SELECT file
-    FROM invoices
-    WHERE id = $1
-  `;
-  const queryParams = [invoiceId];
-
-  try {
-    const result = await pool.query(queryText, queryParams);
-    if (result.rows.length === 0) {
-      throw new Error(`No invoice found with id: ${invoiceId}`);
-    }
-    return result.rows[0].file;
-  } catch (error) {
-    console.error('Error fetching file:', error);
-    throw new Error('Error al obtener el archivo');
+  const rows = await drizzleDb
+    .select({ file: invoices.file })
+    .from(invoices)
+    .where(eq(invoices.id, invoiceId))
+    .limit(1);
+  if (rows.length === 0) {
+    throw new Error(`No invoice found with id: ${invoiceId}`);
   }
+  return rows[0].file ?? '';
 }
 
 export async function fetchInvoicesPages(query: string, areaId?: string | null) {
-  const queryText = `
-    SELECT COUNT(*)
-    FROM invoices i
-    JOIN customers c ON i.customer_id = c.id
-    LEFT JOIN budget_allocations ba ON i.budget_allocation_id = ba.id
-    LEFT JOIN areas a ON ba.area_id = a.id
-    LEFT JOIN budgets b ON ba.project_id = b.id
-    WHERE
-      (c.name ILIKE $1 OR
-      c.email ILIKE $1 OR
-      i.amount::text ILIKE $1 OR
-      i.date::text ILIKE $1 OR
-      i.status ILIKE $1 OR
-      b.project_name ILIKE $1 OR
-      a.name ILIKE $1)
-      ${areaId ? 'AND i.area_id = $2' : ''}
-  `;
-  const params: any[] = [`%${query}%`];
+  const term = `%${query}%`;
+  const conditions = [
+    or(
+      ilike(customers.name, term),
+      ilike(customers.email, term),
+      sql`${invoices.amount}::text ILIKE ${term}`,
+      sql`${invoices.date}::text ILIKE ${term}`,
+      ilike(invoices.status, term),
+      ilike(budgets.projectName, term),
+      ilike(areas.name, term),
+    ),
+  ];
   if (areaId) {
-    params.push(areaId);
+    conditions.push(eq(invoices.areaId, areaId));
   }
-  const countResult = await queryDatabase<{ count: string }>(queryText, params);
-  const totalPages = Math.ceil(Number(countResult[0].count) / ITEMS_PER_PAGE);
-  return totalPages;
+
+  const [{ total }] = await drizzleDb
+    .select({ total: count() })
+    .from(invoices)
+    .innerJoin(customers, eq(invoices.customerId, customers.id))
+    .leftJoin(
+      budgetAllocations,
+      eq(invoices.budgetAllocationId, budgetAllocations.id),
+    )
+    .leftJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .leftJoin(budgets, eq(budgetAllocations.projectId, budgets.id))
+    .where(and(...conditions));
+
+  return Math.ceil(Number(total) / ITEMS_PER_PAGE);
 }
 
 export async function fetchInvoiceById(id: string) {
-  const queryText = `
-    SELECT
-      invoices.id,
-      invoices.customer_id,
-      invoices.amount,
-      invoices.status,
-      invoices.invoice_number,
-      invoices.issue_date,
-      invoices.contable_item_id,
-      ci.nombre AS contable_item_nombre,
-      ci.codigo AS contable_item_codigo,
-      invoices.observations,
-      invoices.file
-    FROM invoices
-    LEFT JOIN contable_items ci ON invoices.contable_item_id = ci.id
-    WHERE invoices.id = $1
-  `;
-  const params = [id];
-  const invoices = await queryDatabase<any>(queryText, params);
-  const row = invoices[0];
+  const rows = await drizzleDb
+    .select({
+      id: invoices.id,
+      customer_id: invoices.customerId,
+      amount: invoices.amount,
+      status: invoices.status,
+      invoice_number: invoices.invoiceNumber,
+      issue_date: invoices.issueDate,
+      contable_item_id: invoices.contableItemId,
+      contable_item_nombre: contableItems.nombre,
+      contable_item_codigo: contableItems.codigo,
+      observations: invoices.observations,
+      file: invoices.file,
+    })
+    .from(invoices)
+    .leftJoin(contableItems, eq(invoices.contableItemId, contableItems.id))
+    .where(eq(invoices.id, id));
+  const row = rows[0];
 
   return {
     ...row,
@@ -321,17 +269,17 @@ export async function fetchInvoiceById(id: string) {
   };
 }
 
-export async function fetchCustomers() {
-  const queryText = `
-    SELECT
-      id,
-      name,
-      cuit_cuil,
-      company_id
-    FROM customers
-    ORDER BY name ASC
-  `;
-  return await queryDatabase<CustomerField>(queryText);
+export async function fetchCustomers(): Promise<CustomerField[]> {
+  const rows = await drizzleDb
+    .select({
+      id: customers.id,
+      name: customers.name,
+      cuit_cuil: customers.cuitCuil,
+      company_id: customers.companyId,
+    })
+    .from(customers)
+    .orderBy(asc(customers.name));
+  return rows as CustomerField[];
 }
 
 export async function fetchAreas(): Promise<AreaType[]> {
@@ -342,26 +290,35 @@ export async function fetchAreas(): Promise<AreaType[]> {
 }
 
 export async function fetchAreaFunds(): Promise<AreaFund[]> {
-  const queryText = `
-    SELECT af.*, a.name as area_name
-    FROM area_funds af
-    JOIN areas a ON af.area_id = a.id
-    ORDER BY a.name ASC
-  `;
-  const result = await pool.query(queryText);
-  return result.rows;
+  const rows = await drizzleDb
+    .select({
+      id: areaFunds.id,
+      area_id: areaFunds.areaId,
+      allocated_funds: areaFunds.allocatedFunds,
+      year: areaFunds.year,
+      half: areaFunds.half,
+      area_name: areas.name,
+    })
+    .from(areaFunds)
+    .innerJoin(areas, eq(areaFunds.areaId, areas.id))
+    .orderBy(asc(areas.name));
+  return rows as unknown as AreaFund[];
 }
 
 export async function updateAreaFund(
   area_id: number,
   amount: number,
 ): Promise<void> {
-  const queryText = `
-    INSERT INTO area_funds (area_id, allocated_funds)
-    VALUES ($1, $2)
-    ON CONFLICT (area_id) DO UPDATE SET allocated_funds = $2
-  `;
-  await pool.query(queryText, [area_id, amount]);
+  await drizzleDb
+    .insert(areaFunds)
+    .values({
+      areaId: String(area_id),
+      allocatedFunds: String(amount),
+    } as any)
+    .onConflictDoUpdate({
+      target: areaFunds.areaId,
+      set: { allocatedFunds: String(amount) },
+    });
 }
 
 export async function fetchFilteredCustomers(
@@ -369,256 +326,224 @@ export async function fetchFilteredCustomers(
   currentPage: number,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const queryText = `
-  SELECT *
-  FROM (
-      SELECT
-          customers.id,
-          customers.name,
-          customers.email,
-          customers.image_url,
-          customers.phone,
-          customers.iva_condition,
-          COUNT(invoices.id) AS total_invoices,
-          SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-          SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-      FROM customers
-      LEFT JOIN invoices ON customers.id = invoices.customer_id
-      GROUP BY customers.id, customers.name, customers.email, customers.image_url, customers.phone, customers.iva_condition
-    ) AS subquery  
-    WHERE 
-        name ILIKE $1 OR
-        email ILIKE $1 OR
-        total_invoices::text ILIKE $1
-    ORDER BY name ASC
-    LIMIT $2 OFFSET $3
-  `;
-  const params = [`%${query}%`, ITEMS_PER_PAGE, offset];
-  return await queryDatabase<CustomersTableType>(queryText, params);
-}
+  const term = `%${query}%`;
 
-export async function fetchCustomersPages(query: string) {
-  const queryText = `
-    SELECT COUNT(*)
-    FROM customers
-    WHERE
-      name ILIKE $1 OR
-      email ILIKE $1
-  `;
-  const params = [`%${query}%`];
-  const countResult = await queryDatabase<{ count: string }>(queryText, params);
-  const totalPages = Math.ceil(Number(countResult[0].count) / ITEMS_PER_PAGE);
-  return totalPages;
-}
-
-export async function fetchCustomerById(id: string) {
-  const queryText = `
-    SELECT
+  const sq = drizzleDb
+    .select({
+      id: customers.id,
+      name: customers.name,
+      email: customers.email,
+      image_url: customers.imageUrl,
+      phone: customers.phone,
+      iva_condition: customers.ivaCondition,
+      total_invoices: count(invoices.id).as('total_invoices'),
+      total_pending: sql<string>`SUM(CASE WHEN ${invoices.status} = 'pending' THEN ${invoices.amount} ELSE 0 END)`.as('total_pending'),
+      total_paid: sql<string>`SUM(CASE WHEN ${invoices.status} = 'paid' THEN ${invoices.amount} ELSE 0 END)`.as('total_paid'),
+    })
+    .from(customers)
+    .leftJoin(invoices, eq(customers.id, invoices.customerId))
+    .groupBy(
       customers.id,
       customers.name,
       customers.email,
-      customers.image_url,
-      customers.cuit_cuil, 
-      customers.cbu_cvu,
+      customers.imageUrl,
       customers.phone,
-      customers.iva_condition,
-      customers.company_id
-    FROM customers
-    WHERE customers.id = $1
-  `;
-  const params = [id];
-  const customers = await queryDatabase<CustomerForm>(queryText, params);
-  return customers[0];
+      customers.ivaCondition,
+    )
+    .as('subquery');
+
+  const rows = await drizzleDb
+    .select()
+    .from(sq)
+    .where(
+      or(
+        ilike(sq.name, term),
+        ilike(sq.email, term),
+        sql`${sq.total_invoices}::text ILIKE ${term}`,
+      ),
+    )
+    .orderBy(asc(sq.name))
+    .limit(ITEMS_PER_PAGE)
+    .offset(offset);
+
+  return rows as unknown as CustomersTableType[];
+}
+
+export async function fetchCustomersPages(query: string) {
+  const term = `%${query}%`;
+  const [{ total }] = await drizzleDb
+    .select({ total: count() })
+    .from(customers)
+    .where(or(ilike(customers.name, term), ilike(customers.email, term)));
+  return Math.ceil(Number(total) / ITEMS_PER_PAGE);
+}
+
+export async function fetchCustomerById(id: string) {
+  const rows = await drizzleDb
+    .select({
+      id: customers.id,
+      name: customers.name,
+      email: customers.email,
+      image_url: customers.imageUrl,
+      cuit_cuil: customers.cuitCuil,
+      cbu_cvu: customers.cbuCvu,
+      phone: customers.phone,
+      iva_condition: customers.ivaCondition,
+      company_id: customers.companyId,
+    })
+    .from(customers)
+    .where(eq(customers.id, id))
+    .limit(1);
+  return rows[0] as unknown as CustomerForm;
 }
 
 export async function fetchBudgetsPages(query: string, areaId?: string | null): Promise<number> {
-  let queryText = `
-    SELECT COUNT(DISTINCT b.id)
-    FROM budgets b
-  `;
-  const values: any[] = [`%${query}%`];
+  let qb = drizzleDb
+    .select({ total: countDistinct(budgets.id) })
+    .from(budgets)
+    .$dynamic();
+
+  const conditions = [ilike(budgets.projectName, `%${query}%`)];
 
   if (areaId) {
-    queryText += ` JOIN budget_allocations ba ON b.id = ba.project_id`;
-    values.push(areaId);
+    qb = qb.innerJoin(
+      budgetAllocations,
+      eq(budgets.id, budgetAllocations.projectId),
+    );
+    conditions.push(eq(budgetAllocations.areaId, areaId));
   }
 
-  queryText += `
-    WHERE b.project_name ILIKE $1
-  `;
-
-  if (areaId) {
-    queryText += ` AND ba.area_id = $2`;
-  }
-
-  const result = await pool.query(queryText, values);
-  const total = parseInt(result.rows[0].count, 10);
-  return Math.ceil(total / 10); // 10 ítems por página
+  const [{ total }] = await qb.where(and(...conditions));
+  return Math.ceil(Number(total) / 10);
 }
 
 export async function fetchAreasWithFunds() {
-  const queryText = `
-    SELECT
-      areas.id,
-      areas.name,
-      area_funds.allocated_funds
-    FROM areas
-    LEFT JOIN area_funds ON areas.id = area_funds.area_id
-    ORDER BY areas.name ASC
-  `;
-  const result = await pool.query(queryText);
-  return result.rows;
+  return drizzleDb
+    .select({
+      id: areas.id,
+      name: areas.name,
+      allocated_funds: areaFunds.allocatedFunds,
+    })
+    .from(areas)
+    .leftJoin(areaFunds, eq(areas.id, areaFunds.areaId))
+    .orderBy(asc(areas.name));
 }
 export async function fetchFilteredBudgets(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * 10; // 10 items por página
-  const queryText = `
-    SELECT 
-      budgets.id, 
-      budgets.project_name, 
-      budgets.year,
-      budget_allocations.program,
-      SUM(budget_allocations.allocated_amount) AS total_allocated_amount,
-      SUM(budget_allocations.executed_amount) AS total_executed_amount,
-      STRING_AGG(areas.name, ', ') AS area_names
-    FROM budgets
-    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
-    LEFT JOIN areas ON budget_allocations.area_id = areas.id
-    WHERE 
-      budgets.project_name ILIKE $1 OR 
-      budgets.year::text ILIKE $1
-    GROUP BY budgets.id, budget_allocations.program
-    ORDER BY budgets.year DESC
-    LIMIT 10 OFFSET $2;
-  `;
-  const values = [`%${query}%`, offset];
+  const offset = (currentPage - 1) * 10;
+  const term = `%${query}%`;
 
-  console.log('SQL Query:', queryText);
-  console.log('Query Values:', values);
-
-  try {
-    const result = await pool.query(queryText, values);
-    console.log('Query Result:', result.rows);
-    return result.rows;
-  } catch (error) {
-    console.error('Error executing SQL query:', error);
-    throw new Error('Database error occurred');
-  }
+  return drizzleDb
+    .select({
+      id: budgets.id,
+      project_name: budgets.projectName,
+      year: budgets.year,
+      program: budgetAllocations.program,
+      total_allocated_amount: sum(budgetAllocations.allocatedAmount),
+      total_executed_amount: sum(budgetAllocations.executedAmount),
+      area_names: sql<string>`STRING_AGG(${areas.name}, ', ')`,
+    })
+    .from(budgets)
+    .leftJoin(budgetAllocations, eq(budgets.id, budgetAllocations.projectId))
+    .leftJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .where(
+      or(
+        ilike(budgets.projectName, term),
+        sql`${budgets.year}::text ILIKE ${term}`,
+      ),
+    )
+    .groupBy(budgets.id, budgetAllocations.program)
+    .orderBy(desc(budgets.year))
+    .limit(10)
+    .offset(offset);
 }
 
 export async function getAreaFunds(areaId: string) {
-  const queryText = `
-    SELECT allocated_funds
-    FROM area_funds
-    WHERE area_id = $1
-  `;
-  const result = await pool.query(queryText, [areaId]);
-  return result.rows[0]?.allocated_funds || 0;
+  const rows = await drizzleDb
+    .select({ allocated_funds: areaFunds.allocatedFunds })
+    .from(areaFunds)
+    .where(eq(areaFunds.areaId, areaId))
+    .limit(1);
+  return rows[0]?.allocated_funds || 0;
 }
-// app/lib/data.ts
 export async function fetchBudgetById(id: string) {
-  const queryText = `
-    SELECT 
-      b.id AS id,
-      b.id AS budget_id,
-      b.year,
-      b.project_name,
-      b.status,
-      ba.program,
-      ba.allocated_amount,
-      ba.executed_amount,
-      ba.area_id,
-      a.name AS area_name
-    FROM budgets b
-    LEFT JOIN budget_allocations ba ON b.id = ba.project_id
-    LEFT JOIN areas a ON ba.area_id = a.id
-    WHERE b.id = $1
-    LIMIT 1;
-  `;
+  const rows = await drizzleDb
+    .select({
+      id: budgets.id,
+      budget_id: budgets.id,
+      year: budgets.year,
+      project_name: budgets.projectName,
+      status: budgets.status,
+      program: budgetAllocations.program,
+      allocated_amount: budgetAllocations.allocatedAmount,
+      executed_amount: budgetAllocations.executedAmount,
+      area_id: budgetAllocations.areaId,
+      area_name: areas.name,
+    })
+    .from(budgets)
+    .leftJoin(budgetAllocations, eq(budgets.id, budgetAllocations.projectId))
+    .leftJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .where(eq(budgets.id, id))
+    .limit(1);
 
-  const result = await pool.query(queryText, [id]);
-
-  if (result.rows.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
-  const row: any = result.rows[0];
+  const row = rows[0];
 
-  // Normalizamos para el formulario
   return {
     ...row,
-    // Para que el input de "Cantidad" tenga algo: usamos executed_amount si existe
-    amount: row.executed_amount ?? row.amount ?? 0,
-    // Si tu tabla budgets no tiene columna status, row.status será undefined
-    // y acá seteamos un default
+    amount: row.executed_amount ?? 0,
     status: row.status ?? 'pending',
   };
 }
 
 export async function fetchRejectedBudgets() {
-  /*   const queryText = `
-    SELECT budgets.*, areas.name AS area_name
-    FROM budgets
-    LEFT JOIN areas ON budgets.area_id = areas.id
-    WHERE budgets.status = 'rejected'
-    ORDER BY areas.name ASC
-  `; */
-  const queryText = `
-  SELECT *
-  FROM budgets
-`;
-  const result = await pool.query(queryText);
-  return result.rows;
+  return drizzleDb.select().from(budgets);
 }
 
 export async function fetchCustomersData() {
-  const queryText = `
-    SELECT
-      customers.id,
-      customers.name,
-      customers.email,
-      customers.image_url,
-      COUNT(invoices.id) AS total_invoices,
-      SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-      SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-    FROM customers
-    LEFT JOIN invoices ON customers.id = invoices.customer_id
-    GROUP BY customers.id, customers.name, customers.email, customers.image_url
-    ORDER BY customers.name ASC
-  `;
-  const customers = await queryDatabase<CustomersTableType>(queryText);
-  return customers.map((customer) => ({
+  const rows = await drizzleDb
+    .select({
+      id: customers.id,
+      name: customers.name,
+      email: customers.email,
+      image_url: customers.imageUrl,
+      total_invoices: count(invoices.id),
+      total_pending: sql<string>`SUM(CASE WHEN ${invoices.status} = 'pending' THEN ${invoices.amount} ELSE 0 END)`,
+      total_paid: sql<string>`SUM(CASE WHEN ${invoices.status} = 'paid' THEN ${invoices.amount} ELSE 0 END)`,
+    })
+    .from(customers)
+    .leftJoin(invoices, eq(customers.id, invoices.customerId))
+    .groupBy(customers.id, customers.name, customers.email, customers.imageUrl)
+    .orderBy(asc(customers.name));
+
+  return rows.map((customer) => ({
     ...customer,
-    total_pending: formatCurrency(customer.total_pending),
-    total_paid: formatCurrency(customer.total_paid),
+    total_pending: formatCurrency(Number(customer.total_pending)),
+    total_paid: formatCurrency(Number(customer.total_paid)),
   }));
 }
 
 export async function getUser(email: string) {
-  const queryText = 'SELECT * FROM users WHERE email = $1';
-  const params = [email];
-  const users = await queryDatabase<User>(queryText, params);
-  return users[0];
+  const rows = await drizzleDb
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  return rows[0] as User | undefined;
 }
 
 export async function getAllYears(): Promise<number[]> {
-  const queryText = `
-    SELECT year
-    FROM year
-  `;
-  try {
-    const result = await pool.query(queryText);
-    const years = result.rows.map((row) => row.year);
-    return years;
-  } catch (error) {
-    console.error('Error fetching years:', error);
-    throw new Error('Error al obtener los años');
-  }
+  const rows = await drizzleDb.select({ year: year.year }).from(year);
+  return rows.map((row) => row.year);
 }
 
 export async function fetchPrograms(): Promise<{ id: string; name: string }[]> {
-  const query = 'SELECT id, name FROM programs ORDER BY name ASC';
-  const { rows } = await pool.query(query);
-  return rows;
+  return drizzleDb
+    .select({ id: programs.id, name: programs.name })
+    .from(programs)
+    .orderBy(asc(programs.name));
 }
 
 export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
@@ -631,39 +556,36 @@ export async function sumBudgetAllocationsByAreaYearHalf(): Promise<
     allocated_funds: number;
   }[]
 > {
-  const queryText = `
-  SELECT 
-    ba.area_id,
-    a.name AS area_name,
-    ba.year,
-    ba.half,
-    SUM(ba.executed_amount) AS executed_funds,
-    SUM(ba.allocated_amount) AS allocated_funds
-  FROM 
-    budget_allocations ba
-  INNER JOIN 
-    areas a ON ba.area_id = a.id
-  GROUP BY 
-    ba.area_id, a.name, ba.year, ba.half
-  `;
+  const rows = await drizzleDb
+    .select({
+      area_id: budgetAllocations.areaId,
+      area_name: areas.name,
+      year: budgetAllocations.year,
+      half: budgetAllocations.half,
+      executed_funds: sum(budgetAllocations.executedAmount),
+      allocated_funds: sum(budgetAllocations.allocatedAmount),
+    })
+    .from(budgetAllocations)
+    .innerJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .groupBy(
+      budgetAllocations.areaId,
+      areas.name,
+      budgetAllocations.year,
+      budgetAllocations.half,
+    );
 
-  try {
-    const result = await pool.query(queryText);
-    if (result.rows.length === 0) {
-      throw new Error('No se encontraron asignaciones de presupuesto');
-    }
-    return result.rows.map((row) => ({
-      area_id: row.area_id,
-      area_name: row.area_name,
-      year: row.year,
-      half: row.half,
-      executed_funds: row.executed_funds || 0,
-      allocated_funds: row.allocated_funds || 0,
-    }));
-  } catch (error) {
-    console.error('Error fetching budget allocations:', error);
-    throw new Error('Error al obtener las asignaciones de presupuesto');
+  if (rows.length === 0) {
+    throw new Error('No se encontraron asignaciones de presupuesto');
   }
+
+  return rows.map((row) => ({
+    area_id: row.area_id as string,
+    area_name: row.area_name,
+    year: row.year,
+    half: row.half,
+    executed_funds: Number(row.executed_funds ?? 0),
+    allocated_funds: Number(row.allocated_funds ?? 0),
+  }));
 }
 
 export async function fetchBudgetsByCompany(
@@ -671,77 +593,63 @@ export async function fetchBudgetsByCompany(
   query: string,
   currentPage: number,
 ) {
-  const offset = (currentPage - 1) * 10; // 10 elementos por página
-  const sql = `
-    SELECT 
-      budgets.id,
-      budgets.project_name,
-      budgets.year,
-      budgets.company_id,
-      COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
-      COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
-      STRING_AGG(DISTINCT areas.name, ', ') AS area_names
-    FROM budgets
-    LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
-    LEFT JOIN areas ON budget_allocations.area_id = areas.id
-    WHERE 
-      budgets.company_id = $1 AND 
-      (budgets.project_name ILIKE $2 OR budgets.year::text ILIKE $2)
-    GROUP BY budgets.id
-    ORDER BY budgets.year DESC
-    LIMIT 10 OFFSET $3;
-  `;
-  const values = [companyId, `%${query}%`, offset];
+  const offset = (currentPage - 1) * 10;
+  const term = `%${query}%`;
 
-  try {
-    const result = await pool.query(sql, values);
-    return result.rows;
-  } catch (error) {
-    console.error('Error fetching budgets by company:', error);
-    throw new Error('No se pudieron obtener los presupuestos.');
-  }
+  return drizzleDb
+    .select({
+      id: budgets.id,
+      project_name: budgets.projectName,
+      year: budgets.year,
+      company_id: budgets.companyId,
+      total_allocated_amount: sql<string>`COALESCE(SUM(${budgetAllocations.allocatedAmount}), 0)`,
+      total_executed_amount: sql<string>`COALESCE(SUM(${budgetAllocations.executedAmount}), 0)`,
+      area_names: sql<string>`STRING_AGG(DISTINCT ${areas.name}, ', ')`,
+    })
+    .from(budgets)
+    .leftJoin(budgetAllocations, eq(budgets.id, budgetAllocations.projectId))
+    .leftJoin(areas, eq(budgetAllocations.areaId, areas.id))
+    .where(
+      and(
+        eq(budgets.companyId, companyId),
+        or(
+          ilike(budgets.projectName, term),
+          sql`${budgets.year}::text ILIKE ${term}`,
+        ),
+      ),
+    )
+    .groupBy(budgets.id)
+    .orderBy(desc(budgets.year))
+    .limit(10)
+    .offset(offset);
 }
 
 export async function generateExcelReport(areaId?: string | null): Promise<NextResponse> {
-  const params: any[] = [];
-  let whereClause = '';
-
-  if (areaId) {
-    params.push(areaId);
-    whereClause = `WHERE iv.area_id = $1`;
-  }
-
-  const queryText = `
-    SELECT 
-      iv.id, 
-      ci.name AS "Proveedor", 
-      iv.amount AS "Monto", 
-      iv.status AS "Estado", 
-      iv.date AS "Fecha", 
-      iv.year AS "Año", 
-      ba.half AS "Semestre", 
-      ar.name AS "Area", 
-      co.name AS "Cliente", 
-      ba.program AS "Programa",
-      bu.project_name AS "Proyecto"
-    FROM 
-      invoices iv
-    LEFT JOIN 
-      customers ci ON iv.customer_id = ci.id
-    LEFT JOIN 
-      companies co ON iv.company_id = co.id
-    LEFT JOIN 
-      budget_allocations ba ON iv.budget_allocation_id = ba.id
-    LEFT JOIN 
-      budgets bu ON ba.project_id = bu.id
-    LEFT JOIN 
-      areas ar ON iv.area_id = ar.id
-    ${whereClause};
-  `;
-
   try {
-    const result = await pool.query(queryText, params);
-    const rows = result.rows;
+    const rows = await drizzleDb
+      .select({
+        id: invoices.id,
+        Proveedor: customers.name,
+        Monto: invoices.amount,
+        Estado: invoices.status,
+        Fecha: invoices.date,
+        'Año': invoices.year,
+        Semestre: budgetAllocations.half,
+        Area: areas.name,
+        Cliente: company.name,
+        Programa: budgetAllocations.program,
+        Proyecto: budgets.projectName,
+      })
+      .from(invoices)
+      .leftJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(company, eq(invoices.companyId, company.id))
+      .leftJoin(
+        budgetAllocations,
+        eq(invoices.budgetAllocationId, budgetAllocations.id),
+      )
+      .leftJoin(budgets, eq(budgetAllocations.projectId, budgets.id))
+      .leftJoin(areas, eq(invoices.areaId, areas.id))
+      .where(areaId ? eq(invoices.areaId, areaId) : undefined);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Report');
@@ -756,16 +664,13 @@ export async function generateExcelReport(areaId?: string | null): Promise<NextR
 
     const buffer = await workbook.xlsx.writeBuffer();
 
-    // Crear una respuesta con el buffer
-    const response = new NextResponse(buffer, {
+    return new NextResponse(buffer, {
       headers: {
         'Content-Disposition': 'attachment; filename=report.xlsx',
         'Content-Type':
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
     });
-
-    return response;
   } catch (error) {
     console.error('Error generating Excel report:', error);
     return new NextResponse('Error al generar el reporte de Excel', {

@@ -26,6 +26,7 @@ export const budgetsRelations = relations(budgets, ({one, many}) => ({
 export const companyRelations = relations(company, ({many}) => ({
 	budgets: many(budgets),
 	invoices: many(invoices),
+	customers: many(customers),
 }));
 
 export const budgetAllocationsRelations = relations(budgetAllocations, ({one, many}) => ({
@@ -74,6 +75,10 @@ export const contableItemsRelations = relations(contableItems, ({many}) => ({
 	invoices: many(invoices),
 }));
 
-export const customersRelations = relations(customers, ({many}) => ({
+export const customersRelations = relations(customers, ({one, many}) => ({
 	invoices: many(invoices),
+	company: one(company, {
+		fields: [customers.companyId],
+		references: [company.id]
+	}),
 }));

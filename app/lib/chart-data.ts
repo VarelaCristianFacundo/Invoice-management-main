@@ -1,8 +1,6 @@
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL,
-});
+import { and, eq, sql } from 'drizzle-orm';
+import { drizzleDb } from './drizzle/db';
+import { invoices } from './drizzle/schema';
 
 export async function fetchStatusSummaryData(
   status?: string,
@@ -11,70 +9,48 @@ export async function fetchStatusSummaryData(
   areaId?: string | null,
 ) {
   try {
-    const company =
-      companyId && companyId !== 'all' ? parseInt(companyId) : null;
-
-    let whereClause = 'WHERE 1=1';
-    const params: any[] = [];
-
-    if (company) {
-      params.push(company);
-      whereClause += ` AND company_id = $${params.length}`;
+    const conditions = [];
+    if (companyId && companyId !== 'all') {
+      conditions.push(eq(invoices.companyId, parseInt(companyId)));
     }
     if (status && status !== 'all') {
-      params.push(status);
-      whereClause += ` AND status = $${params.length}`;
+      conditions.push(eq(invoices.status, status));
     }
     if (year && year !== 'all') {
-      params.push(parseInt(year));
-      whereClause += ` AND year = $${params.length}`;
+      conditions.push(eq(invoices.year, parseInt(year)));
     }
     if (areaId) {
-      params.push(areaId);
-      whereClause += ` AND area_id = $${params.length}`;
+      conditions.push(eq(invoices.areaId, areaId));
     }
+    const where = conditions.length ? and(...conditions) : undefined;
 
-    // Una sola query que devuelve todo lo necesario
-    const result = await pool.query(
-      `
-      SELECT
-        COUNT(*) FILTER (WHERE status = 'pagado')     AS count_paid,
-        COUNT(*) FILTER (WHERE status = 'aprobado')   AS count_approved,
-        COUNT(*) FILTER (WHERE status = 'presentado') AS count_pending,
-        COALESCE(SUM(CASE WHEN status = 'pagado'     THEN amount END), 0)       AS sum_paid,
-        COALESCE(SUM(CASE WHEN status = 'aprobado'   THEN amount END), 0)       AS sum_approved,
-        COALESCE(SUM(CASE WHEN status = 'presentado' THEN amount END), 0)       AS sum_pending
-      FROM invoices
-      ${whereClause}
-    `,
-      params,
-    );
-
-    const row = result.rows[0] || {};
-
-    // Asegurar que los valores son números normales (no bigint ni string)
-    const countPending = Number(row.count_pending || 0);
-    const countApproved = Number(row.count_approved || 0);
-    const countPaid = Number(row.count_paid || 0);
-    const sumPending = Number(row.sum_pending || 0);
-    const sumApproved = Number(row.sum_approved || 0);
-    const sumPaid = Number(row.sum_paid || 0);
+    const [row] = await drizzleDb
+      .select({
+        count_paid: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'pagado')`,
+        count_approved: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'aprobado')`,
+        count_pending: sql<string>`COUNT(*) FILTER (WHERE ${invoices.status} = 'presentado')`,
+        sum_paid: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'pagado' THEN ${invoices.amount} END), 0)`,
+        sum_approved: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'aprobado' THEN ${invoices.amount} END), 0)`,
+        sum_pending: sql<string>`COALESCE(SUM(CASE WHEN ${invoices.status} = 'presentado' THEN ${invoices.amount} END), 0)`,
+      })
+      .from(invoices)
+      .where(where);
 
     return [
       {
         status: 'presentado',
-        count: countPending,
-        amount: sumPending,
+        count: Number(row?.count_pending ?? 0),
+        amount: Number(row?.sum_pending ?? 0),
       },
       {
         status: 'aprobado',
-        count: countApproved,
-        amount: sumApproved,
+        count: Number(row?.count_approved ?? 0),
+        amount: Number(row?.sum_approved ?? 0),
       },
       {
         status: 'pagado',
-        count: countPaid,
-        amount: sumPaid,
+        count: Number(row?.count_paid ?? 0),
+        amount: Number(row?.sum_paid ?? 0),
       },
     ];
   } catch (error) {

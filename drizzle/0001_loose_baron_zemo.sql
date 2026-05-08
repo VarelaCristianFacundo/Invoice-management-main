@@ -1,0 +1,1 @@
+ALTER TABLE "programs" ADD CONSTRAINT "programs_name_key" UNIQUE("name");

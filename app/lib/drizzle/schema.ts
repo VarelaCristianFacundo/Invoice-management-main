@@ -41,6 +41,7 @@ export const customers = pgTable("customers", {
 	cuitCuil: varchar("cuit_cuil", { length: 20 }),
 	ivaCondition: varchar("iva_condition", { length: 10 }),
 	cbuCvu: varchar("cbu_cvu", { length: 30 }),
+	companyId: integer("company_id").references(() => company.id),
 });
 
 export const revenue = pgTable("revenue", {
@@ -57,11 +58,23 @@ export const contableItems = pgTable("contable_items", {
 	descripcion: text(),
 });
 
+export const programs = pgTable("programs", {
+	id: uuid().default(sql`gen_random_uuid()`).primaryKey().notNull(),
+	name: text().notNull(),
+}, (table) => [
+	unique("programs_name_key").on(table.name),
+]);
+
+export const year = pgTable("year", {
+	year: integer().notNull(),
+});
+
 export const budgets = pgTable("budgets", {
 	id: uuid().default(sql`uuid_generate_v4()`).primaryKey().notNull(),
 	projectName: varchar("project_name", { length: 255 }).notNull(),
 	year: integer().notNull(),
 	companyId: integer("company_id"),
+	status: varchar({ length: 255 }).default('pending').notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.companyId],
