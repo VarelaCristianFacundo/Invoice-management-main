@@ -2,7 +2,7 @@
 
 import { formatCurrency, formatDateToLocal } from "@/app/lib/utils";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 
 type Invoice = {
   id: string;
@@ -16,11 +16,12 @@ type Invoice = {
   year: number; // Añadimos el año para el filtro
 };
 
-export default function CustomerInvoices({
-  params,
-}: {
-  params: { customer_id: string };
-}) {
+export default function CustomerInvoices(
+  props: {
+    params: Promise<{ customer_id: string }>;
+  }
+) {
+  const params = use(props.params);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedYear, setSelectedYear] = useState<number | "">(new Date().getFullYear());

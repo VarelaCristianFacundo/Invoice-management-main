@@ -2,10 +2,8 @@
 import { pool } from '@/app/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   if (!id) {
     return NextResponse.json(

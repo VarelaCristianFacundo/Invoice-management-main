@@ -1,10 +1,8 @@
 import { sumBudgetAllocationsByAreaYearHalf } from '@/app/lib/data';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const areaId = params.id;
 
   try {

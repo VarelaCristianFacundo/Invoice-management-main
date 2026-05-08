@@ -5,10 +5,8 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-export async function GET(
-  req: Request,
-  { params }: { params: { customer_id: string } },
-) {
+export async function GET(req: Request, props: { params: Promise<{ customer_id: string }> }) {
+  const params = await props.params;
   try {
     const { searchParams } = new URL(req.url);
     const year = searchParams.get('year');

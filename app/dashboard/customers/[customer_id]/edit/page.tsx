@@ -8,11 +8,12 @@ export const metadata: Metadata = {
   title: 'Editar Proveedor',
 };
 
-export default async function Page({
-  params,
-}: {
-  params: { customer_id: string };
-}) {
+export default async function Page(
+  props: {
+    params: Promise<{ customer_id: string }>;
+  }
+) {
+  const params = await props.params;
   const customer_id = params.customer_id;
   const customer = await fetchCustomerById(customer_id);
 

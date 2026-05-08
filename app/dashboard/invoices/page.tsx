@@ -16,31 +16,32 @@ export const metadata: Metadata = {
   title: 'Facturas',
 };
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: {
-    query?: string;
-    page?: string;
-  };
-}) {
+export default async function Page(
+  props: {
+    searchParams?: Promise<{
+      query?: string;
+      page?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const query = searchParams?.query || '';
   const currentPage = Number(searchParams?.page) || 1;
-  
+
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     redirect('/login');
   }
-  
+
   // Determinar si el usuario está limitado a su área
   const userRole = session.user.role || 'usuario';
   const isAreaUser = userRole?.startsWith('usuario_') && 
                       userRole !== 'usuario' && 
                       userRole !== 'usuario_presupuestos';
   const userAreaId = isAreaUser ? session.user.area_id : null;
-  
+
   const totalPages = await fetchInvoicesPages(query, userAreaId)
-  
+
   return (
     <div className="w-full">
       <div className="flex w-full items-center justify-between">
