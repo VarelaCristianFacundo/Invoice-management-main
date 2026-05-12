@@ -8,7 +8,8 @@ export async function GET() {
   const userRole = session?.user?.role || '';
   const isAreaUser = userRole?.startsWith('usuario_') && 
                      userRole !== 'usuario' && 
-                     userRole !== 'usuario_presupuestos';
+                     userRole !== 'usuario_presupuestos' &&
+                     userRole !== 'usuario_contable';
   const userAreaId = isAreaUser ? session?.user?.area_id : null;
 
   return await generateExcelReport(userAreaId);

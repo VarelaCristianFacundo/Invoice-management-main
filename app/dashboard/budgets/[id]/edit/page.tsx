@@ -18,7 +18,8 @@ export default async function Page(props: { params: Promise<{ id: string; }>; })
   const isAreaUser =
     userRole?.startsWith('usuario_') &&
     userRole !== 'usuario' &&
-    userRole !== 'usuario_presupuestos';
+    userRole !== 'usuario_presupuestos' &&
+    userRole !== 'usuario_contable';
   const userAreaId = isAreaUser ? session.user.area_id : null;
 
   const [budget, customers, allAreas] = await Promise.all([

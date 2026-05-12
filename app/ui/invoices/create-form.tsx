@@ -65,7 +65,8 @@ export default function CreateInvoiceForm({
   // Determinar si el usuario está limitado a su área
   const isAreaUser = userRole?.startsWith('usuario_') && 
                       userRole !== 'usuario' && 
-                      userRole !== 'usuario_presupuestos';
+                      userRole !== 'usuario_presupuestos' &&
+                      userRole !== 'usuario_contable';
   
   // Cargar allocations
   useEffect(() => {

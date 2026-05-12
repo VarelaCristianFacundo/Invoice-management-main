@@ -12,36 +12,24 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const areaRoles = [
-  'usuario_administracion',
-  'usuario_contable',
-  'usuario_logistica',
-  'usuario_marketing',
-  'usuario_produccion',
-  'usuario_rrhh',
-  'usuario_sistemas',
-  'usuario_ventas',
-  'usuario_eventos'
-];
-
 const links = [
   { 
     name: 'Inicio', 
     href: '/dashboard', 
     icon: HomeIcon, 
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', ...areaRoles] 
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'AREA_USER'] 
   },
   {
     name: 'Proyectos',
     href: '/dashboard/budgets',
     icon: CurrencyDollarIcon,
-    roles: ['admin', 'usuario_presupuestos', ...areaRoles],
+    roles: ['admin', 'usuario_presupuestos', 'usuario_contable', 'AREA_USER'],
   },
   {
     name: 'Facturas',
     href: '/dashboard/invoices',
     icon: DocumentDuplicateIcon,
-    roles: ['admin', 'usuario', 'tesorero', ...areaRoles],
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_contable', 'AREA_USER'],
   },
   {
     name: 'Fondos',
@@ -53,13 +41,13 @@ const links = [
     name: 'Proveedores',
     href: '/dashboard/customers',
     icon: UserGroupIcon,
-    roles: ['admin', 'tesorero', 'usuario', ...areaRoles],
+    roles: ['admin', 'tesorero', 'usuario', 'usuario_contable', 'AREA_USER'],
   },
   {
     name: 'Perfil',
     href: '/dashboard/profile',
     icon: UserIcon,
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', ...areaRoles],
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_contable', 'AREA_USER'],
   },
 ];
 
@@ -77,8 +65,11 @@ export default function NavLinks() {
     <>
       {links.map((link) => {
         const LinkIcon = link.icon;
+        
+        const isAreaUser = userRole.startsWith('usuario_') && userRole !== 'usuario_presupuestos' && userRole !== 'usuario_contable';
+        const hasAccess = link.roles.includes(userRole) || (link.roles.includes('AREA_USER') && isAreaUser);
 
-        if (!link.roles.includes(userRole)) {
+        if (!hasAccess) {
           return null;
         }
 
