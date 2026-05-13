@@ -33,6 +33,8 @@ export default function InvoicesTable({
 
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
+  const userRole = session?.user?.role || "";
+  const isAreaUser = userRole.startsWith("usuario_") && userRole !== "usuario_presupuestos" && userRole !== "usuario_contable";
 
   const loadInvoices = async () => {
     setLoading(true);
@@ -254,7 +256,9 @@ export default function InvoicesTable({
                       <EyeIcon className="h-5 w-5" />
                     </button>
 
-                    <UpdateInvoice id={invoice.id} />
+                    {!(isAreaUser && invoice.status === 'pagado') && (
+                      <UpdateInvoice id={invoice.id} />
+                    )}
                     <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
                   </td>
                 </tr>
