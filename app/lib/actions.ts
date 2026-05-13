@@ -297,6 +297,8 @@ export async function addCustomer(formData: {
       companyId: company_id || 1,
     });
 
+    revalidatePath('/dashboard/customers');
+    revalidatePath('/dashboard/invoices/create');
     return { success: true, message: 'Proveedor agregado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);
@@ -729,6 +731,8 @@ export async function updateCustomer(
       };
     }
 
+    revalidatePath('/dashboard/customers');
+    revalidatePath('/dashboard/invoices/create');
     return { success: true, message: 'Proveedor actualizado exitosamente.' };
   } catch (error) {
     console.error('Database Error:', error);

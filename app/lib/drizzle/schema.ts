@@ -39,7 +39,7 @@ export const customers = pgTable("customers", {
 	imageUrl: varchar("image_url", { length: 255 }).default('/customers/default.png').notNull(),
 	phone: varchar({ length: 50 }),
 	cuitCuil: varchar("cuit_cuil", { length: 20 }),
-	ivaCondition: varchar("iva_condition", { length: 10 }),
+	ivaCondition: varchar("iva_condition", { length: 40 }),
 	cbuCvu: varchar("cbu_cvu", { length: 30 }),
 	companyId: integer("company_id").references(() => company.id),
 });
