@@ -23,9 +23,9 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     }
 
     const status = check.rows[0].status;
-    if (status === 'pagado') {
+    if (status === 'pagado' || status === 'aprobado') {
       return NextResponse.json(
-        { message: 'No se puede eliminar una factura que ya fue abonada.' },
+        { message: 'No se puede eliminar una factura que ya fue aprobada o pagada.' },
         { status: 403 },
       );
     }

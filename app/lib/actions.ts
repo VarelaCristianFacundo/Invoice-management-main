@@ -746,10 +746,10 @@ export async function deleteInvoice(id: string) {
       .from(invoices)
       .where(eq(invoices.id, id))
       .limit(1);
-    if (check[0]?.status === 'pagado') {
+    if (check[0]?.status === 'pagado' || check[0]?.status === 'aprobado') {
       return {
         success: false,
-        message: 'No se puede eliminar una factura que ya fue abonada.',
+        message: 'No se puede eliminar una factura aprobada o pagada.',
       };
     }
 

@@ -255,9 +255,7 @@ export default function InvoicesTable({
                     </button>
 
                     <UpdateInvoice id={invoice.id} />
-                    {isAdmin && (
-                      <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
-                    )}
+                    <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
                   </td>
                 </tr>
               ))}

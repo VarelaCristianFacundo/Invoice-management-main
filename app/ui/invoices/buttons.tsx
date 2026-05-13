@@ -37,11 +37,11 @@ export function DeleteInvoice({
   status?: string;
   refreshInvoices: () => Promise<void>;
 }) {
-  const isPaid = status === 'pagado';
+  const isLocked = status === 'pagado' || status === 'aprobado';
 
   const handleDelete = async () => {
-    if (isPaid) {
-      Swal.fire("No permitido", "No se puede eliminar una factura que ya fue abonada.", "warning");
+    if (isLocked) {
+      Swal.fire("No permitido", "No se puede eliminar una factura aprobada o pagada.", "warning");
       return;
     }
 
@@ -78,10 +78,10 @@ export function DeleteInvoice({
   return (
     <button
       onClick={handleDelete}
-      disabled={isPaid}
-      title={isPaid ? "No se puede eliminar una factura abonada" : "Eliminar factura"}
+      disabled={isLocked}
+      title={isLocked ? "No se puede eliminar una factura aprobada o pagada" : "Eliminar factura"}
       className={`rounded-md border p-2 ${
-        isPaid
+        isLocked
           ? "text-gray-300 cursor-not-allowed"
           : "text-red-600 hover:bg-gray-100 hover:text-red-800"
       }`}
