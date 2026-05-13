@@ -31,6 +31,7 @@ export default withAuth({
           'admin', 
           'usuario', 
           'tesorero',
+          'usuario_contable',
           'AREA_USER'
         ],
         '/dashboard/allocations': ['admin', 'tesorero'],

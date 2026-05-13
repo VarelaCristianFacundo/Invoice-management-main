@@ -59,11 +59,9 @@ export async function GET(req: NextRequest) {
 
     const result = await pool.query(sql, values);
 
+    // Si no hay resultados, devolvemos un array vacío en lugar de un error 404
     if (result.rowCount === 0) {
-      return NextResponse.json(
-        { message: 'No hay presupuestos encontrados.' },
-        { status: 404 },
-      );
+      return NextResponse.json([], { status: 200 });
     }
 
     return NextResponse.json(result.rows, { status: 200 });

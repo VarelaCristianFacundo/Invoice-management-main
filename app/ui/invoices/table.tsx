@@ -254,11 +254,9 @@ export default function InvoicesTable({
                       <EyeIcon className="h-5 w-5" />
                     </button>
 
+                    <UpdateInvoice id={invoice.id} />
                     {isAdmin && (
-                      <>
-                        <UpdateInvoice id={invoice.id} />
-                        <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
-                      </>
+                      <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
                     )}
                   </td>
                 </tr>
