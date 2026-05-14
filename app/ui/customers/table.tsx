@@ -4,6 +4,7 @@ import Search from '@/app/ui/search';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { CreateCustomer, DeleteCustomer, UpdateCustomer } from './buttons';
+import { ImportCustomersButton } from './import-button';
 import CustomerAvatar from './customer-avatar';
 
 export default async function CustomersTable({
@@ -24,7 +25,10 @@ export default async function CustomersTable({
       </h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
         <Search placeholder="Buscar proveedores..." />
-        <CreateCustomer />
+        <div className="flex items-center gap-2">
+          <ImportCustomersButton />
+          <CreateCustomer />
+        </div>
       </div>
       <div className="mt-6 flow-root">
         <div className="overflow-x-auto">
