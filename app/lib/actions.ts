@@ -496,6 +496,25 @@ export async function createBudgetAllocation(
   year: number,
 ) {
   try {
+    const existing = await drizzleDb
+      .select({ id: budgetAllocations.id })
+      .from(budgetAllocations)
+      .where(
+        and(
+          eq(budgetAllocations.areaId, area_id),
+          eq(budgetAllocations.year, year),
+          eq(budgetAllocations.half, half),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      return {
+        success: false,
+        message: `Ya existe un proyecto asignado a esta área para el ${half}° semestre de ${year}. Cada área sólo puede tener un proyecto por semestre.`,
+      };
+    }
+
     await drizzleDb.insert(budgetAllocations).values({
       projectId: project_id,
       areaId: area_id,
@@ -541,6 +560,25 @@ export async function createBudget({
 }) {
   try {
     if (id === 'new') {
+      const existing = await drizzleDb
+        .select({ id: budgetAllocations.id })
+        .from(budgetAllocations)
+        .where(
+          and(
+            eq(budgetAllocations.areaId, areaId),
+            eq(budgetAllocations.year, year),
+            eq(budgetAllocations.half, half),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return {
+          success: false,
+          message: `Ya existe un proyecto asignado a esta área para el ${half}° semestre de ${year}. Cada área sólo puede tener un proyecto por semestre.`,
+        };
+      }
+
       const [{ id: newProjectId }] = await drizzleDb
         .insert(budgets)
         .values({
