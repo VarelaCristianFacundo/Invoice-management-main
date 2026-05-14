@@ -1,5 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 --> statement-breakpoint
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+--> statement-breakpoint
 CREATE TABLE "area_funds" (
 	"id" uuid PRIMARY KEY DEFAULT uuid_generate_v4() NOT NULL,
 	"area_id" uuid NOT NULL,

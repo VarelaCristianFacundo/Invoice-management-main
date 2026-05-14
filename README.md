@@ -122,6 +122,21 @@ npm run db:seed
 npm run dev
 ```
 
+#### Extensiones de Postgres
+
+La primera migración (`0000_*.sql`) crea dos extensiones: `uuid-ossp` (para `uuid_generate_v4()`) y `pgcrypto` (para `gen_random_uuid()` en Postgres < 13; en 13+ ya viene en el core pero la dejamos por compatibilidad).
+
+`CREATE EXTENSION` requiere **permisos de superuser**. Si el usuario configurado en `POSTGRES_URL` no los tiene, vas a ver `permission denied to create extension`. Resolución: pedile al admin de la DB (o conectate como `postgres` si la DB es local) que las cree una sola vez:
+
+```bash
+sudo -u postgres psql -d <tu_db> -c \
+  'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; CREATE EXTENSION IF NOT EXISTS "pgcrypto";'
+```
+
+Después la migración pasa de largo gracias al `IF NOT EXISTS`.
+
+> **Versión de Postgres**: 13+ recomendado. En 12 funciona pero esa versión llegó a end-of-life en noviembre 2024 — sin parches de seguridad. Planificá un upgrade cuando puedas.
+
 ### Cuando cambia el schema
 
 Cualquier modificación a `app/lib/drizzle/schema.ts` (agregar columna, tabla, constraint, índice, etc.):
