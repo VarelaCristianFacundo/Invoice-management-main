@@ -1,0 +1,1 @@
+ALTER TABLE "customers" ALTER COLUMN "iva_condition" SET DATA TYPE varchar(40);
