@@ -21,13 +21,21 @@ type TableProps = {
   query: string;
   currentPage: number;
   userAreaId?: string | null;
+  userRole?: string | null;
 };
 
-export default function BudgetsTable({ query, currentPage, userAreaId }: TableProps) {
+export default function BudgetsTable({ query, currentPage, userAreaId, userRole }: TableProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedCompany, setSelectedCompany] = useState<number | null>(1); // Default CAMARCO
   const [search, setSearch] = useState<string>("");
+
+  const isAreaUser =
+    typeof userRole === 'string' &&
+    userRole.startsWith('usuario_') &&
+    userRole !== 'usuario' &&
+    userRole !== 'usuario_presupuestos' &&
+    userRole !== 'usuario_contable';
 
   const fetchBudgets = useCallback(async () => {
     try {
@@ -134,10 +142,12 @@ export default function BudgetsTable({ query, currentPage, userAreaId }: TablePr
                     <BudgetStatus status={budget.status || 'pending'} />
                   </td>
                   <td className="px-4 py-2 flex gap-2">
-                    <>
-                      <UpdateBudget id={budget.budget_id} />
-                      <DeleteBudget id={budget.budget_id} refreshBudgets={fetchBudgets} />
-                    </>
+                    {!isAreaUser && (
+                      <>
+                        <UpdateBudget id={budget.budget_id} />
+                        <DeleteBudget id={budget.budget_id} refreshBudgets={fetchBudgets} />
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

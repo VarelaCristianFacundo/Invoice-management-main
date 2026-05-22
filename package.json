@@ -12,7 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx scripts/seed-drizzle.ts"
+    "db:seed": "tsx scripts/seed-drizzle.ts",
+    "db:setup-users": "tsx scripts/setup-prod-users.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

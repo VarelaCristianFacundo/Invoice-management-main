@@ -17,7 +17,7 @@ export default async function CustomersTable({
   userRole: string;
 }) {
   const customers = await fetchFilteredCustomers(query, currentPage);
-  const isSuperUser = userRole === 'admin' || userRole === 'usuario';
+  const canManage = userRole === 'admin' || userRole === 'usuario_contable';
   return (
     <div className="w-full">
       <h1 className={`${roboto.className} mb-8 text-xl md:text-2xl`}>
@@ -71,8 +71,10 @@ export default async function CustomersTable({
                     <div className="pt-4 text-sm flex justify-between items-center">
                       <p>{customer.total_invoices} facturas</p>
                       <div className="flex gap-2">
-                        <UpdateCustomer customer_id={customer.id} />
-                        {isSuperUser && (
+                          {canManage && (
+                            <UpdateCustomer customer_id={customer.id} />
+                          )}
+                          {canManage && (
                           <DeleteCustomer customer_id={customer.id} />
                         )}
                         <Link
@@ -134,8 +136,10 @@ export default async function CustomersTable({
                       </td>
                       <td className="whitespace-nowrap bg-white  py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md flex justify-evenly">
                         <div className="flex justify-end gap-2">
-                          <UpdateCustomer customer_id={customer.id} />
-                          {isSuperUser && (
+                          {canManage && (
+                            <UpdateCustomer customer_id={customer.id} />
+                          )}
+                          {canManage && (
                             <DeleteCustomer customer_id={customer.id} />
                           )}
                         </div>

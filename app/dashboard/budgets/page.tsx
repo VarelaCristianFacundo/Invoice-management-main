@@ -41,7 +41,7 @@ export default async function Page(props: { searchParams: Promise<{ query?: stri
         <Search placeholder="Buscar proyectos..." />
         <CreateBudget />
       </div>
-      <Table query={query} currentPage={currentPage} userAreaId={userAreaId} />
+      <Table query={query} currentPage={currentPage} userAreaId={userAreaId} userRole={userRole} />
       <Pagination totalPages={totalPages} />
     </div>
   );

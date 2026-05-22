@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/authOptions';
 import { drizzleDb, type Tx } from './drizzle/db';
 import {
   areaFunds,
@@ -124,6 +126,17 @@ export type CustomerState = {
   message?: string | null;
 };
 
+// Returns true if the role is an area-scoped user (not admin/contable/legacy).
+function isAreaScopedRole(role: string | null | undefined): boolean {
+  if (!role) return false;
+  return (
+    role.startsWith('usuario_') &&
+    role !== 'usuario' &&
+    role !== 'usuario_presupuestos' &&
+    role !== 'usuario_contable'
+  );
+}
+
 export async function createInvoice(formData: {
   customerId: string;
   amount: number;
@@ -138,6 +151,16 @@ export async function createInvoice(formData: {
   issue_date: string;
   contable_item_id?: number;
 }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+
+  // Area-scoped users can only submit invoices for their own area.
+  if (isAreaScopedRole(session.user.role)) {
+    if (!session.user.area_id || session.user.area_id !== formData.areaId) {
+      return { success: false, message: 'Solo podés cargar facturas de tu propia área.' };
+    }
+  }
+
   const validatedFields = CreateInvoice.safeParse(formData);
 
   if (!validatedFields.success) {
@@ -314,6 +337,12 @@ export async function updateInvoice(
   formData: FormData,
   company_id: number = 0,
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para editar facturas.' };
+  }
+
   // Normalizar el monto para aceptar "," como separador decimal
   const normalizeMoneyInput = (raw: string): string => {
     const value = raw.trim().replace(/\s+/g, '');
@@ -647,6 +676,12 @@ export async function updateBudget(
   formData: FormData,
   _changedBy: string,
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para editar proyectos.' };
+  }
+
   const year = Number(formData.get('year'));
   const projectName = (formData.get('project_name') ?? '').toString().trim();
   const allocatedAmount = Number(formData.get('allocated_amount') ?? 0);
@@ -690,14 +725,19 @@ export async function updateBudget(
 }
 
 export async function deleteBudget(id: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para eliminar proyectos.' };
+  }
+
   try {
-    const res = await fetch(`/api/budget/${id}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('No se pudo eliminar el presupuesto');
-    return await res.json();
+    await drizzleDb.delete(budgets).where(eq(budgets.id, id));
+    revalidatePath('/dashboard/budgets');
+    return { success: true, message: 'Proyecto eliminado exitosamente.' };
   } catch (error) {
     console.error(error);
+    return { success: false, message: 'No se pudo eliminar el proyecto.' };
   }
 }
 
@@ -713,6 +753,12 @@ export async function updateCustomer(
     company_id?: number;
   },
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para editar proveedores.' };
+  }
+
   const validatedFields = CustomerUpdateSchemaLoose.safeParse({
     ...formData,
     id,
@@ -782,6 +828,12 @@ export async function updateCustomer(
 }
 
 export async function deleteInvoice(id: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para eliminar facturas.' };
+  }
+
   try {
     const check = await drizzleDb
       .select({ status: invoices.status })
@@ -1182,6 +1234,12 @@ export async function updateBudgetProject(
 }
 
 export async function deleteCustomer(id: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return { success: false, message: 'No autorizado.' };
+  if (isAreaScopedRole(session.user.role)) {
+    return { success: false, message: 'No tenés permisos para eliminar proveedores.' };
+  }
+
   try {
     await drizzleDb.delete(customers).where(eq(customers.id, id));
     revalidatePath('/dashboard/customers');
