@@ -256,10 +256,12 @@ export default function InvoicesTable({
                       <EyeIcon className="h-5 w-5" />
                     </button>
 
-                    {!(isAreaUser && invoice.status === 'pagado') && (
+                    {!isAreaUser && (
                       <UpdateInvoice id={invoice.id} />
                     )}
-                    <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
+                    {!isAreaUser && (
+                      <DeleteInvoice id={invoice.id} status={invoice.status} refreshInvoices={loadInvoices} />
+                    )}
                   </td>
                 </tr>
               ))}

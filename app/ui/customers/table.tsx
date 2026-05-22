@@ -4,6 +4,7 @@ import Search from '@/app/ui/search';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { CreateCustomer, DeleteCustomer, UpdateCustomer } from './buttons';
+import { ImportCustomersButton } from './import-button';
 import CustomerAvatar from './customer-avatar';
 
 export default async function CustomersTable({
@@ -16,7 +17,7 @@ export default async function CustomersTable({
   userRole: string;
 }) {
   const customers = await fetchFilteredCustomers(query, currentPage);
-  const isSuperUser = userRole === 'admin' || userRole === 'usuario';
+  const canManage = userRole === 'admin' || userRole === 'usuario_contable';
   return (
     <div className="w-full">
       <h1 className={`${roboto.className} mb-8 text-xl md:text-2xl`}>
@@ -24,7 +25,10 @@ export default async function CustomersTable({
       </h1>
       <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
         <Search placeholder="Buscar proveedores..." />
-        <CreateCustomer />
+        <div className="flex items-center gap-2">
+          <ImportCustomersButton />
+          <CreateCustomer />
+        </div>
       </div>
       <div className="mt-6 flow-root">
         <div className="overflow-x-auto">
@@ -67,8 +71,10 @@ export default async function CustomersTable({
                     <div className="pt-4 text-sm flex justify-between items-center">
                       <p>{customer.total_invoices} facturas</p>
                       <div className="flex gap-2">
-                        <UpdateCustomer customer_id={customer.id} />
-                        {isSuperUser && (
+                          {canManage && (
+                            <UpdateCustomer customer_id={customer.id} />
+                          )}
+                          {canManage && (
                           <DeleteCustomer customer_id={customer.id} />
                         )}
                         <Link
@@ -130,8 +136,10 @@ export default async function CustomersTable({
                       </td>
                       <td className="whitespace-nowrap bg-white  py-5 text-sm group-first-of-type:rounded-md group-last-of-type:rounded-md flex justify-evenly">
                         <div className="flex justify-end gap-2">
-                          <UpdateCustomer customer_id={customer.id} />
-                          {isSuperUser && (
+                          {canManage && (
+                            <UpdateCustomer customer_id={customer.id} />
+                          )}
+                          {canManage && (
                             <DeleteCustomer customer_id={customer.id} />
                           )}
                         </div>

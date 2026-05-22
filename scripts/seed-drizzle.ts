@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+// Mirror Next.js env priority: .env.local overrides .env
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 import bcrypt from 'bcrypt';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';

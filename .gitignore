@@ -28,6 +28,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# local-only setup scripts (contain credentials)
+scripts/setup-prod-users.ts
+
 # vercel
 .vercel
 
