@@ -36,10 +36,10 @@ export async function GET(req: NextRequest) {
         budgets.year,
         budgets.company_id,
         COALESCE(budgets.status, 'pending') AS status,
-        COALESCE(budget_allocations.program, 'No Program') AS program,
+        COALESCE(budget_allocations.program, 'Proyecto sin programa') AS program,
         COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
         COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
-        COALESCE(STRING_AGG(areas.name, ', '), 'No Areas') AS area_names
+        COALESCE(STRING_AGG(areas.name, ', '), 'Area sin programa') AS area_names
       FROM budgets
       LEFT JOIN budget_allocations ON budgets.id = budget_allocations.project_id
       LEFT JOIN areas ON budget_allocations.area_id = areas.id
