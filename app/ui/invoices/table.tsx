@@ -6,7 +6,6 @@ import { DeleteInvoice, UpdateInvoice } from "@/app/ui/invoices/buttons";
 import InvoiceStatus from "@/app/ui/invoices/status";
 import { DocumentTextIcon, EyeIcon } from "@heroicons/react/24/outline";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
 import ExportExcelButton from "./export-excel-button";
@@ -202,12 +201,19 @@ export default function InvoicesTable({
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       {invoice.image_url && invoice.image_url.trim() ? (
-                        <Image
+                        <img
                           src={invoice.image_url}
                           alt={invoice.name || "invoice"}
                           width={28}
                           height={28}
                           className="rounded-full"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = document.createElement('div');
+                            fallback.className = 'flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold';
+                            fallback.textContent = invoice.name?.[0]?.toUpperCase() ?? "?";
+                            e.currentTarget.parentElement?.appendChild(fallback);
+                          }}
                         />
                       ) : (
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold">
