@@ -219,8 +219,8 @@ export default function InvoicesTable({
                   </td>
 
                   <td className="px-4 py-2">
-                    {invoice.area_name && invoice.program && invoice.project_name
-                      ? `${invoice.area_name} - ${invoice.program} - ${invoice.project_name}`
+                    {invoice.project_name
+                      ? `${invoice.area_name || ''} - ${invoice.program || ''} - ${invoice.project_name}`.trim()
                       : "N/A"}
                   </td>
 
