@@ -13,11 +13,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const links = [
-  { 
-    name: 'Inicio', 
-    href: '/dashboard', 
-    icon: HomeIcon, 
-    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'AREA_USER'] 
+  {
+    name: 'Inicio',
+    href: '/dashboard',
+    icon: HomeIcon,
+    roles: ['admin', 'usuario', 'tesorero', 'usuario_presupuestos', 'usuario_contable', 'AREA_USER']
   },
   {
     name: 'Proyectos',
