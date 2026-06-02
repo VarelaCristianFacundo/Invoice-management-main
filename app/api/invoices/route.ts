@@ -18,7 +18,7 @@ async function fetchFilteredInvoices(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const sql = `
-    SELECT 
+    SELECT
       i.id AS invoice_id,
       i.customer_id,
       i.amount,
@@ -36,7 +36,7 @@ async function fetchFilteredInvoices(
       ba.area_id AS allocation_area_id,
       ba.year AS allocation_year,
       ba.program,
-      
+
       a.name AS area_name,
       b.project_name
     FROM invoices i
@@ -44,14 +44,14 @@ async function fetchFilteredInvoices(
     LEFT JOIN budget_allocations ba ON i.budget_allocation_id = ba.id
     LEFT JOIN areas a ON ba.area_id = a.id
     LEFT JOIN budgets b ON ba.project_id = b.id
-    WHERE 
-      b.company_id = $1 AND (
-        $2 = '' OR 
-        c.name ILIKE $2 OR 
-        i.amount::text ILIKE $2 OR 
-        i.status ILIKE $2 OR 
-        b.project_name ILIKE $2 OR 
-        a.name ILIKE $2
+    WHERE
+      i.company_id = $1 AND (
+        $2 = '' OR
+        c.name ILIKE $2 OR
+        i.amount::text ILIKE $2 OR
+        i.status ILIKE $2 OR
+        COALESCE(b.project_name, '') ILIKE $2 OR
+        COALESCE(a.name, '') ILIKE $2
       )
       ${areaId ? 'AND i.area_id = $5' : ''}
     ORDER BY i.date DESC
@@ -70,7 +70,7 @@ async function fetchFilteredInvoices(
     customer_id: r.customer_id,
     name: r.customer_name,
     email: r.customer_email,
-    image_url: r.image_url || '/default-user.png',
+    image_url: r.image_url && r.image_url.trim() ? r.image_url : '/default-user.png',
     amount: Number(r.amount) || 0,
     status: r.status,
     date: r.date,
