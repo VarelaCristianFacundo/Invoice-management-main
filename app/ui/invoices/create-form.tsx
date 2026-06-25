@@ -160,23 +160,27 @@ export default function CreateInvoiceForm({
   }
 
   const filteredCustomers =
-    showAllCustomers
-      ? customerList
-      : customerInput.length >= 3
-        ? customerList.filter((c) =>
-          c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
-          (c.cuit_cuil && c.cuit_cuil.includes(customerInput)),
-        )
-        : [];
+    customerId  // Si hay algo seleccionado, no mostrar dropdown
+      ? []
+      : showAllCustomers
+        ? customerList
+        : customerInput.length >= 3
+          ? customerList.filter((c) =>
+            c.name.toLowerCase().includes(customerInput.toLowerCase()) ||
+            (c.cuit_cuil && c.cuit_cuil.includes(customerInput)),
+          )
+          : [];
 
 
   const handleCustomerSelect = (selected: CustomerField) => {
-    setCustomerInput(`${selected.name} (${selected.cuit_cuil})`);
+    const companyName = selected.company_id === 1 ? 'FODECO' : 'CAMARCO';
+    const displayName = `${selected.name} (${companyName})`;
+    setCustomerInput(displayName);
     setCustomerId(selected.id);
     setSelectedCompanyId(selected.company_id);
     setShowAllCustomers(false);
-    
-    // Al seleccionar un proveedor, si ya hay una allocation seleccionada 
+
+    // Al seleccionar un proveedor, si ya hay una allocation seleccionada
     // pero es de otra empresa, la limpiamos.
     if (selectedAllocationId) {
       const currentAlloc = budgetAllocations.find(a => a.id === selectedAllocationId);
@@ -365,7 +369,7 @@ export default function CreateInvoiceForm({
                 className="p-2 cursor-pointer hover:bg-gray-100 text-sm"
                 onClick={() => handleCustomerSelect(customer)}
               >
-                {customer.name} — {customer.cuit_cuil} {customer.company_id === 2 ? '(FODECO)' : '(CAMARA)'}
+                {customer.name} — {customer.cuit_cuil} {customer.company_id === 1 ? '(FODECO)' : '(CAMARCO)'}
               </li>
             ))}
           </ul>
