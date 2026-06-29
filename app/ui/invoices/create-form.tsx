@@ -173,7 +173,7 @@ export default function CreateInvoiceForm({
 
 
   const handleCustomerSelect = (selected: CustomerField) => {
-    const companyName = selected.company_id === 1 ? 'FODECO' : 'CAMARCO';
+    const companyName = selected.company_id === 1 ? 'CAMARCO' : 'FODECO';
     const displayName = `${selected.name} (${companyName})`;
     setCustomerInput(displayName);
     setCustomerId(selected.id);
@@ -369,7 +369,7 @@ export default function CreateInvoiceForm({
                 className="p-2 cursor-pointer hover:bg-gray-100 text-sm"
                 onClick={() => handleCustomerSelect(customer)}
               >
-                {customer.name} — {customer.cuit_cuil} {customer.company_id === 1 ? '(FODECO)' : '(CAMARCO)'}
+                {customer.name} — {customer.cuit_cuil} {customer.company_id === 1 ? '(CAMARCO)' : '(FODECO)'}
               </li>
             ))}
           </ul>

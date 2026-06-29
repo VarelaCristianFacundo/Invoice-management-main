@@ -188,8 +188,8 @@ export default function Form() {
               className="peer block w-full rounded-md border border-gray-200 py-2 text-sm placeholder:text-gray-500"
               defaultValue="1"
             >
-              <option value="1">FODECO</option>
-              <option value="2">CAMARCO</option>
+              <option value="1">CAMARCO</option>
+              <option value="2">FODECO</option>
             </select>
           </div>
         </div>
