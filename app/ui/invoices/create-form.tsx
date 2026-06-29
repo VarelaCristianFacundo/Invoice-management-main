@@ -245,6 +245,10 @@ export default function CreateInvoiceForm({
       Swal.fire("Incomplete", "Selecciona proveedor y proyecto/área", "info");
       return;
     }
+    if (!selectedCompanyId) {
+      Swal.fire("Incomplete", "El proveedor seleccionado no tiene empresa asignada.", "info");
+      return;
+    }
     if (amount <= 0) {
       Swal.fire("Incomplete", "El monto debe ser mayor a 0", "info");
       return;
@@ -267,8 +271,8 @@ export default function CreateInvoiceForm({
       return;
     }
 
-    // Extract the company_id from the allocation
-    const companyId = allocation.company_id;
+    // The invoice company is always determined by the provider, not the allocation.
+    const companyId = selectedCompanyId;
 
     const formDataObj = {
       customerId,
