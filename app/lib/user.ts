@@ -14,3 +14,14 @@ export async function getUserByEmail(email: string) {
   const result = await pool.query(queryText, values);
   return result.rows[0];
 }
+
+export async function getUserByUsername(username: string) {
+  const queryText = `
+    SELECT id, name, email, password, role, area_id, username
+    FROM users
+    WHERE username = $1
+  `;
+  const values = [username];
+  const result = await pool.query(queryText, values);
+  return result.rows[0];
+}

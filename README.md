@@ -190,9 +190,11 @@ Vea [docs/OPERATIONS.md](docs/OPERATIONS.md) para comandos `pg_dump` / `psql` y 
 
 ## 🔑 Autenticación
 
-- NextAuth (Credentials) con endpoints en `app/api/auth/[...nextauth]/route.ts` y lógica auxiliar en `auth.ts` / `auth.config.ts`.
+- NextAuth (Credentials) con endpoint en `app/api/auth/[...nextauth]/route.ts` y configuración en `authOptions.ts`.
+- El login es por **tipo de usuario** (no por correo): el form (`app/ui/login-form.tsx`) muestra un selector de área/rol (ej. `contaduria`, `escuela`, `sistemas`) que se valida contra la columna `username` de `users` (`app/lib/user.ts` → `getUserByUsername`). El `email` sigue existiendo en la tabla pero ya no se usa para iniciar sesión.
 - Página de login: `app/login/page.tsx`.
 - Middleware de protección de rutas: `middleware.ts`.
+- Alta/actualización de usuarios y contraseñas: `npm run db:setup-users` (ver `scripts/setup-prod-users.ts`).
 
 ## 📤 Exportadores
 

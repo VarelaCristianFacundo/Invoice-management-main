@@ -3,7 +3,7 @@
 import bcrypt from 'bcrypt';
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { getUserByEmail } from './app/lib/user';
+import { getUserByUsername } from './app/lib/user';
 
 const isHttps = process.env.NEXTAUTH_URL?.startsWith('https://') ?? false;
 
@@ -12,10 +12,10 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: {
-          label: 'Correo',
+        username: {
+          label: 'Usuario',
           type: 'text',
-          placeholder: 'usuario@ejemplo.com',
+          placeholder: 'Tipo de usuario',
         },
         password: {
           label: 'Contraseña',
@@ -26,7 +26,7 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials) return null;
 
-        const user = await getUserByEmail(credentials.email);
+        const user = await getUserByUsername(credentials.username);
         if (!user) return null;
 
         const isValid = await bcrypt.compare(

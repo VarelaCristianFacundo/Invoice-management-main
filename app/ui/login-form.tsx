@@ -6,6 +6,18 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+const USER_TYPES = [
+  { value: 'direccionejecutiva', label: 'Dirección Ejecutiva' },
+  { value: 'contaduria', label: 'Contaduría' },
+  { value: 'escuela', label: 'Escuela' },
+  { value: 'eventos', label: 'Eventos' },
+  { value: 'comunicaciones', label: 'Comunicación' },
+  { value: 'sistemas', label: 'Sistemas' },
+  { value: 'secretaria', label: 'Secretaría' },
+  { value: 'tecnica', label: 'Técnica' },
+  { value: 'desarrolloeintegracion', label: 'D+I' },
+];
+
 export default function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState('');
@@ -15,7 +27,7 @@ export default function LoginForm() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const email = e.currentTarget.email.value;
+    const username = e.currentTarget.username.value;
     const password = e.currentTarget.password.value;
 
     setError('');
@@ -24,7 +36,7 @@ export default function LoginForm() {
     try {
       const res = await signIn('credentials', {
         redirect: false,
-        email,
+        username,
         password,
       });
 
@@ -47,17 +59,26 @@ export default function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && <p className="text-red-500">{error}</p>}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Correo</label>
+        <label className="block text-sm font-medium text-gray-700">
+          Tipo de usuario
+        </label>
         <div className="mt-1">
-          <input
-            name="email"
-            type="email"
-            autoComplete="email"
-            placeholder="Ingresa tu correo"
+          <select
+            name="username"
             required
             disabled={isSubmitting}
+            defaultValue=""
             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 sm:text-sm"
-          />
+          >
+            <option value="" disabled>
+              Seleccioná un tipo de usuario
+            </option>
+            {USER_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <div>

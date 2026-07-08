@@ -17,6 +17,7 @@ export const users = pgTable("users", {
 	password: text().notNull(),
 	role: varchar({ length: 100 }).default('usuario').notNull(),
 	areaId: uuid("area_id"),
+	username: varchar({ length: 100 }),
 }, (table) => [
 	index("idx_users_area_id").using("btree", table.areaId.asc().nullsLast().op("uuid_ops")),
 	foreignKey({
@@ -25,6 +26,7 @@ export const users = pgTable("users", {
 			name: "users_area_id_fkey"
 		}),
 	unique("users_email_key").on(table.email),
+	unique("users_username_key").on(table.username),
 ]);
 
 export const company = pgTable("company", {
