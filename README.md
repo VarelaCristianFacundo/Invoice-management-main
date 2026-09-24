@@ -208,6 +208,31 @@ Los botones de exportación se encuentran en `app/ui/invoices/export-*.tsx`.
 - **Invoices**: alta/edición, estado (`presentado | aprobado | pagado | rechazado`), paginación, búsqueda, export.
 - **Customers**: ABM con validaciones (`zod`).
 - **Budgets/Allocations**: creación, edición, rechazos, reporte por año, asignación por programas/áreas.
+
+### Presupuestos por área y semestre
+
+Un **área puede tener varias líneas de presupuesto en el mismo año y semestre**.
+Cada línea es un proyecto (`budgets`) con su propia asignación
+(`budget_allocations`): por ejemplo "Escuela - Eventos", "Escuela - Cursos" y
+"Escuela - Capacitación" conviven como tres líneas del área Escuela en el 1er
+semestre.
+
+- **El monto del área por semestre es la suma de sus líneas.** No hay techo por
+  área: cada línea lleva su monto propio (`allocated_amount`) y su control de
+  ejecución independiente (`executed_amount`).
+- Al aprobar una factura se valida el cupo **de la línea** a la que se imputó, no
+  el del área.
+- Lo único que no se permite es cargar dos veces la misma línea: la constraint
+  `budget_allocations_project_area_year_half_key` es única por
+  (`project_id`, `area_id`, `year`, `half`).
+- La consolidación por área se ve en **Fondos por Área**
+  (`/dashboard/allocations`), que muestra el total del semestre y permite
+  desplegar el detalle de cada línea.
+- Al cargar una factura, el selector "Proyecto + Área" incluye año y semestre
+  para distinguir las líneas de una misma área.
+
+> `area_funds` guarda un monto por área/semestre de carga manual que **no se usa
+> como tope**. El dato vigente para reportes es la suma de `budget_allocations`.
 - **Reportes**: `app/api/report/invoices/route.ts`.
 - **Autocomplete** de ítems contables: `app/ui/invoices/custom-autocomplete-contable-item.tsx`.
 

@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
         budgets.company_id,
         COALESCE(budgets.status, 'pending') AS status,
         COALESCE(budget_allocations.program, 'Proyecto sin programa') AS program,
+        STRING_AGG(DISTINCT budget_allocations.half::text, ', ' ORDER BY budget_allocations.half::text) AS halves,
         COALESCE(SUM(budget_allocations.allocated_amount), 0) AS total_allocated_amount,
         COALESCE(SUM(budget_allocations.executed_amount), 0) AS total_executed_amount,
         COALESCE(STRING_AGG(areas.name, ', '), 'Area sin programa') AS area_names

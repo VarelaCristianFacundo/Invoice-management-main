@@ -525,11 +525,16 @@ export async function createBudgetAllocation(
   year: number,
 ) {
   try {
+    // Un área puede tener varias líneas de presupuesto en el mismo semestre
+    // (ej: "Escuela - Eventos" y "Escuela - Cursos"). Lo único que no se
+    // permite es cargar dos veces la misma línea (mismo proyecto + área +
+    // año + semestre).
     const existing = await drizzleDb
       .select({ id: budgetAllocations.id })
       .from(budgetAllocations)
       .where(
         and(
+          eq(budgetAllocations.projectId, project_id),
           eq(budgetAllocations.areaId, area_id),
           eq(budgetAllocations.year, year),
           eq(budgetAllocations.half, half),
@@ -540,7 +545,7 @@ export async function createBudgetAllocation(
     if (existing.length > 0) {
       return {
         success: false,
-        message: `Ya existe un proyecto asignado a esta área para el ${half}° semestre de ${year}. Cada área sólo puede tener un proyecto por semestre.`,
+        message: `Este proyecto ya tiene una asignación para esta área en el ${half}° semestre de ${year}.`,
       };
     }
 
@@ -589,25 +594,10 @@ export async function createBudget({
 }) {
   try {
     if (id === 'new') {
-      const existing = await drizzleDb
-        .select({ id: budgetAllocations.id })
-        .from(budgetAllocations)
-        .where(
-          and(
-            eq(budgetAllocations.areaId, areaId),
-            eq(budgetAllocations.year, year),
-            eq(budgetAllocations.half, half),
-          ),
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return {
-          success: false,
-          message: `Ya existe un proyecto asignado a esta área para el ${half}° semestre de ${year}. Cada área sólo puede tener un proyecto por semestre.`,
-        };
-      }
-
+      // Varias líneas de presupuesto pueden convivir en la misma área y
+      // semestre: el monto del área surge de la suma de sus líneas. Como el
+      // proyecto se crea acá mismo, no hay asignación previa con la que pueda
+      // colisionar.
       const [{ id: newProjectId }] = await drizzleDb
         .insert(budgets)
         .values({
@@ -1218,11 +1208,14 @@ export async function updateBudgetProject(
   } catch (error: unknown) {
     const code = (error as { code?: string })?.code;
     const message = error instanceof Error ? error.message : String(error);
-    if (code === '23505' || /budget_allocations_area_id_year_half_key|unique/i.test(message)) {
+    if (
+      code === '23505' ||
+      /budget_allocations_project_area_year_half_key|unique/i.test(message)
+    ) {
       return {
         success: false,
         message:
-          'Ya existe una asignación para esa área en ese año y semestre. Cambiá el año o el semestre.',
+          'Este proyecto ya tiene una asignación para esa área en ese año y semestre.',
       };
     }
     console.error('Database Error updating budget:', error);

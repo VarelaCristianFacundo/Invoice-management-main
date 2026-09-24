@@ -1,0 +1,3 @@
+ALTER TABLE "budget_allocations" DROP CONSTRAINT "budget_allocations_area_id_year_half_key";--> statement-breakpoint
+CREATE INDEX "idx_budget_allocations_area_year_half" ON "budget_allocations" USING btree ("area_id" uuid_ops,"year" int4_ops,"half" int4_ops);--> statement-breakpoint
+ALTER TABLE "budget_allocations" ADD CONSTRAINT "budget_allocations_project_area_year_half_key" UNIQUE("project_id","area_id","year","half");

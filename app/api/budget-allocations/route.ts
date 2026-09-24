@@ -2,25 +2,29 @@ import { db } from '@/app/lib/db';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const { area, year, allocatedAmount, program, half } = await req.json();
+  const { area, year, allocatedAmount, program, half, projectId } =
+    await req.json();
 
-  if (!area || !year || !allocatedAmount || !program || !half) {
+  if (!area || !year || !allocatedAmount || !program || !half || !projectId) {
     return NextResponse.json(
       { error: 'Todos los campos son obligatorios' },
       { status: 400 },
     );
   }
 
+  // Un área puede tener varias líneas de presupuesto por semestre; la única
+  // colisión posible es repetir la misma línea (proyecto + área + año +
+  // semestre), y en ese caso se actualiza el monto.
   const result = await db.query(
     `
-    INSERT INTO budget_allocations (area_id, year, allocated_amount, program, half)
-    VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (area_id, year, half)
+    INSERT INTO budget_allocations (project_id, area_id, year, allocated_amount, program, half)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (project_id, area_id, year, half)
     DO UPDATE SET allocated_amount = EXCLUDED.allocated_amount,
                   program = EXCLUDED.program
     RETURNING *;
     `,
-    [area, year, allocatedAmount, program, half],
+    [projectId, area, year, allocatedAmount, program, half],
   );
 
   return NextResponse.json(result.rows[0]);
@@ -45,7 +49,7 @@ export async function GET() {
       FROM budget_allocations ba
       LEFT JOIN areas a ON ba.area_id = a.id
       LEFT JOIN budgets b ON ba.project_id = b.id
-      ORDER BY b.project_name, a.name;
+      ORDER BY a.name, ba.year DESC, ba.half, b.project_name;
     `);
 
     return NextResponse.json(result.rows);

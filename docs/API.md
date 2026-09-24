@@ -24,7 +24,9 @@
 - `GET/POST /api/budgets`
 - `GET/PUT/DELETE /api/budget/[id]`
 - `POST /api/budget/[id]/reject`
-- `GET/POST /api/budget-allocations`
+- `GET/POST /api/budget-allocations` — `POST` hace upsert por
+  (`projectId`, `area`, `year`, `half`); un área admite varias líneas por
+  semestre.
 
 ## Programs / Areas
 
@@ -32,7 +34,8 @@
 - `GET/POST /api/areas`
 - `GET /api/areas/[id]/funds`
 - `GET /api/area-funds`
-- `GET /api/area-funds-summary`
+- `GET /api/area-funds-summary?companyId=` — totales por área/año/semestre
+  (suma de las líneas) más el detalle de cada línea en `funds[].lines[]`.
 
 ## Reports & Misc
 

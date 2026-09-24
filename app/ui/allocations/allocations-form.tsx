@@ -1,14 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
+
+type Line = {
+    allocation_id: string;
+    project_id: string;
+    project_name: string;
+    program: string | null;
+    allocated: number;
+    executed: number;
+};
 
 type Fund = {
     year: number;
     half: number;
     allocated: number;
     executed: number;
+    lines: Line[];
 };
 
 type Area = {
@@ -23,6 +33,15 @@ export default function AreaFundsView() {
     const [selectedArea, setSelectedArea] = useState<Area | null>(null);
     const [search, setSearch] = useState<string>("");
     const [selectedCompany, setSelectedCompany] = useState<number>(1); // Default CAMARCO
+    // Filas (año/semestre) expandidas para ver el detalle de líneas.
+    const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+    const formatMoney = (value: number) =>
+        value.toLocaleString("es-AR", {
+            style: "currency",
+            currency: "ARS",
+            minimumFractionDigits: 2,
+        });
 
     const fetchAreaFunds = useCallback(async () => {
         try {
@@ -36,6 +55,7 @@ export default function AreaFundsView() {
             const data = await res.json();
             setAreas(data);
             setSelectedArea(data[0] || null);
+            setExpanded({});
         } catch (error) {
             console.error("Error fetching data:", error);
             Swal.fire(
@@ -116,13 +136,18 @@ export default function AreaFundsView() {
                 <div className="flex-1">
                     {selectedArea ? (
                         <>
-                            <h3 className="text-md font-medium mb-4">{selectedArea.name}</h3>
+                            <div className="mb-4 flex flex-wrap items-baseline gap-2">
+                                <h3 className="text-md font-medium">{selectedArea.name}</h3>
+                                <span className="text-xs text-gray-500">
+                                    El monto de cada semestre es la suma de sus líneas de presupuesto.
+                                </span>
+                            </div>
                             {selectedArea.funds.length === 0 ? (
                                 <p className="text-sm text-gray-500">
                                     Sin fondos asignados aún
                                 </p>
                             ) : (
-                                <table className="w-full text-sm border-collapse border border-gray-300">
+                                <table className="w-full text-sm border-collapse border border-gray-300 bg-white">
                                     <thead>
                                         <tr className="bg-gray-200">
                                             <th className="border border-gray-300 px-2 py-1 text-left">
@@ -130,6 +155,9 @@ export default function AreaFundsView() {
                                             </th>
                                             <th className="border border-gray-300 px-2 py-1 text-left">
                                                 Semestre
+                                            </th>
+                                            <th className="border border-gray-300 px-2 py-1 text-left">
+                                                Líneas
                                             </th>
                                             <th className="border border-gray-300 px-2 py-1 text-left">
                                                 Asignado
@@ -140,26 +168,82 @@ export default function AreaFundsView() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {selectedArea.funds.map((fund, index) => (
-                                            <tr
-                                                key={`${selectedArea.id}-${fund.year}-${fund.half}-${index}`}
-                                            >
-                                                <td className="border border-gray-300 px-2 py-1">
-                                                    {fund.year}
-                                                </td>
-                                                <td className="border border-gray-300 px-2 py-1">
-                                                    {fund.half === 1
-                                                        ? "1er Semestre"
-                                                        : "2do Semestre"}
-                                                </td>
-                                                <td className="border border-gray-300 px-2 py-1">
-                                                    ${fund.allocated.toFixed(2)}
-                                                </td>
-                                                <td className="border border-gray-300 px-2 py-1">
-                                                    ${fund.executed.toFixed(2)}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {selectedArea.funds.map((fund) => {
+                                            const rowKey = `${selectedArea.id}-${fund.year}-${fund.half}`;
+                                            const isExpanded = Boolean(expanded[rowKey]);
+                                            const lines = fund.lines ?? [];
+
+                                            return (
+                                                <Fragment key={rowKey}>
+                                                    <tr className="font-medium">
+                                                        <td className="border border-gray-300 px-2 py-1">
+                                                            {fund.year}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-1">
+                                                            {fund.half === 1
+                                                                ? "1er Semestre"
+                                                                : "2do Semestre"}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-1">
+                                                            {lines.length > 0 ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setExpanded((prev) => ({
+                                                                            ...prev,
+                                                                            [rowKey]: !prev[rowKey],
+                                                                        }))
+                                                                    }
+                                                                    className="text-blue-600 hover:underline"
+                                                                >
+                                                                    {isExpanded ? "- " : "+ "}
+                                                                    {lines.length}{" "}
+                                                                    {lines.length === 1
+                                                                        ? "línea"
+                                                                        : "líneas"}
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-gray-500">-</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-1">
+                                                            {formatMoney(fund.allocated)}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-1">
+                                                            {formatMoney(fund.executed)}
+                                                        </td>
+                                                    </tr>
+
+                                                    {isExpanded &&
+                                                        lines.map((line) => (
+                                                            <tr
+                                                                key={line.allocation_id}
+                                                                className="bg-gray-50 text-xs text-gray-700"
+                                                            >
+                                                                <td className="border border-gray-300 px-2 py-1" />
+                                                                <td
+                                                                    className="border border-gray-300 px-2 py-1"
+                                                                    colSpan={2}
+                                                                >
+                                                                    {line.project_name}
+                                                                    {line.program ? (
+                                                                        <span className="text-gray-500">
+                                                                            {" "}
+                                                                            / {line.program}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </td>
+                                                                <td className="border border-gray-300 px-2 py-1">
+                                                                    {formatMoney(line.allocated)}
+                                                                </td>
+                                                                <td className="border border-gray-300 px-2 py-1">
+                                                                    {formatMoney(line.executed)}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                </Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             )}

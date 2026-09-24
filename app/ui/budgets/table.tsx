@@ -11,6 +11,8 @@ type Budget = {
   project_name: string;
   program: string;
   year: number;
+  /** Semestres de las asignaciones del proyecto, ej: "1" o "1, 2". */
+  halves: string | null;
   status: string;
   total_allocated_amount: number;
   total_executed_amount: number;
@@ -78,6 +80,14 @@ export default function BudgetsTable({ query, currentPage, userAreaId, userRole 
     setSearch(e.target.value);
   };
 
+  const formatHalves = (halves: string | null) => {
+    if (!halves) return "N/A";
+    return halves
+      .split(",")
+      .map((half) => (half.trim() === "1" ? "1er" : "2do"))
+      .join(", ");
+  };
+
   return (
     <div className="p-6 bg-gray-100 rounded-md shadow-md">
       <h2 className="text-lg font-semibold mb-4">Presupuestos por Empresa</h2>
@@ -109,6 +119,12 @@ export default function BudgetsTable({ query, currentPage, userAreaId, userRole 
         />
       </div>
 
+      <p className="mb-4 text-xs text-gray-600">
+        Un área puede tener varias líneas de presupuesto en el mismo semestre.
+        El monto del área surge de la suma de sus líneas (ver{" "}
+        <span className="font-medium">Fondos por Área</span>).
+      </p>
+
       {/* Tabla de presupuestos */}
       <div className="overflow-x-auto bg-white rounded-md shadow">
         {loading ? (
@@ -122,6 +138,7 @@ export default function BudgetsTable({ query, currentPage, userAreaId, userRole 
                 <th className="px-4 py-2">Proyecto</th>
                 <th className="px-4 py-2">Programa</th>
                 <th className="px-4 py-2">Año</th>
+                <th className="px-4 py-2">Semestre</th>
                 <th className="px-4 py-2">Monto Asignado</th>
                 <th className="px-4 py-2">Monto Abonado</th>
                 <th className="px-4 py-2">Areas</th>
@@ -135,6 +152,7 @@ export default function BudgetsTable({ query, currentPage, userAreaId, userRole 
                   <td className="px-4 py-2">{budget.project_name}</td>
                   <td className="px-4 py-2">{budget.program || "N/A"}</td>
                   <td className="px-4 py-2">{budget.year}</td>
+                  <td className="px-4 py-2">{formatHalves(budget.halves)}</td>
                   <td className="px-4 py-2">{formatCurrency(budget.total_allocated_amount)}</td>
                   <td className="px-4 py-2">{formatCurrency(budget.total_executed_amount)}</td>
                   <td className="px-4 py-2">{budget.area_names}</td>

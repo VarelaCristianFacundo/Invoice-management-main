@@ -23,6 +23,7 @@ type BudgetAllocationItem = {
   area_id: string;
   area_name: string;
   year: number;
+  half: number;
   company_id: number;
 };
 
@@ -384,7 +385,7 @@ export default function CreateInvoiceForm({
       {/* Project + Area */}
       <div>
         <label htmlFor="allocation" className="mb-2 block text-sm font-medium">
-          Elegir Proyecto + Área (Año)
+          Elegir Proyecto + Área (Año / Semestre)
         </label>
         <select
           id="allocation"
@@ -399,7 +400,7 @@ export default function CreateInvoiceForm({
             .filter(alloc => !selectedCompanyId || alloc.company_id === selectedCompanyId)
             .map((alloc) => (
               <option key={alloc.id} value={alloc.id}>
-                {`${alloc.project_name} - ${alloc.area_name} (Año ${alloc.year})`}
+                {`${alloc.area_name} - ${alloc.project_name} (${alloc.year} / ${alloc.half === 1 ? "1er" : "2do"} sem.)`}
               </option>
             ))}
         </select>
@@ -408,6 +409,10 @@ export default function CreateInvoiceForm({
             * Selecciona primero un proveedor para ver sus proyectos correspondientes.
           </p>
         )}
+        <p className="mt-1 text-xs text-gray-500">
+          Un área puede tener varias líneas de presupuesto en el mismo semestre:
+          elegí la que corresponde a esta factura.
+        </p>
       </div>
 
       {/* Monto */}

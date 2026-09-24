@@ -105,7 +105,8 @@ export const budgetAllocations = pgTable("budget_allocations", {
 			foreignColumns: [budgets.id],
 			name: "budget_allocations_project_id_fkey"
 		}),
-	unique("budget_allocations_area_id_year_half_key").on(table.areaId, table.year, table.half),
+	index("idx_budget_allocations_area_year_half").using("btree", table.areaId.asc().nullsLast().op("uuid_ops"), table.year.asc().nullsLast().op("int4_ops"), table.half.asc().nullsLast().op("int4_ops")),
+	unique("budget_allocations_project_area_year_half_key").on(table.projectId, table.areaId, table.year, table.half),
 	check("budget_allocations_half_check", sql`half = ANY (ARRAY[1, 2])`),
 ]);
 
